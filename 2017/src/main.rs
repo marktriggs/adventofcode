@@ -493,8 +493,6 @@ fn day6() {
     println!("Part 2: cycled length: {}", day6_pt1(cycle_start));
 }
 
-*/
-
 ///////////////// Day 7
 
 use std::io::{BufRead, BufReader};
@@ -668,6 +666,132 @@ fn day7() {
 //     println!("{:?}", g);
 // }
 
+*/
+
+///////////////// Day 8
+
+
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+
+#[derive(Debug)]
+struct Instruction {
+    target_register: String,
+    operator: String,
+    operand: i32,
+    condition_register: String,
+    condition_operator: String,
+    condition_operand: i32,
+}
+
+fn parse_instruction(instruction: String) -> Instruction {
+    let bits: Vec<String> = instruction.split(" ").map(|s| s.to_owned()).collect();
+
+    Instruction {
+        target_register: bits[0].clone(),
+        operator: bits[1].clone(),
+        operand: bits[2].parse().unwrap(),
+        condition_register: bits[4].clone(),
+        condition_operator: bits[5].clone(),
+        condition_operand: bits[6].parse().unwrap(),
+    }
+}
+
+// const DAY_8_SAMPLE: &[&str] = &[
+//     "b inc 5 if a > 1",
+//     "a inc 1 if b < 5",
+//     "c dec -10 if a >= 1",
+//     "c inc -20 if c == 10",
+// ];
+
+fn day8_pt1() {
+    let mut registers: HashMap<String, i32> = HashMap::new();
+
+    let f = File::open("advent-files/day8_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines() {
+        let instruction = parse_instruction(line.unwrap());
+
+        // Init our condition register if needed
+        registers.entry(instruction.condition_register.clone()).or_insert(0);
+
+        let condition_register_value = registers.get(&instruction.condition_register).unwrap().clone();
+
+        let condition_matched = match instruction.condition_operator.as_ref() {
+            "==" => (condition_register_value == instruction.condition_operand),
+            ">=" => (condition_register_value >= instruction.condition_operand),
+            ">" => (condition_register_value > instruction.condition_operand),
+            "<" => (condition_register_value < instruction.condition_operand),
+            "<=" => (condition_register_value <= instruction.condition_operand),
+            "!=" => (condition_register_value != instruction.condition_operand),
+            _ => panic!("Invalid instruction: {:?}", instruction),
+        };
+
+        if condition_matched {
+            let target_register = registers.entry(instruction.target_register).or_insert(0);
+
+            if instruction.operator == "inc" {
+                *target_register += instruction.operand;
+            } else {
+                *target_register -= instruction.operand;
+            }
+        }
+    }
+
+    println!("max: {}", registers.values().fold(std::i32::MIN, |m, v| std::cmp::max(m, *v)))
+}
+
+
+fn day8_pt2() {
+    let mut registers: HashMap<String, i32> = HashMap::new();
+
+    let f = File::open("advent-files/day8_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut point_max = 0;
+
+    for line in br.lines() {
+        let instruction = parse_instruction(line.unwrap());
+
+        // Init our condition register if needed
+        registers.entry(instruction.condition_register.clone()).or_insert(0);
+
+        let condition_register_value = registers.get(&instruction.condition_register).unwrap().clone();
+
+        let condition_matched = match instruction.condition_operator.as_ref() {
+            "==" => (condition_register_value == instruction.condition_operand),
+            ">=" => (condition_register_value >= instruction.condition_operand),
+            ">" => (condition_register_value > instruction.condition_operand),
+            "<" => (condition_register_value < instruction.condition_operand),
+            "<=" => (condition_register_value <= instruction.condition_operand),
+            "!=" => (condition_register_value != instruction.condition_operand),
+            _ => panic!("Invalid instruction: {:?}", instruction),
+        };
+
+        if condition_matched {
+            let target_register = registers.entry(instruction.target_register).or_insert(0);
+
+            if instruction.operator == "inc" {
+                *target_register += instruction.operand;
+            } else {
+                *target_register -= instruction.operand;
+            }
+
+            if *target_register > point_max {
+                point_max = *target_register;
+            }
+        }
+    }
+
+    println!("max at any point: {}", point_max)
+}
+
+fn day8() {
+    day8_pt1();
+    day8_pt2();
+}
 
 fn main() {
     // day1();
@@ -676,6 +800,7 @@ fn main() {
     // day4();
     // day5();
     // day6();
+    // day7();
 
-    day7();
+    day8();
 }
