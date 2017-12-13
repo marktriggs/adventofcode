@@ -1168,7 +1168,11 @@ struct Firewall {
 impl Firewall {
     fn step(&mut self, n: usize) {
         if self.active {
-            self.at_position = (self.at_position + n) % self.sequence.len();
+            self.at_position = self.at_position + n;
+
+            while self.at_position >= self.sequence.len() {
+                self.at_position = self.at_position - self.sequence.len();
+            }
         }
     }
 
