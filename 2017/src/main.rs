@@ -666,7 +666,6 @@ fn day7() {
 //     println!("{:?}", g);
 // }
 
-*/
 
 ///////////////// Day 8
 
@@ -763,8 +762,8 @@ fn day8_pt2() {
         let condition_matched = match instruction.condition_operator.as_ref() {
             "==" => (condition_register_value == instruction.condition_operand),
             ">=" => (condition_register_value >= instruction.condition_operand),
-            ">" => (condition_register_value > instruction.condition_operand),
-            "<" => (condition_register_value < instruction.condition_operand),
+            ">"  => (condition_register_value > instruction.condition_operand),
+            "<"  => (condition_register_value < instruction.condition_operand),
             "<=" => (condition_register_value <= instruction.condition_operand),
             "!=" => (condition_register_value != instruction.condition_operand),
             _ => panic!("Invalid instruction: {:?}", instruction),
@@ -793,6 +792,517 @@ fn day8() {
     day8_pt2();
 }
 
+
+///////////////// Day 9
+
+use std::io::{BufReader, Read};
+use std::fs::File;
+
+fn score(s: &str) -> (u32, u32) {
+    let mut input: Vec<char> = s.chars().collect();
+    let mut total_score = 0;
+    let mut this_group_score = 0;
+    let mut garbage_count = 0;
+
+    while input.len() > 0 {
+        let ch = input.remove(0);
+
+        match ch {
+            '{' => {
+                this_group_score += 1;
+                total_score += this_group_score;
+            },
+            '}' => {
+                this_group_score -= 1;
+            },
+            ',' => {},
+            '<' => {
+                while input.len() > 0 {
+                    let garbage_ch = input.remove(0);
+
+                    match garbage_ch {
+                        '>' => { break; }
+                        '!' => {
+                            // Skip the next too
+                            if input.len() > 0 {
+                                input.remove(0);
+                            }
+                        },
+                        _ => { garbage_count += 1 },
+                    }
+                }
+            }
+            _ => { panic!("Invalid input: {}", ch) }
+        }
+    }
+
+    (total_score, garbage_count)
+}
+
+fn day9() {
+    assert_eq!(score("{}").0, 1);
+    assert_eq!(score("{{{}}}").0, 6);
+    assert_eq!(score("{{},{}}").0, 5);
+    assert_eq!(score("{{{},{},{{}}}}").0, 16);
+    assert_eq!(score("{<a>,<a>,<a>,<a>}").0, 1);
+    assert_eq!(score("{{<ab>},{<ab>},{<ab>},{<ab>}}").0, 9);
+    assert_eq!(score("{{<!!>},{<!!>},{<!!>},{<!!>}}").0, 9);
+    assert_eq!(score("{{<a!>},{<a!>},{<a!>},{<ab>}}").0, 3);
+
+    let f = File::open("advent-files/day9_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    let (score, garbage_count) = score(input.trim_right());
+
+    println!("The score for my input is: {}", score);
+    println!("The garbage count for my input is: {}", garbage_count);
+}
+
+///////////////// Day 10
+
+// use std::cell::RefCell;
+// use std::collections::HashMap;
+// use std::collections::HashSet;
+// use std::fs::File;
+// use std::io::{BufRead, BufReader};
+// use std::io::{BufReader, Read};
+// use std::iter::FromIterator;
+// use std::rc::Rc;
+
+
+fn reverse_subseq(vec: &mut Vec<u32>, idx: usize, len: usize) {
+    let mut start = idx;
+    let mut end = (idx + len - 1) % vec.len();
+
+    for _ in 0 .. (len / 2) {
+        let tmp = vec[end];
+        vec[end] = vec[start];
+        vec[start] = tmp;
+
+        start = (start + 1) % vec.len();
+        end = if end == 0 { vec.len() - 1 } else { end - 1 }
+    }
+}
+
+
+fn day10_pt1() {
+    let mut nums: Vec<u32> = (0..256).collect();
+    let mut pos = 0;
+    let mut skip = 0;
+
+    let inputs = vec!(130, 126, 1, 11, 140, 2, 255, 207, 18, 254, 246, 164, 29, 104, 0, 224);
+
+    for i in inputs {
+        reverse_subseq(&mut nums, pos, i);
+        pos = (pos + i + skip) % nums.len();
+        skip += 1;
+    }
+
+    println!("Result: {}", nums[0] * nums[1]);
+}
+
+fn day10_pt2() {
+    let mut nums: Vec<u32> = (0..256).collect();
+    let mut pos = 0;
+    let mut skip = 0;
+
+    let mut inputs: Vec<usize> = "130,126,1,11,140,2,255,207,18,254,246,164,29,104,0,224"
+        .chars()
+        .map(|c| c as usize)
+        .collect();
+
+    inputs.extend(vec!(17, 31, 73, 47, 23));
+
+    for _round in 0..64 {
+        for i in &inputs {
+            reverse_subseq(&mut nums, pos, *i);
+            pos = (pos + i + skip) % nums.len();
+            skip += 1;
+        }
+    }
+
+    let mut result = Vec::new();
+
+    for block in 0..16 {
+        let block_numbers: Vec<&u32> = nums.iter().skip(block * 16).take(16).collect();
+        result.push(format!("{:02x}", block_numbers.iter().skip(1).fold(*block_numbers[0], |acc, n| acc ^ *n)))
+    }
+
+    println!("Result part 2: {}", result.join(""));
+}
+
+fn day10() {
+    day10_pt1();
+    day10_pt2();
+}
+
+///////////////// Day 11
+
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::collections::HashMap;
+
+
+fn sum_distance(map: &HashMap<&str, i32>) -> i32 {
+    let mut nw = *map.get("nw").unwrap_or(&0);
+    let mut ne = *map.get("ne").unwrap_or(&0);
+    let mut sw = *map.get("sw").unwrap_or(&0);
+    let mut se = *map.get("se").unwrap_or(&0);
+    let mut n = *map.get("n").unwrap_or(&0);
+    let mut s = *map.get("s").unwrap_or(&0);
+
+    let mut total = 0;
+
+    loop {
+        // ne cancels sw
+        let mut diff = std::cmp::min(sw, ne);
+        sw -= diff;
+        ne -= diff;
+
+        // se cancels nw
+        diff = std::cmp::min(se, nw);
+        se -= diff;
+        nw -= diff;
+
+        // ne + nw = n
+        diff = std::cmp::min(ne, nw);
+        ne -= diff;
+        nw -= diff;
+        n += diff;
+
+        // se + sw = s
+        diff = std::cmp::min(se, sw);
+        se -= diff;
+        sw -= diff;
+        s += diff;
+
+        // ne + s = se
+        diff = std::cmp::min(ne, s);
+        ne -= diff;
+        s -= diff;
+        se += diff;
+
+        // se + n = ne
+        diff = std::cmp::min(se, n);
+        se -= diff;
+        n -= diff;
+        ne += diff;
+
+        // nw + s = sw
+        diff = std::cmp::min(nw, s);
+        nw -= diff;
+        s -= diff;
+        sw += diff;
+
+        // sw + n = nw
+        diff = std::cmp::min(sw, n);
+        sw -= diff;
+        n -= diff;
+        nw += diff;
+
+        // n cancels s
+        diff = std::cmp::min(n, s);
+        n -= diff;
+        s -= diff;
+
+        let new = nw + ne + sw + se + n + s;
+
+        if new == total {
+            // Hit a fixed point
+            break;
+        }
+
+        total = new;
+    }
+
+    total
+}
+
+fn day11_pt1(directions: Vec<&str>) -> i32 {
+    let map = directions.iter().fold(HashMap::new(), |mut map, dir| {
+        {
+            let entry = map.entry(*dir).or_insert(0);
+            *entry += 1
+        }
+        map
+    });
+
+    sum_distance(&map)
+}
+
+fn day11_pt2(directions: Vec<&str>) -> i32 {
+    let mut furthest_distance = 0;
+
+    let mut map = HashMap::new();
+
+    for dir in directions {
+        {
+            let entry = map.entry(dir).or_insert(0);
+            *entry += 1
+        }
+
+        let distance = sum_distance(&map);
+
+        furthest_distance = std::cmp::max(furthest_distance, distance);
+    }
+
+    furthest_distance
+}
+
+
+fn day11() {
+    assert_eq!(day11_pt1("ne,ne,ne".split(",").collect()), 3);
+    assert_eq!(day11_pt1("ne,ne,sw,sw".split(",").collect()), 0);
+    assert_eq!(day11_pt1("ne,ne,s,s".split(",").collect()), 2);
+    assert_eq!(day11_pt1("se,sw,se,sw,sw".split(",").collect()), 3);
+
+    let f = File::open("advent-files/day11_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    println!("{}", day11_pt1(input.trim().split(",").collect()));
+    println!("{}", day11_pt2(input.trim().split(",").collect()));
+
+}
+
+
+///////////////// Day 12
+
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use regex::Regex;
+
+extern crate regex;
+
+fn day12_pt1() -> usize {
+    let mut groups = [0; 2000];
+
+    for i in 0..groups.len() {
+        groups[i] = i;
+    }
+
+    let f = File::open("advent-files/day12_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let delim = Regex::new("(, | <-> )").unwrap();
+
+    for line in br.lines().map(Result::unwrap) {
+        let nodes: Vec<usize> = delim.split(&line).map(|s| s.parse().unwrap()).collect();
+
+        // Nodes in the same group have the same value in `groups`
+        let val = groups[nodes[0]];
+
+        for n in nodes.iter().skip(1) {
+            let replaceme = groups[*n];
+
+            for i in 0 .. groups.len() {
+                if groups[i] == replaceme {
+                    groups[i] = val;
+                }
+            }
+        }
+    }
+
+    let zero_id = groups[0];
+
+    groups.iter().filter(|&&v| v == zero_id).count()
+}
+
+
+fn day12_pt2() -> usize {
+    let mut groups = [0; 2000];
+
+    for i in 0..groups.len() {
+        groups[i] = i;
+    }
+
+    let f = File::open("advent-files/day12_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let delim = Regex::new("(, | <-> )").unwrap();
+
+    for line in br.lines().map(Result::unwrap) {
+        let nodes: Vec<usize> = delim.split(&line).map(|s| s.parse().unwrap()).collect();
+
+        // Nodes in the same group have the same value in `groups`
+        let val = groups[nodes[0]];
+
+        for n in nodes.iter().skip(1) {
+            let replaceme = groups[*n];
+
+            for i in 0 .. groups.len() {
+                if groups[i] == replaceme {
+                    groups[i] = val;
+                }
+            }
+        }
+    }
+
+    let mut v = groups.to_vec();
+    v.sort();
+    v.dedup();
+
+    v.len()
+}
+
+fn day12() {
+    println!("Number in group zero: {}", day12_pt1());
+    println!("Total groups: {}", day12_pt2());
+}
+
+*/
+
+#[derive(Debug)]
+struct Firewall {
+    active: bool,
+    at_position: usize,
+    sequence: Vec<usize>,
+    range: usize,
+}
+
+impl Firewall {
+    fn step(&mut self) {
+        if self.active {
+            self.at_position = (self.at_position + 1) % self.sequence.len();
+        }
+    }
+
+    fn position(&self) -> i32 {
+        if self.active {
+            self.sequence[self.at_position] as i32
+        } else {
+            -1
+        }
+    }
+
+    fn reset(&mut self, n: usize) {
+        self.at_position = n;
+    }
+}
+
+fn day13_pt1(input: &str) -> usize {
+    let max_depth = input.trim().split("\n").map(|line| {
+        let bits: Vec<&str> = line.split(": ").collect();
+        bits[0].parse().unwrap()
+    }).fold(0, std::cmp::max);
+
+    let mut layers: Vec<Box<Firewall>> = (0..max_depth + 1).map(|_| Box::new(Firewall { active: false, range: 0, at_position: 0, sequence: Vec::new() })).collect();
+
+    for descr in input.trim().split("\n") {
+        let v: Vec<usize> = descr.split(": ").map(|s| { s.parse().unwrap() }).collect();
+        let (depth, range) = (v[0], v[1]);
+
+        layers[depth] = Box::new(Firewall { active: true, at_position: 0, range, sequence: (0..range).chain((0..range).skip(1).rev().skip(1)).collect() })
+    }
+
+    let mut packet_position = 0;
+    let mut severity = 0;
+    for _ in  0..layers.len() {
+        if layers[packet_position].position() == 0 {
+            severity += packet_position * layers[packet_position].range;
+        }
+
+        packet_position += 1;
+
+        for ref mut layer in &mut layers {
+            layer.step();
+        }
+    }
+
+    severity
+}
+
+fn _day13_pt2(layers: &mut Vec<Firewall>) -> usize {
+    let mut delay = 0;
+
+    loop {
+        let start_positions: Vec<usize> = layers.iter().map(|layer| layer.at_position ).collect();
+
+        // println!("{:?}", layers);
+        // println!("{:?}", start_positions);
+
+        let mut packet_position = 0;
+        let mut hit = false;
+
+        for _ in  0..layers.len() {
+            if layers[packet_position].position() == 0 {
+                hit = true;
+                break;
+            }
+
+            packet_position += 1;
+
+            for layer in layers.iter_mut() {
+                layer.step();
+            }
+        }
+
+        if !hit {
+            return delay;
+        }
+
+        for (ref mut layer, &position) in layers.iter_mut().zip(&start_positions) {
+            layer.reset(position);
+            layer.step();
+        }
+
+        delay += 1;
+    }
+}
+
+fn day13_pt2_faster(layers: &mut Vec<Firewall>) -> usize {
+    let mut delay = 0;
+
+    for i in 0..layers.len() {
+        for _ in 0..i {
+            layers[i].step();
+        }
+    }
+
+    loop {
+        if !layers.iter().any(|layer| layer.position() == 0) {
+            return delay;
+        }
+
+        for layer in layers.iter_mut() {
+            layer.step();
+        }
+
+        delay += 1
+    }
+}
+
+fn day13() {
+    // let input = "0: 3\n1: 2\n4: 4\n6: 4\n";
+    let input = "0: 5\n1: 2\n2: 3\n4: 4\n6: 6\n8: 4\n10: 8\n12: 6\n14: 6\n16: 8\n18: 6\n20: 9\n22: 8\n24: 10\n26: 8\n28: 8\n30: 12\n32: 8\n34: 12\n36: 10\n38: 12\n40: 12\n42: 12\n44: 12\n46: 12\n48: 14\n50: 12\n52: 14\n54: 12\n56: 14\n58: 12\n60: 14\n62: 14\n64: 14\n66: 14\n68: 14\n70: 14\n72: 14\n76: 14\n80: 18\n84: 14\n90: 18\n92: 17\n";
+
+    day13_pt1(input);
+    // println!("{}", day13_pt1(input));
+
+    let max_depth = input.trim().split("\n").map(|line| {
+        let bits: Vec<&str> = line.split(": ").collect();
+        bits[0].parse().unwrap()
+    }).fold(0, std::cmp::max);
+
+    let mut layers: Vec<Firewall> = (0..max_depth + 1).map(|_| Firewall { active: false, range: 0, at_position: 0, sequence: Vec::new() }).collect();
+
+    for descr in input.trim().split("\n") {
+        let v: Vec<usize> = descr.split(": ").map(|s| { s.parse().unwrap() }).collect();
+        let (depth, range) = (v[0], v[1]);
+
+        layers[depth] = Firewall { active: true, at_position: 0, range, sequence: (0..range).chain((0..range).skip(1).rev().skip(1)).collect() };
+    }
+
+
+    println!("Optimal delay: {}", day13_pt2_faster(&mut layers));
+    // println!("Optimal delay: {}", day13_pt2(&mut layers));
+}
+
 fn main() {
     // day1();
     // day2();
@@ -801,6 +1311,10 @@ fn main() {
     // day5();
     // day6();
     // day7();
-
-    day8();
+    // day8();
+    // day9();
+    // day10();
+    // day11();
+    // day12();
+    day13();
 }
