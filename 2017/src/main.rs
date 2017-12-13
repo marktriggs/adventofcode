@@ -1166,9 +1166,9 @@ struct Firewall {
 }
 
 impl Firewall {
-    fn step(&mut self) {
+    fn step(&mut self, n: usize) {
         if self.active {
-            self.at_position = (self.at_position + 1) % self.sequence.len();
+            self.at_position = (self.at_position + n) % self.sequence.len();
         }
     }
 
@@ -1180,26 +1180,12 @@ impl Firewall {
         }
     }
 
-    fn reset(&mut self, n: usize) {
+    fn _reset(&mut self, n: usize) {
         self.at_position = n;
     }
 }
 
-fn day13_pt1(input: &str) -> usize {
-    let max_depth = input.trim().split("\n").map(|line| {
-        let bits: Vec<&str> = line.split(": ").collect();
-        bits[0].parse().unwrap()
-    }).fold(0, std::cmp::max);
-
-    let mut layers: Vec<Box<Firewall>> = (0..max_depth + 1).map(|_| Box::new(Firewall { active: false, range: 0, at_position: 0, sequence: Vec::new() })).collect();
-
-    for descr in input.trim().split("\n") {
-        let v: Vec<usize> = descr.split(": ").map(|s| { s.parse().unwrap() }).collect();
-        let (depth, range) = (v[0], v[1]);
-
-        layers[depth] = Box::new(Firewall { active: true, at_position: 0, range, sequence: (0..range).chain((0..range).skip(1).rev().skip(1)).collect() })
-    }
-
+fn day13_pt1(mut layers: Vec<Firewall>) -> usize {
     let mut packet_position = 0;
     let mut severity = 0;
     for _ in  0..layers.len() {
@@ -1209,15 +1195,15 @@ fn day13_pt1(input: &str) -> usize {
 
         packet_position += 1;
 
-        for ref mut layer in &mut layers {
-            layer.step();
+        for layer in layers.iter_mut() {
+            layer.step(1);
         }
     }
 
     severity
 }
 
-fn _day13_pt2(layers: &mut Vec<Firewall>) -> usize {
+fn _day13_pt2(mut layers: Vec<Firewall>) -> usize {
     let mut delay = 0;
 
     loop {
@@ -1238,7 +1224,7 @@ fn _day13_pt2(layers: &mut Vec<Firewall>) -> usize {
             packet_position += 1;
 
             for layer in layers.iter_mut() {
-                layer.step();
+                layer.step(1);
             }
         }
 
@@ -1247,21 +1233,19 @@ fn _day13_pt2(layers: &mut Vec<Firewall>) -> usize {
         }
 
         for (ref mut layer, &position) in layers.iter_mut().zip(&start_positions) {
-            layer.reset(position);
-            layer.step();
+            layer._reset(position);
+            layer.step(1);
         }
 
         delay += 1;
     }
 }
 
-fn day13_pt2_faster(layers: &mut Vec<Firewall>) -> usize {
+fn day13_pt2_faster(mut layers: Vec<Firewall>) -> usize {
     let mut delay = 0;
 
     for i in 0..layers.len() {
-        for _ in 0..i {
-            layers[i].step();
-        }
+            layers[i].step(i);
     }
 
     loop {
@@ -1270,19 +1254,16 @@ fn day13_pt2_faster(layers: &mut Vec<Firewall>) -> usize {
         }
 
         for layer in layers.iter_mut() {
-            layer.step();
+            layer.step(1);
         }
 
         delay += 1
     }
 }
 
-fn day13() {
+fn day13_input() -> Vec<Firewall> {
     // let input = "0: 3\n1: 2\n4: 4\n6: 4\n";
     let input = "0: 5\n1: 2\n2: 3\n4: 4\n6: 6\n8: 4\n10: 8\n12: 6\n14: 6\n16: 8\n18: 6\n20: 9\n22: 8\n24: 10\n26: 8\n28: 8\n30: 12\n32: 8\n34: 12\n36: 10\n38: 12\n40: 12\n42: 12\n44: 12\n46: 12\n48: 14\n50: 12\n52: 14\n54: 12\n56: 14\n58: 12\n60: 14\n62: 14\n64: 14\n66: 14\n68: 14\n70: 14\n72: 14\n76: 14\n80: 18\n84: 14\n90: 18\n92: 17\n";
-
-    day13_pt1(input);
-    // println!("{}", day13_pt1(input));
 
     let max_depth = input.trim().split("\n").map(|line| {
         let bits: Vec<&str> = line.split(": ").collect();
@@ -1295,11 +1276,15 @@ fn day13() {
         let v: Vec<usize> = descr.split(": ").map(|s| { s.parse().unwrap() }).collect();
         let (depth, range) = (v[0], v[1]);
 
-        layers[depth] = Firewall { active: true, at_position: 0, range, sequence: (0..range).chain((0..range).skip(1).rev().skip(1)).collect() };
+        layers[depth] = Firewall { active: true, at_position: 0, range, sequence: (0..range).chain((0..range).skip(1).rev().skip(1)).collect() }
     }
 
+    layers
+}
 
-    println!("Optimal delay: {}", day13_pt2_faster(&mut layers));
+fn day13() {
+    println!("Part1: {}", day13_pt1(day13_input()));
+    println!("Optimal delay: {}", day13_pt2_faster(day13_input()));
     // println!("Optimal delay: {}", day13_pt2(&mut layers));
 }
 
