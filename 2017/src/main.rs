@@ -1834,6 +1834,15 @@ impl Program {
         }
     }
 
+    fn deref_value(self: &Program, value: &str) -> i64 {
+        match to_register(value) {
+            r @ 'a'...'z' => {
+                *self.registers.get(&r).unwrap()
+            },
+            _ => { value.parse().unwrap() }
+        }
+    }
+
     fn step(self: &mut Program) {
         if self.state == ProgramState::FINISHED {
             return;
@@ -1847,24 +1856,24 @@ impl Program {
 
         match bits[0] {
             "snd" => {
-                let value = deref_value(bits[1], &self.registers);
+                let value = self.deref_value(bits[1]);
                 self.send_count += 1;
                 self.outbox.push(value);
             },
             "set" => {
-                let value = deref_value(bits[2], &self.registers);
+                let value = self.deref_value(bits[2]);
                 self.registers.insert(to_register(bits[1]), value);
             },
             "add" => {
-                let new_value = deref_value(bits[1], &self.registers) + deref_value(bits[2], &self.registers);
+                let new_value = self.deref_value(bits[1]) + self.deref_value(bits[2]);
                 self.registers.insert(to_register(bits[1]), new_value);
             },
             "mul" => {
-                let new_value = deref_value(bits[1], &self.registers) * deref_value(bits[2], &self.registers);
+                let new_value = self.deref_value(bits[1]) * self.deref_value(bits[2]);
                 self.registers.insert(to_register(bits[1]), new_value);
             },
             "mod" => {
-                let new_value = deref_value(bits[1], &self.registers) % deref_value(bits[2], &self.registers);
+                let new_value = self.deref_value(bits[1]) % self.deref_value(bits[2]);
                 self.registers.insert(to_register(bits[1]), new_value);
             },
             "rcv" => {
@@ -1879,8 +1888,8 @@ impl Program {
                 }
             },
             "jgz" => {
-                let x = deref_value(bits[1], &self.registers);
-                let y = deref_value(bits[2], &self.registers);
+                let x = self.deref_value(bits[1]);
+                let y = self.deref_value(bits[2]);
 
                 if x > 0 {
                     // Compensate for the increment we're going to get anyway.
