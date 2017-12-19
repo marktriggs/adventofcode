@@ -1155,7 +1155,6 @@ fn day12() {
     println!("Total groups: {}", day12_pt2());
 }
 
-*/
 
 #[derive(Debug)]
 struct Firewall {
@@ -1292,6 +1291,637 @@ fn day13() {
     // println!("Optimal delay: {}", day13_pt2(&mut layers));
 }
 
+
+///////////////// Day 14
+
+fn reverse_subseq(vec: &mut Vec<u32>, idx: usize, len: usize) {
+    let mut start = idx;
+    let mut end = (idx + len - 1) % vec.len();
+
+    for _ in 0 .. (len / 2) {
+        let tmp = vec[end];
+        vec[end] = vec[start];
+        vec[start] = tmp;
+
+        start = (start + 1) % vec.len();
+        end = if end == 0 { vec.len() - 1 } else { end - 1 }
+    }
+}
+
+fn knot_hash(input: &str) -> Vec<u8> {
+    let mut nums: Vec<u32> = (0..256).collect();
+    let mut pos = 0;
+    let mut skip = 0;
+
+    let mut inputs: Vec<usize> = input.chars().map(|c| c as usize).collect();
+    inputs.extend(vec!(17, 31, 73, 47, 23));
+
+
+    for _round in 0..64 {
+        for i in &inputs {
+            reverse_subseq(&mut nums, pos, *i);
+            pos = (pos + i + skip) % nums.len();
+            skip += 1;
+        }
+    }
+
+    let result: Vec<u8> = (0..16).map(|block| {
+        let block_numbers: Vec<&u32> = nums.iter().skip(block * 16).take(16).collect();
+        block_numbers.iter().skip(1).fold(*block_numbers[0], |acc, n| acc ^ *n) as u8
+    }).collect();
+
+    result
+}
+
+
+fn day14_pt1() {
+    let key = "hxtvlmkl";
+
+    let mut squares_used = 0;
+
+    for round in 0..128 {
+        let input = format!("{}-{}", key, round);
+
+        for mut b in knot_hash(&input) {
+            while b > 0 {
+                squares_used += (b & 1) as usize;
+                b = b >> 1;
+            }
+        }
+    }
+
+    println!("Squares used: {}", squares_used);
+}
+
+fn day14_pt2() {
+    let key = "hxtvlmkl";
+
+    // Populate our grid
+    let mut grid: Vec<Vec<u32>> = Vec::new();
+
+    for round in 0..128 {
+        let mut row: Vec<u32> = Vec::new();
+        let input = format!("{}-{}", key, round);
+
+        for mut b in knot_hash(&input) {
+            let mut bits: Vec<u32> = Vec::new();
+            for _ in 0..8 {
+                bits.insert(0, (b & 1) as u32);
+                b = b >> 1;
+            }
+
+            row.extend(bits);
+        }
+
+        grid.push(row);
+    }
+
+    // Each cell in its own group to start with
+    let mut groups: Vec<Vec<u32>> = Vec::new();
+
+    for y in 0..128 {
+        let mut row = Vec::new();
+
+        for x in 0..128 {
+            row.push((y * 128 + x) as u32);
+        }
+
+        groups.push(row);
+    }
+
+    // Merge groups left to right within rows
+    for y in 0..128 {
+        for x in 0..127 {
+            if grid[y][x] == 1 && grid[y][x + 1] == 1 {
+                groups[y][x + 1] = groups[y][x];
+            }
+        }
+    }
+
+    // Merge groups top to bottom globally
+    for y in 0..127 {
+        for x in 0..128 {
+            if grid[y][x] == 1 && grid[y + 1][x] == 1 {
+                let victor_value = groups[y][x];
+                let victim_value = groups[y + 1][x];
+
+                for i in 0..128 {
+                    for j in 0..128 {
+                        if groups[i][j] == victim_value {
+                            groups[i][j] = victor_value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut group_numbers: Vec<u32> = Vec::new();
+    for y in 0..128 {
+        for x in 0..128 {
+            if grid[y][x] == 1 {
+                group_numbers.push(groups[y][x]);
+            }
+        }
+    }
+
+    group_numbers.sort();
+    group_numbers.dedup();
+    println!("Unique groups: {}", group_numbers.len());
+}
+
+
+fn day14() {
+    day14_pt1();
+    day14_pt2();
+}
+
+
+///////////////// Day 15
+
+struct Generator {
+    factor: usize,
+    value: usize,
+    required_multiple: usize,
+}
+
+impl Iterator for Generator {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<usize> {
+        loop {
+            self.value = (self.value * self.factor) % 2147483647;
+
+            if (self.value % self.required_multiple) == 0 {
+                return Some(self.value)
+            }
+        }
+    }
+}
+
+fn day15_pt1() {
+    let a = Generator { value: 679, factor: 16807, required_multiple: 1 };
+    let b = Generator { value: 771, factor: 48271, required_multiple: 1 };
+
+    let sample_size = 40000000;
+
+    println!("{}", a.take(sample_size).zip(b.take(sample_size)).filter(|&(a, b)| {
+        (a & 0xFFFF) == (b & 0xFFFF)
+    }).count());
+}
+
+fn day15_pt2() {
+    let a = Generator { value: 679, factor: 16807, required_multiple: 4 };
+    let b = Generator { value: 771, factor: 48271, required_multiple: 8 };
+
+    let sample_size = 5000000;
+
+    println!("{}", a.take(sample_size).zip(b.take(sample_size)).filter(|&(a, b)| {
+        (a & 0xFFFF) == (b & 0xFFFF)
+    }).count());
+}
+
+fn day15() {
+    day15_pt1();
+    day15_pt2();
+}
+
+
+///////////////// Day 16
+
+use std::fs::File;
+use std::io::{BufReader, Read};
+
+
+fn day16_input() -> String {
+    let f = File::open("advent-files/day16_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    input
+}
+
+fn day16_apply_moves<'a>(state: &'a mut Vec<&str>, moves: &Vec<&str>) -> &'a Vec<&'a str> {
+    for m in moves {
+        match m.chars().nth(0).unwrap() {
+            's' => {
+                let spin_length: usize = m[1..].parse().unwrap();
+
+                for _ in 0..spin_length {
+                    let len = state.len();
+                    let elt = state.remove(len - 1);
+                    state.insert(0, elt);
+                }
+            },
+            'x' => {
+                let bits: Vec<&str> = m[1..].split("/").collect();
+                let a: usize  = bits[0].parse().unwrap();
+                let b: usize  = bits[1].parse().unwrap();
+
+                let tmp = state[a];
+                state[a] = state[b];
+                state[b] = tmp;
+            },
+            'p' => {
+                let bits: Vec<&str> = m[1..].split("/").collect();
+
+                let a = state.iter().position(|&x| x == bits[0]).unwrap();
+                let b = state.iter().position(|&x| x == bits[1]).unwrap();
+
+                let tmp = state[a];
+                state[a] = state[b];
+                state[b] = tmp;
+            },
+            _ => { panic!("Unrecognised line") },
+        }
+    }
+
+    state
+}
+
+fn day16_pt1(state: &mut Vec<&str>, moves: &Vec<&str>)  {
+   println!("{}", day16_apply_moves(state, moves).join(""));
+}
+
+fn build_index_mapping(mut state: Vec<&str>, moves: &Vec<&str>, repeats: usize) -> Vec<usize> {
+    let pre_state = state.clone();
+    let index_transforms: Vec<&str> = moves.iter().filter(|m| m.chars().nth(0).unwrap() != 'p').cloned().collect();
+
+    for _ in 0..repeats {
+        day16_apply_moves(&mut state, &index_transforms);
+    }
+
+    let mut mapping = Vec::new();
+
+    for i in 0..pre_state.len() {
+        let ch = state[i];
+        let target_pos = pre_state.iter().position(|&c| c == ch);
+
+        mapping.push(target_pos.unwrap());
+    }
+
+    mapping
+}
+
+fn day16_pt2(state: &mut Vec<&str>, moves: &Vec<&str>)  {
+    {
+        // optimization: batch together 1000 runs so we don't have to do as many iterations below
+        let batch_size = 1000;
+        let mapping = build_index_mapping(state.clone(), moves, batch_size);
+        let mut scratch = vec!(""; mapping.len());
+
+        for _ in 0..(1000000000 / batch_size) {
+            for i in 0..mapping.len() {
+                scratch[i] = state[mapping[i]];
+            }
+
+            for i in 0..mapping.len() {
+                state[i] = scratch[i];
+            }
+        }
+    }
+
+    // Observation: the 'swap by value' rules cycle every 8 iterations.  Since 1
+    // billion mod 8 == 0, the effect of running them a billion times is the
+    // same as not running them at all.  So we don't!
+
+    println!("{}", state.join(""));
+}
+
+
+fn day16() {
+    let input = day16_input();
+    let state: Vec<&str> = "abcdefghijklmnop".split("").filter(|s| s.len() > 0).collect();
+    let moves: Vec<&str> = input.trim().split(",").collect();
+
+    day16_pt1(&mut state.clone(), &moves);
+    day16_pt2(&mut state.clone(), &moves);
+}
+
+fn day17_pt1() {
+    let step = 303;
+
+    let mut buf = vec!(0);
+    let mut pos = 0;
+
+    for r in 1..2018 {
+        pos = (pos + step + 1) % buf.len();
+        buf.insert(pos, r);
+    }
+
+
+    println!("{}", buf[pos + 1]);
+}
+
+fn day17_pt2() {
+    let step = 303;
+
+    let mut bufsize = 1;
+    let mut pos = 0;
+    let mut answer = 0;
+
+    // The insight here is that you don't need to store all values to know what
+    // comes after zero.  You'll know what it was 'cos you put it there...
+    for r in 1..50000001 {
+        pos = (pos + step) % bufsize;
+
+        if pos == 0 {
+            answer = r;
+        }
+
+        bufsize += 1;
+        pos += 1;
+    }
+
+
+    println!("{}", answer);
+}
+
+fn day17() {
+    day17_pt1();
+    day17_pt2();
+}
+
+*/
+
+///////////////// Day 18
+
+use std::collections::HashMap;
+
+const _SAMPLE_PROGRAM: &str = "
+set a 1
+add a 2
+mul a a
+mod a 5
+snd a
+set a 0
+rcv a
+jgz a -1
+set a 1
+jgz a -2
+";
+
+const _SAMPLE_PROGRAM_2: &str = "
+snd 1
+snd 2
+snd p
+rcv a
+rcv b
+rcv c
+rcv d
+";
+
+const DAY18_INPUT: &str = "
+set i 31
+set a 1
+mul p 17
+jgz p p
+mul a 2
+add i -1
+jgz i -2
+add a -1
+set i 127
+set p 618
+mul p 8505
+mod p a
+mul p 129749
+add p 12345
+mod p a
+set b p
+mod b 10000
+snd b
+add i -1
+jgz i -9
+jgz a 3
+rcv b
+jgz b -1
+set f 0
+set i 126
+rcv a
+rcv b
+set p a
+mul p -1
+add p b
+jgz p 4
+snd a
+set a b
+jgz 1 3
+snd b
+set f 1
+add i -1
+jgz i -11
+snd a
+jgz f -16
+jgz a -19
+";
+
+fn to_register(name: &str) -> char {
+    name.chars().nth(0).unwrap()
+}
+
+fn deref_value(value: &str, registers: &HashMap<char, i64>) -> i64 {
+    match to_register(value) {
+        r @ 'a'...'z' => {
+            *registers.get(&r).unwrap()
+        },
+        _ => { value.parse().unwrap() }
+    }
+}
+
+
+fn day18_pt1() {
+    let instructions: Vec<&str> = DAY18_INPUT.trim().split("\n").collect();
+
+    let mut registers = "abcdefghijklmnopqrstuvwxyz".chars().fold(HashMap::new(), |mut acc, register| {
+        acc.insert(register, 0);
+        acc
+    });
+
+    let mut pc: i64 = 0;
+    let mut last_snd: i64 = 0;
+    let mut recovered: Vec<i64> = Vec::new();
+
+    loop {
+        if pc < 0 || pc >= (instructions.len() as i64) {
+            break;
+        }
+
+        let instruction = instructions[pc as usize];
+
+        let bits: Vec<&str> = instruction.split(" ").collect();
+
+        match bits[0] {
+            "snd" => {
+                last_snd = deref_value(bits[1], &registers);
+            },
+            "set" => {
+                let value = deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[1]), value);
+            },
+            "add" => {
+                let new_value = deref_value(bits[1], &registers) + deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "mul" => {
+                let new_value = deref_value(bits[1], &registers) * deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "mod" => {
+                let new_value = deref_value(bits[1], &registers) % deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "rcv" => {
+                let x = deref_value(bits[1], &registers);
+
+                if x != 0 {
+                    recovered.push(last_snd);
+                    break;
+                }
+            },
+            "jgz" => {
+                let x = deref_value(bits[1], &registers);
+                let y = deref_value(bits[2], &registers);
+
+                if x > 0 {
+                    // Compensate for the increment we're going to get anyway.
+                    pc -= 1;
+                    pc += y;
+                }
+            },
+            _ => { panic!("WTF?!"); },
+        }
+
+        pc += 1;
+    }
+
+    println!("{:?}", recovered);
+}
+
+#[derive(PartialEq)]
+enum ProgramState {
+    RUNNING,
+    FINISHED,
+    WAITING,
+}
+
+struct Program {
+    program_id: i64,
+    instructions: Vec<&'static str>,
+    registers: HashMap<char, i64>,
+    send_count: usize,
+    pc: i64,
+    state: ProgramState,
+    outbox: Vec<i64>,
+    inbox: Vec<i64>,
+}
+
+impl Program {
+    fn new(instruction_text: &'static str, program_id: i64) -> Program {
+        Program {
+            program_id: program_id,
+            instructions: instruction_text.trim().split("\n").collect(),
+            registers: "abcdefghijklmnopqrstuvwxyz".chars().fold(HashMap::new(), |mut acc, register| {
+                acc.insert(register, if register == 'p' { program_id } else { 0 });
+                acc
+            }),
+            pc: 0,
+            send_count: 0,
+            state: ProgramState::RUNNING,
+            outbox: Vec::new(),
+            inbox: Vec::new(),
+        }
+    }
+
+    fn step(self: &mut Program) {
+        if self.state == ProgramState::FINISHED {
+            return;
+        }
+
+        let instruction = self.instructions[self.pc as usize];
+
+        // println!("{}: [{}] {}", self.program_id, self.pc, instruction);
+
+        let bits: Vec<&str> = instruction.split(" ").collect();
+
+        match bits[0] {
+            "snd" => {
+                let value = deref_value(bits[1], &self.registers);
+                self.send_count += 1;
+                self.outbox.push(value);
+            },
+            "set" => {
+                let value = deref_value(bits[2], &self.registers);
+                self.registers.insert(to_register(bits[1]), value);
+            },
+            "add" => {
+                let new_value = deref_value(bits[1], &self.registers) + deref_value(bits[2], &self.registers);
+                self.registers.insert(to_register(bits[1]), new_value);
+            },
+            "mul" => {
+                let new_value = deref_value(bits[1], &self.registers) * deref_value(bits[2], &self.registers);
+                self.registers.insert(to_register(bits[1]), new_value);
+            },
+            "mod" => {
+                let new_value = deref_value(bits[1], &self.registers) % deref_value(bits[2], &self.registers);
+                self.registers.insert(to_register(bits[1]), new_value);
+            },
+            "rcv" => {
+                if self.inbox.len() > 0 {
+                    let value = self.inbox.remove(0);
+                    // println!("{}: received {}", self.program_id, value);
+                    self.registers.insert(to_register(bits[1]), value);
+                    self.state = ProgramState::RUNNING;
+                } else {
+                    self.pc -= 1;
+                    self.state = ProgramState::WAITING;
+                }
+            },
+            "jgz" => {
+                let x = deref_value(bits[1], &self.registers);
+                let y = deref_value(bits[2], &self.registers);
+
+                if x > 0 {
+                    // Compensate for the increment we're going to get anyway.
+                    self.pc -= 1;
+                    self.pc += y;
+                }
+            },
+            _ => { panic!("WTF?!"); },
+        }
+
+        self.pc += 1;
+
+        if self.pc < 0 || self.pc >= (self.instructions.len() as i64) {
+            self.state = ProgramState::FINISHED;
+        }
+    }
+}
+
+fn day18_pt2() {
+    let mut p0 = Program::new(DAY18_INPUT, 0);
+    let mut p1 = Program::new(DAY18_INPUT, 1);
+
+    while p0.state == ProgramState::RUNNING || p1.state == ProgramState::RUNNING {
+        p0.step();
+        p1.step();
+
+        // Deliver mail!
+        while p0.outbox.len() > 0 { p1.inbox.push(p0.outbox.pop().unwrap()); }
+        while p1.outbox.len() > 0 { p0.inbox.push(p1.outbox.pop().unwrap()); }
+    }
+
+    println!("Program 1 sent {} times", p1.send_count);
+}
+
+
+fn day18() {
+    day18_pt1();
+    day18_pt2();
+}
+
+
 fn main() {
     // day1();
     // day2();
@@ -1305,5 +1935,10 @@ fn main() {
     // day10();
     // day11();
     // day12();
-    day13();
+    // day13();
+    // day14();
+    // day15();
+    // day16();
+    // day17();
+    day18();
 }
