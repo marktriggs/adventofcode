@@ -2400,8 +2400,6 @@ fn day20() {
 }
 
 
-*/
-
 ///////////////// Day 21
 
 // Abandoned!
@@ -2482,26 +2480,25 @@ fn day20() {
 use std::fs::File;
 use std::io::{BufReader, Read};
 
-
-fn flip(s: String) -> String {
-    s.split("/").map(|row| row.chars().rev().collect::<String>()).collect::<Vec<String>>().join("/")
+fn parse_grid(s: String) -> Vec<String> {
+    s.split("/").map(str::to_owned).collect()
 }
 
-// abc   gda
-// def   heb
-// ghi   ifc
+fn grid_str(grid: Vec<String>) -> String {
+    grid.join("/")
+}
+
+fn flip(s: String) -> String {
+    grid_str(parse_grid(s).iter().map(|row| row.chars().rev().collect::<String>()).collect())
+}
 
 fn rotate(s: String) -> String {
-    let mut bits: Vec<String> = s.split("/").map(str::to_owned).collect::<Vec<String>>();
-    bits.reverse();
+    let rows: Vec<String> = parse_grid(s);
+    let cols = rows[0].len();
 
-    (0..bits.len()).map (|i| {
-        let mut result = String::new();
-        for j in 0..bits.len() {
-            result.push(bits[j].chars().nth(i).unwrap());
-        }
-        result
-    }).collect::<Vec<String>>().join("/")
+    grid_str((0..cols).map (|c| {
+        (0..rows.len()).rev().map(|r| rows[r].chars().nth(c).unwrap()).collect()
+    }).collect())
 }
 
 fn permute(s: String) -> Vec<String> {
@@ -2544,7 +2541,6 @@ fn parse_input() -> Vec<Rule> {
         }
 
         let bits: Vec<String> = line.split(" => ").map(str::to_owned).collect();
-
         let (lhs, rhs) = (bits[0].clone(), bits[1].clone());
 
         rules.push(Rule { lhs: permute(lhs), rhs: rhs });
@@ -2566,48 +2562,55 @@ fn apply_rules(p: String, rules: &Vec<Rule>) -> String {
 }
 
 fn join_grids(grids: Vec<String>) -> String {
-    // println!("Join: {:?} with div {}", grids, divisor);
     if grids.len() == 1 {
         return grids[0].clone();
     }
 
     let n = (grids.len() as f64).sqrt() as usize;
 
-    // println!("Grid size will be {}x{}", n, n);
-
-    let inputs: Vec<Vec<String>> = grids.iter().map(|g| g.split("/").map(|r| r.to_owned()).collect()).collect();
+    let inputs: Vec<Vec<String>> = grids.iter().map(|g| {
+        parse_grid(g.to_owned())
+    }).collect();
 
     let mut result: Vec<String> = Vec::new();
 
     for chunk in inputs.chunks(n) {
         for i in 0..chunk[0].len() {
-            result.push((0..n).map(|j| chunk[j][i].clone()).collect::<Vec<String>>().join(""))
+            result.push((0..n).map(|j| chunk[j][i].clone()).collect::<String>())
         }
-        // println!("{:?}", chunk);
     }
 
-    result.join("/")
+    grid_str(result)
 }
 
-// AAA/AAA/AAA BBB/BBB/BBB CCC/CCC/CCC DDD/DDD/DDD
+fn extract_grids(p: String, len: usize) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
 
+    let rows: Vec<String> = parse_grid(p);
 
+    for next_rows in rows.chunks(len) {
+        let mut col = 0;
+        let cols = next_rows[0].len();
+        while col < cols {
+            let grid = grid_str(next_rows.iter().map(|s| {
+                (&s[col..col + len]).to_owned()
+            }).collect::<Vec<String>>());
 
+            result.push(grid);
 
-// AAABBB
-// AAABBB
-// AAABBB
-// CCCDDD
-// CCCDDD
-// CCCDDD
+            col += len;
+        }
+    }
+
+    result
+}
 
 fn next_pattern(p: String, rules: &Vec<Rule>) -> String {
     let len = p.split("/").nth(0).unwrap().len();
 
-    let divisor = if (len % 2) == 0 {
-        2
-    } else {
-        3
+    let divisor = match len % 2 {
+        0 => 2,
+        _ => 3,
     };
 
     let new_grids = extract_grids(p, divisor).iter().map(|ref g| apply_rules((*g).clone(), &rules)).collect();
@@ -2624,7 +2627,6 @@ fn day21_pt1() {
         pattern = next_pattern(pattern, &rules)
     }
 
-    // println!("Final pattern: {}", pattern);
     println!("Number of on pixels: {}", pattern.chars().filter(|&ch| ch == '#').count());
 }
 
@@ -2637,7 +2639,6 @@ fn day21_pt2() {
         pattern = next_pattern(pattern, &rules)
     }
 
-    // println!("Final pattern: {}", pattern);
     println!("Number of on pixels: {}", pattern.chars().filter(|&ch| ch == '#').count());
 }
 
@@ -2647,32 +2648,167 @@ fn day21() {
     day21_pt2();
 }
 
-fn extract_grids(p: String, len: usize) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
 
-    let rows: Vec<String> = p.split("/").map(str::to_owned).collect();
+*/
 
-    let mut row = 0;
-    while row < rows.len() {
-        let next_rows: Vec<String> = rows.iter().skip(row).take(len).cloned().collect();
+///////////////// Day 22
 
-        let mut col = 0;
-        let max = next_rows[0].len();
-        while col < max {
-            let grid: String = next_rows.iter().map(|s| {
-                (&s[col..col + len]).to_owned()
-            }).collect::<Vec<String>>().join("/");
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::collections::HashSet;
 
-            result.push(grid);
 
-            col += len;
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
+struct Pos (i64, i64);
+
+impl Pos {
+    fn add(&self, other: Pos) -> Pos {
+        Pos(self.0 + other.0, self.1 + other.1)
+    }
+}
+
+#[derive(Debug)]
+struct World {
+    infected_positions: HashSet<Pos>,
+    weakened_positions: HashSet<Pos>,
+    flagged_positions: HashSet<Pos>,
+}
+
+impl World {
+    fn from_input(path: &str) -> World {
+        let mut result = World {
+            infected_positions: HashSet::new(),
+            weakened_positions: HashSet::new(),
+            flagged_positions: HashSet::new(),
+        };
+
+        let f = File::open(path).expect("open file");
+        let mut br = BufReader::new(f);
+
+        let mut input = String::new();
+        br.read_to_string(&mut input).unwrap();
+
+        let rows: Vec<String> = input.split("\n").map(str::to_owned).collect();
+        let height = rows.len() as i64;
+        let width = rows[0].len() as i64;
+
+        let mut y = (height - 1) / 2;
+        for row in rows {
+            let mut x = -((width - 1) / 2);
+            for ch in row.chars() {
+                if ch == '#' {
+                    result.infected_positions.insert(Pos(x, y));
+                }
+                x += 1;
+            }
+
+            y -= 1;
         }
 
-        row += len;
+        result
     }
 
-    result
+    fn is_infected(&self, pos: &Pos) -> bool { self.infected_positions.contains(&pos) }
+    fn is_flagged(&self, pos: &Pos) -> bool { self.flagged_positions.contains(&pos) }
+    fn is_weakened(&self, pos: &Pos) -> bool { self.weakened_positions.contains(&pos) }
+
+    fn clean_node(&mut self, pos: &Pos) {
+        self.infected_positions.remove(pos);
+        self.weakened_positions.remove(pos);
+        self.flagged_positions.remove(pos);
+    }
+
+    fn infect_node(&mut self, pos: &Pos) {
+        self.clean_node(pos);
+        self.infected_positions.insert((*pos).clone());
+    }
+
+    fn flag_node(&mut self, pos: &Pos) {
+        self.clean_node(pos);
+        self.flagged_positions.insert((*pos).clone());
+    }
+
+    fn weaken_node(&mut self, pos: &Pos) {
+        self.clean_node(pos);
+        self.weakened_positions.insert((*pos).clone());
+    }
 }
+
+
+fn add_clamped(n: usize, offset: i64, max: usize) -> usize {
+    let r = n as i64 + offset;
+
+    if r >= 0 {
+        r as usize % max
+    } else {
+        (max as i64 + (r % max as i64)) as usize
+    }
+}
+
+fn day22_pt1() {
+    let mut world = World::from_input("advent-files/day22_input.txt");
+
+    // up, right, down, left
+    let orientations = vec!(Pos(0, 1), Pos(1, 0), Pos(0, -1), Pos(-1, 0));
+
+    let mut current_orientation = 0;
+    let mut position = Pos(0, 0);
+    let mut infected_count = 0;
+
+    for _ in 0..10000 {
+        if world.is_infected(&position) {
+            current_orientation = add_clamped(current_orientation, 1, orientations.len());
+            world.clean_node(&position);
+        } else {
+            current_orientation = add_clamped(current_orientation, -1, orientations.len());
+            world.infect_node(&position);
+            infected_count += 1;
+        }
+
+        position = position.add(orientations[current_orientation])
+    }
+
+    println!("Nodes infected: {}", infected_count);
+}
+
+fn day22_pt2() {
+    let mut world = World::from_input("advent-files/day22_input.txt");
+
+    // up, right, down, left
+    let orientations = vec!(Pos(0, 1), Pos(1, 0), Pos(0, -1), Pos(-1, 0));
+
+    let mut current_orientation = 0;
+    let mut position = Pos(0, 0);
+    let mut infected_count = 0;
+
+    for _ in 0..10000000 {
+        if world.is_weakened(&position) {
+            world.infect_node(&position);
+            infected_count += 1;
+        } else if world.is_infected(&position) {
+            current_orientation = add_clamped(current_orientation, 1, orientations.len());
+            world.flag_node(&position);
+        } else if world.is_flagged(&position) {
+            current_orientation = add_clamped(current_orientation, 2, orientations.len());
+            world.clean_node(&position);
+        } else {
+            current_orientation = add_clamped(current_orientation, -1, orientations.len());
+            world.weaken_node(&position);
+        }
+
+        position = position.add(orientations[current_orientation])
+    }
+
+    println!("Nodes infected: {}", infected_count);
+}
+
+
+fn day22() {
+    day22_pt1();
+    day22_pt2();
+}
+
+
 
 fn main() {
     // day1();
@@ -2695,6 +2831,6 @@ fn main() {
     // day18();
     // day19();
     // day20();
-
-    day21();
+    // day21();
+    day22();
 }
