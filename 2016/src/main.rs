@@ -402,8 +402,6 @@ fn day5() {
     day5_pt2();
 }
 
-*/
-
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::collections::HashMap;
@@ -460,6 +458,100 @@ fn day6() {
     day6_pt2();
 }
 
+*/
+
+
+extern crate regex;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use regex::Regex;
+
+fn outer_bit(addr: String) -> String {
+    let pattern = Regex::new(r"\[.*?\]").unwrap();
+
+    pattern.replace_all(&addr, " ").to_string()
+}
+
+fn inner_bit(addr: String) -> String {
+    let pattern_start = Regex::new(r"^.*?\[").unwrap();
+    let pattern_middle = Regex::new(r"\].*?\[").unwrap();
+    let pattern_end = Regex::new(r"\].*?$").unwrap();
+
+    [pattern_start, pattern_middle, pattern_end].iter().fold(addr, |a, pattern| {
+        pattern.replace_all(&a, " ").into_owned()
+    })
+}
+
+
+fn has_abba(s: &str) -> bool {
+    let chars: Vec<char> = s.chars().collect();
+
+    for i in 0..((chars.len() - 4) + 1) {
+        if chars[i] == chars[i + 3] && chars[i + 1] == chars[i + 2] && chars[i] != chars[i + 1] {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn supports_tls(addr: String) -> bool {
+    has_abba(&outer_bit(addr.clone())) && !has_abba(&inner_bit(addr.clone()))
+}
+
+fn supports_ssl(addr: String) -> bool {
+    let outer = outer_bit(addr.clone()).chars().collect::<Vec<char>>();
+    let inner = inner_bit(addr.clone()).chars().collect::<Vec<char>>();
+
+    // N^2 yay!
+    for i in 0..((outer.len() - 3) + 1) {
+        if outer[i] != outer[i + 1] && outer[i] == outer[i + 2] {
+            for j in 0..((inner.len() - 3) + 1) {
+                if inner[j] == outer[i + 1] && inner[j + 2] == outer[i + 1] && inner[j + 1] == outer[i] {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn day7_pt1() {
+    let mut count = 0;
+    let f = File::open("advent-files/day7_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        if supports_tls(line.clone()) {
+            count += 1;
+        }
+    }
+
+    println!("Count was: {}", count);
+
+}
+
+fn day7_pt2() {
+    let mut count = 0;
+    let f = File::open("advent-files/day7_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        if supports_ssl(line.clone()) {
+            count += 1;
+        }
+    }
+
+    println!("Count was: {}", count);
+
+}
+
+fn day7() {
+    day7_pt1();
+    day7_pt2();
+}
 
 fn main() {
     // day1();
@@ -467,6 +559,7 @@ fn main() {
     // day3();
     // day4();
     // day5();
+    // day6();
 
-    day6();
+    day7();
 }
