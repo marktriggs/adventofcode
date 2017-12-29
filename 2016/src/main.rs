@@ -233,8 +233,6 @@ fn day3() {
 }
 
 
-*/
-
 extern crate regex;
 use regex::Regex;
 use std::fs::File;
@@ -326,11 +324,149 @@ fn day4() {
     day4_pt2();
 }
 
+extern crate crypto;
+
+use crypto::md5::Md5;
+use crypto::digest::Digest;
+
+
+fn day5_pt1() {
+    let input = "abbhdwsy";
+    let mut i: usize = 0;
+
+    let mut md5 = Md5::new();
+    let mut out = vec![0; md5.output_bytes()];
+
+    let mut password = Vec::new();
+
+    loop {
+        md5.reset();
+        md5.input_str(input);
+        md5.input_str(&i.to_string());
+
+        md5.result(&mut out);
+
+        if out[0] == 0 && out[1] == 0 && out[2] >> 4 == 0 {
+            password.push(format!("{:x}", out[2] & 0xF));
+            if password.len() == 8 {
+                break;
+            }
+        }
+
+        i += 1;
+    }
+
+    println!("The password is {}", password.join(""));
+}
+
+fn day5_pt2() {
+    let input = "abbhdwsy";
+    let mut i: usize = 0;
+
+    let mut md5 = Md5::new();
+    let mut out = vec![0; md5.output_bytes()];
+
+    let mut password = vec!["".to_owned(); 8];
+    let mut chars_found = 0;
+
+    loop {
+        md5.reset();
+        md5.input_str(input);
+        md5.input_str(&i.to_string());
+
+        md5.result(&mut out);
+
+        if out[0] == 0 && out[1] == 0 && out[2] >> 4 == 0 {
+            let position = out[2] & 0xF;
+
+            if position < 8 && password[position as usize] == "" {
+                password[position as usize] = format!("{:x}", out[3] >> 4);
+                chars_found += 1;
+
+                if chars_found == 8 {
+                    break;
+                }
+            }
+        }
+
+        i += 1;
+    }
+
+    println!("The password is {}", password.join(""));
+}
+
+
+
+fn day5() {
+    day5_pt1();
+    day5_pt2();
+}
+
+*/
+
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use std::collections::HashMap;
+
+
+fn day6_pt1() {
+    let mut frequencies: Vec<HashMap<char, usize>> = (0..8).map(|_| HashMap::new()).collect();
+
+    let f = File::open("advent-files/day6_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        for (i, ch) in line.chars().enumerate() {
+            let e = frequencies[i].entry(ch).or_insert(0);
+            *e += 1
+        }
+    }
+
+    for i in 0..8 {
+        let mut char_counts = frequencies[i].iter().collect::<Vec<(&char, &usize)>>();
+
+        char_counts.sort_by_key(|&(_, count)| -(*count as i64));
+        print!("{}", char_counts[0].0);
+    }
+
+    println!("");
+}
+
+fn day6_pt2() {
+    let mut frequencies: Vec<HashMap<char, usize>> = (0..8).map(|_| HashMap::new()).collect();
+
+    let f = File::open("advent-files/day6_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        for (i, ch) in line.chars().enumerate() {
+            let e = frequencies[i].entry(ch).or_insert(0);
+            *e += 1
+        }
+    }
+
+    for i in 0..8 {
+        let mut char_counts = frequencies[i].iter().collect::<Vec<(&char, &usize)>>();
+
+        char_counts.sort_by_key(|&(_, count)| *count as i64);
+        print!("{}", char_counts[0].0);
+    }
+
+    println!("");
+}
+
+fn day6() {
+    day6_pt1();
+    day6_pt2();
+}
+
 
 fn main() {
     // day1();
     // day2();
     // day3();
+    // day4();
+    // day5();
 
-    day4();
+    day6();
 }

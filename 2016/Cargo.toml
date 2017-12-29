@@ -1,7 +1,8 @@
 [package]
-name = "adventofcode2017"
+name = "adventofcode2016"
 version = "0.1.0"
 authors = ["Mark Triggs <mark@dishevelled.net>"]
 
 [dependencies]
 regex = "0.2"
+rust-crypto = "^0.2"
