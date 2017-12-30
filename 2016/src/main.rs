@@ -458,8 +458,7 @@ fn day6() {
     day6_pt2();
 }
 
-*/
-
+///////////////// Day 7
 
 extern crate regex;
 
@@ -553,6 +552,79 @@ fn day7() {
     day7_pt2();
 }
 
+*/
+
+///////////////// Day 8
+
+extern crate regex;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use regex::Regex;
+
+const SCREEN_WIDTH: usize = 50;
+const SCREEN_HEIGHT: usize = 6;
+
+type Screen = Vec<Vec<char>>;
+
+fn fill_rect(screen: &mut Screen, width: usize, height: usize) {
+    for y in 0..height {
+        for x in 0..width {
+            screen[y][x] = '#';
+        }
+    }
+}
+
+fn rotate_column(screen: &mut Screen, target_column: usize, offset: usize) {
+    let values = (0..SCREEN_HEIGHT).map(|y| screen[y][target_column]).collect::<Vec<char>>();
+    let mut rotated = values.iter().chain(values.iter()).skip(SCREEN_HEIGHT - offset).take(SCREEN_HEIGHT).cloned().collect::<Vec<char>>();
+
+    for y in 0..SCREEN_HEIGHT {
+        screen[y][target_column] = rotated.remove(0);
+    }
+}
+
+fn rotate_row(screen: &mut Screen, target_row: usize, offset: usize) {
+    let values = (0..SCREEN_WIDTH).map(|x| screen[target_row][x]).collect::<Vec<char>>();
+    let mut rotated = values.iter().chain(values.iter()).skip(SCREEN_WIDTH - offset).take(SCREEN_WIDTH).cloned().collect::<Vec<char>>();
+
+    for x in 0..SCREEN_WIDTH {
+        screen[target_row][x] = rotated.remove(0);
+    }
+}
+
+fn show(screen: &Screen) {
+    for row in screen {
+        println!("{}", row.iter().map(|&ch| if ch == '#' { '#' } else { ' '}).collect::<String>());
+    }
+}
+
+fn day8() {
+    let mut screen: Screen = (0..SCREEN_HEIGHT).map(|_| vec!['.'; SCREEN_WIDTH]).collect();
+
+    let rect_command = Regex::new(r"rect (\d+)x(\d+)").unwrap();
+    let row_rotate_command = Regex::new(r"rotate row y=(\d+) by (\d+)").unwrap();
+    let column_rotate_command = Regex::new(r"rotate column x=(\d+) by (\d+)").unwrap();
+
+    let f = File::open("advent-files/day8_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        if let Some(args) = rect_command.captures(&line) {
+            fill_rect(&mut screen, args[1].parse().unwrap(), args[2].parse().unwrap())
+        } else if let Some(args) = row_rotate_command.captures(&line) {
+            rotate_row(&mut screen, args[1].parse().unwrap(), args[2].parse().unwrap());
+        } else if let Some(args) = column_rotate_command.captures(&line) {
+            rotate_column(&mut screen, args[1].parse().unwrap(), args[2].parse().unwrap());
+        }
+    }
+
+    show(&screen);
+
+    println!("Lit pixels: {}", screen.iter().flat_map(|row| row.iter().filter(|&&ch| ch == '#')).count());
+}
+
+
 fn main() {
     // day1();
     // day2();
@@ -560,6 +632,7 @@ fn main() {
     // day4();
     // day5();
     // day6();
+    // day7();
 
-    day7();
+    day8();
 }
