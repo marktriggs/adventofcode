@@ -552,8 +552,6 @@ fn day7() {
     day7_pt2();
 }
 
-*/
-
 ///////////////// Day 8
 
 extern crate regex;
@@ -624,6 +622,121 @@ fn day8() {
     println!("Lit pixels: {}", screen.iter().flat_map(|row| row.iter().filter(|&&ch| ch == '#')).count());
 }
 
+*/
+
+///////////////// Day 9
+
+use std::fs::File;
+use std::io::{Read, BufReader};
+
+fn read_number(input: &mut Vec<char>) -> usize {
+    let mut s = String::new();
+
+    while !input.is_empty() {
+        let ch = input[0];
+
+        if ch.is_digit(10) {
+            s.push(input.remove(0));
+        } else {
+            break;
+        }
+    }
+
+    s.parse::<usize>().unwrap()
+}
+
+fn read_marker(input: &mut Vec<char>) -> (usize, usize) {
+    input.remove(0);            // Skip (
+    let len = read_number(input);
+    input.remove(0);            // Skip x
+    let repeats = read_number(input);
+    input.remove(0);            // Skip )
+
+    (len, repeats)
+}
+
+fn decompress_pt1(s: String) -> String {
+    let mut result: Vec<char> = Vec::new();
+    let mut input = s.chars().collect::<Vec<char>>();
+
+    while !input.is_empty() {
+        let ch = input[0];
+
+        if ch == '(' {
+            let (len, repeats) = read_marker(&mut input);
+
+            for _ in 0..repeats {
+                for i in 0..len {
+                    result.push(input[i]);
+                }
+            }
+
+            for _ in 0..len {
+                input.remove(0);
+            }
+        } else {
+            result.push(input.remove(0));
+        }
+    }
+
+    result.iter().collect::<String>()
+}
+
+fn decompressed_length(s: String) -> usize {
+    let mut input = s.chars().collect::<Vec<char>>();
+    let mut result = 0;
+
+    while !input.is_empty() {
+        let ch = input[0];
+
+        if ch == '(' {
+            let (len, repeats) = read_marker(&mut input);
+
+            let decompressed_len = decompressed_length(input[0..len].iter().collect::<String>());
+
+            for _ in 0..len {
+                input.remove(0);
+            }
+
+            result += repeats * decompressed_len
+        } else {
+            input.remove(0);
+            result += 1;
+        }
+    }
+
+    result
+}
+
+
+fn day9_pt1() {
+    let f = File::open("advent-files/day9_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    input = input.trim().to_owned();
+    println!("input length: {}", input.len());
+    println!("Decompressed length: {}", decompress_pt1(input).len());
+}
+
+fn day9_pt2() {
+    let f = File::open("advent-files/day9_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    input = input.trim().to_owned();
+
+    println!("input length: {}", input.len());
+    println!("Decompressed length: {}", decompressed_length(input));
+}
+
+fn day9() {
+    day9_pt1();
+    // 26606220610: too high
+    day9_pt2();
+}
 
 fn main() {
     // day1();
@@ -633,6 +746,7 @@ fn main() {
     // day5();
     // day6();
     // day7();
+    // day8();
 
-    day8();
+    day9();
 }
