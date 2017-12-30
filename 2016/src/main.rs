@@ -622,7 +622,6 @@ fn day8() {
     println!("Lit pixels: {}", screen.iter().flat_map(|row| row.iter().filter(|&&ch| ch == '#')).count());
 }
 
-*/
 
 ///////////////// Day 9
 
@@ -738,6 +737,128 @@ fn day9() {
     day9_pt2();
 }
 
+*/
+
+///////////////// Day 10
+
+extern crate regex;
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use regex::Regex;
+use std::collections::HashMap;
+
+
+type BucketValues = HashMap<String, Vec<String>>;
+
+#[derive(PartialEq, Eq, Debug)]
+enum BotOrOutput {
+    BOT,
+    OUTPUT,
+}
+
+#[derive(Debug)]
+struct Rule {
+    low_to: String,
+    low_type: BotOrOutput,
+    high_to: String,
+    high_type: BotOrOutput,
+    hit: bool,
+}
+
+fn day10() {
+    let simple_assignment = Regex::new(r"value (\d+) goes to bot (\d+)").unwrap();
+    let rule = Regex::new(r"bot (\d+) gives low to (bot|output) (\d+) and high to (bot|output) (\d+)").unwrap();
+
+    let mut bot_values: BucketValues = HashMap::new();
+    let mut output_values: BucketValues = HashMap::new();
+    let mut rules: HashMap<String, Rule> = HashMap::new();
+
+    let f = File::open("advent-files/day10_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for line in br.lines().map(Result::unwrap) {
+        if let Some(args) = simple_assignment.captures(&line) {
+            let mut e = bot_values.entry(args[2].to_owned()).or_insert(Vec::new());
+            e.push(args[1].to_owned());
+        } else if let Some(args) = rule.captures(&line) {
+            bot_values.entry(args[3].to_owned()).or_insert(Vec::new());
+            bot_values.entry(args[5].to_owned()).or_insert(Vec::new());
+            output_values.entry(args[3].to_owned()).or_insert(Vec::new());
+            output_values.entry(args[5].to_owned()).or_insert(Vec::new());
+
+
+            rules.insert(args[1].to_owned(),
+                         Rule {
+                             low_to: args[3].to_owned(),
+                             low_type: if &args[2] == "bot" { BotOrOutput::BOT } else { BotOrOutput::OUTPUT },
+                             high_to: args[5].to_owned(),
+                             high_type: if &args[4] == "bot" { BotOrOutput::BOT } else { BotOrOutput::OUTPUT },
+                             hit: false,
+                         });
+        }
+    }
+
+    println!("Rules: {:#?}", rules);
+
+    let bots: Vec<String> = bot_values.keys().cloned().collect();
+
+    loop {
+        let mut progressed = false;
+
+        for bot in &bots {
+            if bot_values[bot].len() > 2 {
+                panic!("Eh?");
+            }
+
+            if bot_values[bot].len() == 2 {
+                let rule = rules.get_mut(bot).unwrap();
+
+                if rule.hit {
+                    continue;
+                }
+
+                progressed = true;
+
+                // Apply our rule
+                bot_values.get_mut(bot).unwrap().sort_by_key(|s| s.parse::<usize>().unwrap());
+                let lower = &bot_values[bot][0].clone();
+                let higher = &bot_values[bot][1].clone();
+
+
+                if lower == "17" && higher == "61" {
+                    println!("Target microchips handled by bot: {}", bot);
+                }
+
+                if rule.low_type == BotOrOutput::BOT {
+                    bot_values.get_mut(&rule.low_to).unwrap().push(lower.clone());
+                } else {
+                    output_values.get_mut(&rule.low_to).unwrap().push(lower.clone());
+                }
+
+                if rule.high_type == BotOrOutput::BOT {
+                    bot_values.get_mut(&rule.high_to).unwrap().push(higher.clone());
+                } else {
+                    output_values.get_mut(&rule.high_to).unwrap().push(higher.clone());
+                }
+
+                bot_values.get_mut(bot).unwrap().clear();
+
+                rule.hit = true;
+
+                break;
+            }
+        }
+
+        if !progressed {
+            break;
+        }
+    }
+
+    println!("OUTPUT BINS: {:#?}", output_values);
+    // println!("BOTS: {:#?}", bot_values);
+}
+
+
 fn main() {
     // day1();
     // day2();
@@ -747,6 +868,8 @@ fn main() {
     // day6();
     // day7();
     // day8();
+    // day9();
 
-    day9();
+    // Not 53
+    day10();
 }
