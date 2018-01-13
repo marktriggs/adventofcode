@@ -737,8 +737,6 @@ fn day9() {
     day9_pt2();
 }
 
-*/
-
 ///////////////// Day 10
 
 extern crate regex;
@@ -858,6 +856,271 @@ fn day10() {
     // println!("BOTS: {:#?}", bot_values);
 }
 
+*/
+
+///////////////// Day 11
+
+use std::collections::HashMap;
+use std::collections::HashSet;
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug, Hash)]
+enum GizmoType {
+    GENERATOR,
+    MICROCHIP,
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug, Hash)]
+enum Chemical {
+    THULIUM,
+    PLUTONIUM,
+    STRONTIUM,
+    PROMETHIUM,
+    RUTHENIUM,
+    ELERIUM,
+    DILITHIUM,
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug, Hash)]
+struct Gizmo {
+    chemical: Chemical,
+    gizmo_type: GizmoType
+}
+
+type Floor = HashSet<Gizmo>;
+
+#[derive(Clone)]
+struct State {
+    elevator_position: usize,
+    floors: Vec<Floor>,
+}
+
+impl std::fmt::Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "State {{ at_floor: {}, floors:\n{} }}",
+               self.elevator_position,
+               self.floors.iter().map(|floor| {
+                   format!("[{}]",
+                           floor.iter().map(|gizmo| format!("{:?}", gizmo)).collect::<Vec<String>>().join(", "))
+               }).collect::<Vec<String>>().join("\n"))
+    }
+}
+
+
+fn floor_is_valid(floor: &Floor) -> bool {
+    for m in floor {
+        if m.gizmo_type != GizmoType::MICROCHIP {
+            continue;
+        }
+
+        let mut protected = false;
+        let mut irradiated = false;
+
+        for g in floor {
+            if g.gizmo_type != GizmoType::GENERATOR {
+                continue;
+            }
+
+            if g.chemical == m.chemical {
+                protected = true;
+            } else {
+                irradiated = true;
+            }
+        }
+
+        if !protected && irradiated {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn next_states(state: &State, seen_states: &mut HashSet<String>) -> Vec<State> {
+    let mut result: Vec<State> = Vec::new();
+
+    for move_direction in [-1, 1].iter() {
+        let current_elevator_position = state.elevator_position;
+        let new_elevator_position = (current_elevator_position as i32) + move_direction;
+
+        if new_elevator_position < 0 || new_elevator_position > 3 {
+            continue;
+        }
+
+        let new_elevator_position = new_elevator_position as usize;
+
+        for g1 in &state.floors[current_elevator_position] {
+            for g2 in &state.floors[current_elevator_position] {
+
+                if g2 < g1 {
+                    continue;
+                }
+
+                let mut old_floor = state.floors[current_elevator_position].clone();
+                let mut new_floor = state.floors[new_elevator_position].clone();
+
+                if g1 == g2 {
+                    old_floor.remove(g1);
+                    new_floor.insert(g1.clone());
+                } else {
+                    old_floor.remove(g1);
+                    old_floor.remove(g2);
+                    new_floor.insert(g1.clone());
+                    new_floor.insert(g2.clone());
+                }
+
+                if floor_is_valid(&old_floor) && floor_is_valid(&new_floor) {
+                    // Possible new state!
+                    let mut new_state = state.clone();
+
+                    new_state.floors[current_elevator_position] = old_floor;
+                    new_state.floors[new_elevator_position] = new_floor;
+                    new_state = new_state;
+
+                    new_state.elevator_position = new_elevator_position as usize;
+
+                    let c = canonicalize(&new_state);
+
+                    if !seen_states.contains(&c) {
+                        seen_states.insert(c);
+                        result.push(new_state);
+                    }
+                }
+            }
+        }
+    }
+
+    result
+}
+
+fn state_solved(state: &State) -> bool {
+    (state.floors[0].len() + state.floors[1].len() + state.floors[2].len()) == 0
+}
+
+fn canonicalize(state: &State) -> String {
+    let mut result = String::with_capacity(64);
+
+    result.push_str("[");
+    result.push_str(&state.elevator_position.to_string());
+    result.push_str("]");
+
+    let mut mapping: HashMap<&Chemical, usize> = HashMap::new();
+    let mut count = 0;
+
+    for floor in &state.floors {
+        let mut codes: Vec<String> = Vec::new();
+
+        for gizmo in floor {
+            if !mapping.contains_key(&gizmo.chemical) {
+                count += 1;
+                mapping.insert(&gizmo.chemical, count);
+            }
+
+            if gizmo.gizmo_type == GizmoType::GENERATOR {
+                codes.push(mapping.get(&gizmo.chemical).unwrap().to_string() + "G");
+            } else {
+                codes.push(mapping.get(&gizmo.chemical).unwrap().to_string() + "M");
+            }
+        }
+        result.push_str("[");
+        codes.sort();
+        for c in codes.iter() {
+            result.push_str(c);
+            result.push_str(" ");
+        }
+        result.push_str("]");
+    }
+
+    result
+}
+
+fn day11_pt1_state() -> State {
+    let mut state = State {
+        elevator_position: 0,
+        floors: Vec::new()
+    };
+
+    for _ in 0..4 {
+        state.floors.push(Floor::new());
+    }
+
+    state.floors[0].insert(Gizmo { chemical: Chemical::THULIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::THULIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[0].insert(Gizmo { chemical: Chemical::PLUTONIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::STRONTIUM, gizmo_type: GizmoType::GENERATOR});
+
+    state.floors[1].insert(Gizmo { chemical: Chemical::PLUTONIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[1].insert(Gizmo { chemical: Chemical::STRONTIUM, gizmo_type: GizmoType::MICROCHIP});
+
+    state.floors[2].insert(Gizmo { chemical: Chemical::PROMETHIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[2].insert(Gizmo { chemical: Chemical::PROMETHIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[2].insert(Gizmo { chemical: Chemical::RUTHENIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[2].insert(Gizmo { chemical: Chemical::RUTHENIUM, gizmo_type: GizmoType::MICROCHIP});
+
+    state
+}
+
+fn day11_pt2_state() -> State {
+    let mut state = State {
+        elevator_position: 0,
+        floors: Vec::new()
+    };
+
+    for _ in 0..4 {
+        state.floors.push(Floor::new());
+    }
+
+    state.floors[0].insert(Gizmo { chemical: Chemical::THULIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::THULIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[0].insert(Gizmo { chemical: Chemical::PLUTONIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::STRONTIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::ELERIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::ELERIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[0].insert(Gizmo { chemical: Chemical::DILITHIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[0].insert(Gizmo { chemical: Chemical::DILITHIUM, gizmo_type: GizmoType::MICROCHIP});
+
+
+    state.floors[1].insert(Gizmo { chemical: Chemical::PLUTONIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[1].insert(Gizmo { chemical: Chemical::STRONTIUM, gizmo_type: GizmoType::MICROCHIP});
+
+    state.floors[2].insert(Gizmo { chemical: Chemical::PROMETHIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[2].insert(Gizmo { chemical: Chemical::PROMETHIUM, gizmo_type: GizmoType::MICROCHIP});
+    state.floors[2].insert(Gizmo { chemical: Chemical::RUTHENIUM, gizmo_type: GizmoType::GENERATOR});
+    state.floors[2].insert(Gizmo { chemical: Chemical::RUTHENIUM, gizmo_type: GizmoType::MICROCHIP});
+
+    state
+}
+
+
+fn day11_run(state: State) {
+    let mut states: Vec<State> = vec!(state);
+    let mut steps = 0;
+
+    let mut seen_states: HashSet<String> = HashSet::new();
+
+    while !states.iter().any(|state| state_solved(state)) {
+        steps += 1;
+
+        println!("Up to {} possible states", states.len());
+
+        let mut new_states = Vec::new();
+
+        for state in &states {
+            new_states.extend(next_states(&state, &mut seen_states));
+        }
+
+        states = new_states;
+    }
+
+    println!("That took {} steps", steps);
+    println!("");
+
+}
+
+fn day11() {
+    day11_run(day11_pt1_state());
+    day11_run(day11_pt2_state());
+}
+
 
 fn main() {
     // day1();
@@ -869,7 +1132,7 @@ fn main() {
     // day7();
     // day8();
     // day9();
+    // day10();
 
-    // Not 53
-    day10();
+    day11();
 }
