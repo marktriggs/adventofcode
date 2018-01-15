@@ -6,3 +6,4 @@ authors = ["Mark Triggs <mark@dishevelled.net>"]
 [dependencies]
 regex = "0.2"
 rust-crypto = "^0.2"
+lazy_static = "1.0.0"
