@@ -856,7 +856,6 @@ fn day10() {
     // println!("BOTS: {:#?}", bot_values);
 }
 
-*/
 
 ///////////////// Day 11
 
@@ -1121,6 +1120,283 @@ fn day11() {
     day11_run(day11_pt2_state());
 }
 
+///////////////// Day 12
+
+use std::collections::HashMap;
+
+// todo: NOP?
+const DAY12_INPUT: &str = "
+cpy 1 a
+cpy 1 b
+cpy 26 d
+jnz c 2
+jnz 1 5
+cpy 7 c
+inc d
+dec c
+jnz c -2
+cpy a c
+inc a
+dec b
+jnz b -2
+cpy c b
+dec d
+jnz d -6
+cpy 19 c
+cpy 11 d
+inc a
+dec d
+jnz d -2
+dec c
+jnz c -5
+";
+
+
+fn to_register(name: &str) -> char {
+    name.chars().nth(0).unwrap()
+}
+
+fn deref_value(value: &str, registers: &HashMap<char, i64>) -> i64 {
+    match to_register(value) {
+        r @ 'a'...'z' => {
+            *registers.get(&r).unwrap()
+        },
+        _ => { value.parse().unwrap() }
+    }
+}
+
+
+fn day12_pt1() {
+    let instructions: Vec<&str> = DAY12_INPUT.trim().split("\n").map(|s| {
+        if &s[0..1] == "#" {
+            "nop"
+        } else {
+            s
+        }}).collect();
+
+    let mut registers = "abcd".chars().fold(HashMap::new(), |mut acc, register| {
+        if register == 'c' {
+            acc.insert(register, 1);
+        } else {
+            acc.insert(register, 0);
+        }
+        acc
+    });
+
+    let mut pc: i64 = 0;
+
+    loop {
+        if pc < 0 || pc >= (instructions.len() as i64) {
+            break;
+        }
+
+        let instruction = instructions[pc as usize];
+
+        if pc == 31 {
+            println!("{}: {:?}", pc, instruction);
+            println!("{:?}", &registers);
+        }
+
+
+        let bits: Vec<&str> = instruction.split(" ").collect();
+
+        match bits[0] {
+            "cpy" => {
+                let value = deref_value(bits[1], &registers);
+                registers.insert(to_register(bits[2]), value);
+            },
+            "nop" => {},
+            "inc" => {
+                let new_value = deref_value(bits[1], &registers) + 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "dec" => {
+                let new_value = deref_value(bits[1], &registers) - 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "jnz" => {
+                let x = deref_value(bits[1], &registers);
+                let y = deref_value(bits[2], &registers);
+
+                if x != 0 {
+                    // Compensate for the increment we're going to get anyway.
+                    pc -= 1;
+                    pc += y;
+
+                //println!("Post jump: {:?}", &registers);
+
+                }
+            },
+            _ => { panic!("WTF?!"); },
+        }
+
+        pc += 1;
+    }
+
+    println!("Final state: {:?}", &registers);
+}
+
+
+fn day12() {
+    day12_pt1();
+}
+
+*/
+
+///////////////// Day 13
+
+#[macro_use]
+extern crate lazy_static;
+
+use std::collections::HashMap;
+
+// Build a lookup table for our bytes
+lazy_static! {
+    static ref BYTE_COUNTS: HashMap<u8, usize> = {
+        let mut m = HashMap::new();
+
+        for i in 0..256 {
+            let mut byte = i as u8;
+
+            let mut count = 0;
+
+            while byte > 0 {
+                if (byte & 1) == 1 {
+                    count += 1;
+                }
+
+                byte = byte >> 1
+            }
+
+            m.insert(i as u8, count);
+        }
+
+        m
+    };
+}
+
+
+fn count_set_bits(byte: u8) -> usize {
+    *BYTE_COUNTS.get(&byte).unwrap()
+}
+
+fn is_wall(x: usize, y: usize) -> bool {
+    let n = x*x + 3*x + 2*x*y + y + y*y + 1362;
+
+    let bit_count = count_set_bits(n as u8) +
+        count_set_bits((n >> 8) as u8) +
+        count_set_bits((n >> 16) as u8) +
+        count_set_bits((n >> 24) as u8);
+
+    (bit_count % 2 != 0)
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Node(usize, usize);
+
+fn surrounding_nodes(node: Node, walls: &Vec<Vec<bool>>) -> Vec<Node> {
+    let mut result: Vec<Node> = Vec::new();
+
+    for &(xoff, yoff) in [(-1, 0), (1, 0), (0, -1), (0, 1)].iter() {
+        let new_x = node.0 as i64 + xoff;
+        let new_y = node.1 as i64 + yoff;
+
+        if new_x >= 0 && new_y >= 0 &&
+            (new_y as usize) < walls.len() && (new_x as usize) < walls[0].len() &&
+            !walls[new_x as usize][new_y as usize] {
+            result.push(Node(new_x as usize, new_y as usize));
+        }
+    }
+
+    result
+}
+
+fn day13_pt1() {
+    let size = 1000;
+
+    let mut walls: Vec<Vec<bool>> = (0..size).map(|_row| vec!(false; size)).collect();
+    let mut path_lengths: Vec<Vec<usize>> = (0..size).map(|_row| vec!(std::usize::MAX; size)).collect();
+
+    for x in 0..size {
+        for y in 0..size {
+            walls[x][y] = is_wall(x, y);
+        }
+    }
+
+    // We can get to our target from our target trivially
+    path_lengths[31][39] = 0;
+
+    let mut nodes_to_expand = vec!(Node(31, 39));
+
+    while !nodes_to_expand.is_empty() {
+        let node = nodes_to_expand.pop().unwrap();
+
+        let surrounding = surrounding_nodes(node, &walls);
+        let my_length = path_lengths[node.0][node.1];
+
+        for Node(x, y) in surrounding {
+            if my_length + 1 < path_lengths[x][y] {
+                // println!("{}x{} was {} now {}", x, y, path_lengths[x][y], length);
+                path_lengths[x][y] = my_length + 1;
+                nodes_to_expand.push(Node(x, y));
+            }
+        }
+    }
+
+    println!("Shortest path: {}", path_lengths[1][1]);
+}
+
+
+fn day13_pt2() {
+    let size = 1000;
+
+    let mut walls: Vec<Vec<bool>> = (0..size).map(|_row| vec!(false; size)).collect();
+    let mut path_lengths: Vec<Vec<usize>> = (0..size).map(|_row| vec!(std::usize::MAX; size)).collect();
+
+    for x in 0..size {
+        for y in 0..size {
+            walls[x][y] = is_wall(x, y);
+        }
+    }
+
+    // We can get to our target from our target trivially
+    path_lengths[1][1] = 0;
+
+    let mut nodes_to_expand = vec!(Node(1, 1));
+
+    while !nodes_to_expand.is_empty() {
+        let node = nodes_to_expand.pop().unwrap();
+
+        let surrounding = surrounding_nodes(node, &walls);
+        let my_length = path_lengths[node.0][node.1];
+
+        for Node(x, y) in surrounding {
+            if my_length + 1 < path_lengths[x][y] {
+                // println!("{}x{} was {} now {}", x, y, path_lengths[x][y], length);
+                path_lengths[x][y] = my_length + 1;
+                nodes_to_expand.push(Node(x, y));
+            }
+        }
+    }
+
+    let mut count = 0;
+
+    for row in path_lengths {
+        for steps in row {
+            if steps <= 50 {
+                count += 1;
+            }
+        }
+    }
+
+    // 325 too high!
+    println!("Reachable within 50 steps: {}", count);
+}
+
+fn day13() {
+    day13_pt1();
+    day13_pt2();
+}
 
 fn main() {
     // day1();
@@ -1133,6 +1409,8 @@ fn main() {
     // day8();
     // day9();
     // day10();
+    // day11();
+    // day12();
 
-    day11();
+    day13();
 }
