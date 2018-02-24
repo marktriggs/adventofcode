@@ -1241,7 +1241,6 @@ fn day12() {
     day12_pt1();
 }
 
-*/
 
 ///////////////// Day 13
 
@@ -1398,6 +1397,189 @@ fn day13() {
     day13_pt2();
 }
 
+///////////////// Day 14
+
+extern crate regex;
+extern crate crypto;
+
+#[macro_use]
+extern crate lazy_static;
+
+
+use std::collections::HashMap;
+use crypto::md5::Md5;
+use crypto::digest::Digest;
+use regex::Regex;
+
+lazy_static! {
+    static ref TRIPLES_PATTERN: Regex = {
+        Regex::new(r"(000|111|222|333|444|555|666|777|888|999|aaa|bbb|ccc|ddd|eee|fff)").unwrap()
+    };
+
+    static ref QUINTUPLET_PATTERNS: HashMap<String, Regex> = {
+        let mut map = HashMap::new();
+
+        map.insert("000".to_owned(), Regex::new(r"00000").unwrap());
+        map.insert("111".to_owned(), Regex::new(r"11111").unwrap());
+        map.insert("222".to_owned(), Regex::new(r"22222").unwrap());
+        map.insert("333".to_owned(), Regex::new(r"33333").unwrap());
+        map.insert("444".to_owned(), Regex::new(r"44444").unwrap());
+        map.insert("555".to_owned(), Regex::new(r"55555").unwrap());
+        map.insert("666".to_owned(), Regex::new(r"66666").unwrap());
+        map.insert("777".to_owned(), Regex::new(r"77777").unwrap());
+        map.insert("888".to_owned(), Regex::new(r"88888").unwrap());
+        map.insert("999".to_owned(), Regex::new(r"99999").unwrap());
+        map.insert("aaa".to_owned(), Regex::new(r"aaaaa").unwrap());
+        map.insert("bbb".to_owned(), Regex::new(r"bbbbb").unwrap());
+        map.insert("ccc".to_owned(), Regex::new(r"ccccc").unwrap());
+        map.insert("ddd".to_owned(), Regex::new(r"ddddd").unwrap());
+        map.insert("eee".to_owned(), Regex::new(r"eeeee").unwrap());
+        map.insert("fff".to_owned(), Regex::new(r"fffff").unwrap());
+
+        map
+    };
+}
+
+fn triples(hash: &str) -> Vec<String> {
+    let mut triples = TRIPLES_PATTERN.captures_iter(hash).map(|c| c[0].to_string()).collect::<Vec<String>>();
+    triples.dedup();
+
+    triples
+}
+
+#[derive(Debug)]
+struct Key {
+    hash: String,
+    index: usize,
+}
+
+fn stretch_hash(hash: String, md5: &mut Md5) -> String {
+    let mut next = hash;
+    let mut out = vec![0; md5.output_bytes()];
+
+    for _ in 0..2016 {
+        md5.reset();
+        md5.input_str(&next);
+
+        md5.result(&mut out);
+        next = out.iter().map(|b| format!("{:02x}", b)).collect();
+    }
+
+    next
+}
+
+fn day14() {
+    let salt = "yjdafjpo";
+    // let salt = "abc";
+
+    let mut md5 = Md5::new();
+    let mut out = vec![0; md5.output_bytes()];
+
+    let mut result = Vec::new();
+    let target_keys = 64;
+    let lookahead = 1001;
+    let mut indexes: Vec<usize> = Vec::with_capacity(lookahead);
+    let mut buffer: Vec<String> = Vec::with_capacity(lookahead);
+    let mut i = 0;
+
+    'outer: loop {
+        if result.len() == target_keys {
+            println!("Finished at index: {}", i - 1);
+            break;
+        }
+
+        if buffer.len() == lookahead {
+            let hash_to_check = buffer.remove(0);
+            let hash_index = indexes.remove(0);
+
+            for triple in triples(&hash_to_check) {
+                // If the remainder of the buffer contains the same digit
+                // repeated 5 times, win.
+
+                let p = QUINTUPLET_PATTERNS.get(&triple).unwrap();
+                for line in &buffer {
+                    if p.is_match(&line) {
+                        result.push(Key { hash: hash_to_check, index: hash_index });
+                        continue 'outer;
+                    }
+                }
+
+                // We actually only want the first triple!
+                break;
+            }
+
+        }
+
+        md5.reset();
+        md5.input_str(salt);
+        md5.input_str(&i.to_string());
+
+        md5.result(&mut out);
+
+        let hash: String = stretch_hash(out.iter().map(|b| format!("{:02x}", b)).collect(), &mut md5);
+
+        indexes.push(i);
+        buffer.push(hash);
+
+        i += 1;
+    }
+
+    for key in result {
+        println!("{:?}", key);
+    }
+}
+
+*/
+
+#[derive(Debug, Copy, Clone)]
+struct Disc {
+    position_count: usize,
+    current_position: usize,
+}
+
+impl Disc {
+    fn tick(&self) -> Disc {
+        Disc { position_count: self.position_count, current_position: ((self.current_position + 1) % self.position_count) }
+    }
+}
+
+fn day15() {
+    let discs_at_time_zero = vec!(
+        Disc { position_count: 13, current_position: 10 },
+        Disc { position_count: 17, current_position: 15 },
+        Disc { position_count: 19, current_position: 17 },
+        Disc { position_count: 7, current_position: 1 },
+        Disc { position_count: 5, current_position: 0 },
+        Disc { position_count: 3, current_position: 1 },
+        Disc { position_count: 11, current_position: 0 },
+    );
+
+    let mut logical_discs = discs_at_time_zero.iter().cloned().enumerate().map(|(i, disc)| {
+        let mut result: Disc = disc;
+        for _ in 0..i+1 {
+            result = result.tick();
+        }
+
+        result
+    }).collect::<Vec<Disc>>();
+
+    let mut time = 0;
+
+    loop {
+        if logical_discs.iter().all (|disc| disc.current_position == 0) {
+            break;
+        }
+
+        logical_discs = logical_discs.iter().map (|disc| disc.tick()).collect();
+
+        time += 1;
+    }
+
+    println!("Earliest time: {}", time);
+
+}
+
+
 fn main() {
     // day1();
     // day2();
@@ -1411,6 +1593,8 @@ fn main() {
     // day10();
     // day11();
     // day12();
+    // day13();
+    // day14();
 
-    day13();
+    day15();
 }
