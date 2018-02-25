@@ -1529,8 +1529,6 @@ fn day14() {
     }
 }
 
-*/
-
 #[derive(Debug, Copy, Clone)]
 struct Disc {
     position_count: usize,
@@ -1579,6 +1577,343 @@ fn day15() {
 
 }
 
+*/
+
+use std::collections::HashMap;
+
+
+fn checksum_lookup_table() -> HashMap<String, String> {
+    let mut result = HashMap::new();
+
+    result.insert("00000000".to_owned(), "1111".to_owned());
+    result.insert("00000001".to_owned(), "1110".to_owned());
+    result.insert("00000010".to_owned(), "1110".to_owned());
+    result.insert("00000011".to_owned(), "1111".to_owned());
+    result.insert("00000100".to_owned(), "1101".to_owned());
+    result.insert("00000101".to_owned(), "1100".to_owned());
+    result.insert("00000110".to_owned(), "1100".to_owned());
+    result.insert("00000111".to_owned(), "1101".to_owned());
+    result.insert("00001000".to_owned(), "1101".to_owned());
+    result.insert("00001001".to_owned(), "1100".to_owned());
+    result.insert("00001010".to_owned(), "1100".to_owned());
+    result.insert("00001011".to_owned(), "1101".to_owned());
+    result.insert("00001100".to_owned(), "1111".to_owned());
+    result.insert("00001101".to_owned(), "1110".to_owned());
+    result.insert("00001110".to_owned(), "1110".to_owned());
+    result.insert("00001111".to_owned(), "1111".to_owned());
+    result.insert("00010000".to_owned(), "1011".to_owned());
+    result.insert("00010001".to_owned(), "1010".to_owned());
+    result.insert("00010010".to_owned(), "1010".to_owned());
+    result.insert("00010011".to_owned(), "1011".to_owned());
+    result.insert("00010100".to_owned(), "1001".to_owned());
+    result.insert("00010101".to_owned(), "1000".to_owned());
+    result.insert("00010110".to_owned(), "1000".to_owned());
+    result.insert("00010111".to_owned(), "1001".to_owned());
+    result.insert("00011000".to_owned(), "1001".to_owned());
+    result.insert("00011001".to_owned(), "1000".to_owned());
+    result.insert("00011010".to_owned(), "1000".to_owned());
+    result.insert("00011011".to_owned(), "1001".to_owned());
+    result.insert("00011100".to_owned(), "1011".to_owned());
+    result.insert("00011101".to_owned(), "1010".to_owned());
+    result.insert("00011110".to_owned(), "1010".to_owned());
+    result.insert("00011111".to_owned(), "1011".to_owned());
+    result.insert("00100000".to_owned(), "1011".to_owned());
+    result.insert("00100001".to_owned(), "1010".to_owned());
+    result.insert("00100010".to_owned(), "1010".to_owned());
+    result.insert("00100011".to_owned(), "1011".to_owned());
+    result.insert("00100100".to_owned(), "1001".to_owned());
+    result.insert("00100101".to_owned(), "1000".to_owned());
+    result.insert("00100110".to_owned(), "1000".to_owned());
+    result.insert("00100111".to_owned(), "1001".to_owned());
+    result.insert("00101000".to_owned(), "1001".to_owned());
+    result.insert("00101001".to_owned(), "1000".to_owned());
+    result.insert("00101010".to_owned(), "1000".to_owned());
+    result.insert("00101011".to_owned(), "1001".to_owned());
+    result.insert("00101100".to_owned(), "1011".to_owned());
+    result.insert("00101101".to_owned(), "1010".to_owned());
+    result.insert("00101110".to_owned(), "1010".to_owned());
+    result.insert("00101111".to_owned(), "1011".to_owned());
+    result.insert("00110000".to_owned(), "1111".to_owned());
+    result.insert("00110001".to_owned(), "1110".to_owned());
+    result.insert("00110010".to_owned(), "1110".to_owned());
+    result.insert("00110011".to_owned(), "1111".to_owned());
+    result.insert("00110100".to_owned(), "1101".to_owned());
+    result.insert("00110101".to_owned(), "1100".to_owned());
+    result.insert("00110110".to_owned(), "1100".to_owned());
+    result.insert("00110111".to_owned(), "1101".to_owned());
+    result.insert("00111000".to_owned(), "1101".to_owned());
+    result.insert("00111001".to_owned(), "1100".to_owned());
+    result.insert("00111010".to_owned(), "1100".to_owned());
+    result.insert("00111011".to_owned(), "1101".to_owned());
+    result.insert("00111100".to_owned(), "1111".to_owned());
+    result.insert("00111101".to_owned(), "1110".to_owned());
+    result.insert("00111110".to_owned(), "1110".to_owned());
+    result.insert("00111111".to_owned(), "1111".to_owned());
+    result.insert("01000000".to_owned(), "0111".to_owned());
+    result.insert("01000001".to_owned(), "0110".to_owned());
+    result.insert("01000010".to_owned(), "0110".to_owned());
+    result.insert("01000011".to_owned(), "0111".to_owned());
+    result.insert("01000100".to_owned(), "0101".to_owned());
+    result.insert("01000101".to_owned(), "0100".to_owned());
+    result.insert("01000110".to_owned(), "0100".to_owned());
+    result.insert("01000111".to_owned(), "0101".to_owned());
+    result.insert("01001000".to_owned(), "0101".to_owned());
+    result.insert("01001001".to_owned(), "0100".to_owned());
+    result.insert("01001010".to_owned(), "0100".to_owned());
+    result.insert("01001011".to_owned(), "0101".to_owned());
+    result.insert("01001100".to_owned(), "0111".to_owned());
+    result.insert("01001101".to_owned(), "0110".to_owned());
+    result.insert("01001110".to_owned(), "0110".to_owned());
+    result.insert("01001111".to_owned(), "0111".to_owned());
+    result.insert("01010000".to_owned(), "0011".to_owned());
+    result.insert("01010001".to_owned(), "0010".to_owned());
+    result.insert("01010010".to_owned(), "0010".to_owned());
+    result.insert("01010011".to_owned(), "0011".to_owned());
+    result.insert("01010100".to_owned(), "0001".to_owned());
+    result.insert("01010101".to_owned(), "0000".to_owned());
+    result.insert("01010110".to_owned(), "0000".to_owned());
+    result.insert("01010111".to_owned(), "0001".to_owned());
+    result.insert("01011000".to_owned(), "0001".to_owned());
+    result.insert("01011001".to_owned(), "0000".to_owned());
+    result.insert("01011010".to_owned(), "0000".to_owned());
+    result.insert("01011011".to_owned(), "0001".to_owned());
+    result.insert("01011100".to_owned(), "0011".to_owned());
+    result.insert("01011101".to_owned(), "0010".to_owned());
+    result.insert("01011110".to_owned(), "0010".to_owned());
+    result.insert("01011111".to_owned(), "0011".to_owned());
+    result.insert("01100000".to_owned(), "0011".to_owned());
+    result.insert("01100001".to_owned(), "0010".to_owned());
+    result.insert("01100010".to_owned(), "0010".to_owned());
+    result.insert("01100011".to_owned(), "0011".to_owned());
+    result.insert("01100100".to_owned(), "0001".to_owned());
+    result.insert("01100101".to_owned(), "0000".to_owned());
+    result.insert("01100110".to_owned(), "0000".to_owned());
+    result.insert("01100111".to_owned(), "0001".to_owned());
+    result.insert("01101000".to_owned(), "0001".to_owned());
+    result.insert("01101001".to_owned(), "0000".to_owned());
+    result.insert("01101010".to_owned(), "0000".to_owned());
+    result.insert("01101011".to_owned(), "0001".to_owned());
+    result.insert("01101100".to_owned(), "0011".to_owned());
+    result.insert("01101101".to_owned(), "0010".to_owned());
+    result.insert("01101110".to_owned(), "0010".to_owned());
+    result.insert("01101111".to_owned(), "0011".to_owned());
+    result.insert("01110000".to_owned(), "0111".to_owned());
+    result.insert("01110001".to_owned(), "0110".to_owned());
+    result.insert("01110010".to_owned(), "0110".to_owned());
+    result.insert("01110011".to_owned(), "0111".to_owned());
+    result.insert("01110100".to_owned(), "0101".to_owned());
+    result.insert("01110101".to_owned(), "0100".to_owned());
+    result.insert("01110110".to_owned(), "0100".to_owned());
+    result.insert("01110111".to_owned(), "0101".to_owned());
+    result.insert("01111000".to_owned(), "0101".to_owned());
+    result.insert("01111001".to_owned(), "0100".to_owned());
+    result.insert("01111010".to_owned(), "0100".to_owned());
+    result.insert("01111011".to_owned(), "0101".to_owned());
+    result.insert("01111100".to_owned(), "0111".to_owned());
+    result.insert("01111101".to_owned(), "0110".to_owned());
+    result.insert("01111110".to_owned(), "0110".to_owned());
+    result.insert("01111111".to_owned(), "0111".to_owned());
+    result.insert("10000000".to_owned(), "0111".to_owned());
+    result.insert("10000001".to_owned(), "0110".to_owned());
+    result.insert("10000010".to_owned(), "0110".to_owned());
+    result.insert("10000011".to_owned(), "0111".to_owned());
+    result.insert("10000100".to_owned(), "0101".to_owned());
+    result.insert("10000101".to_owned(), "0100".to_owned());
+    result.insert("10000110".to_owned(), "0100".to_owned());
+    result.insert("10000111".to_owned(), "0101".to_owned());
+    result.insert("10001000".to_owned(), "0101".to_owned());
+    result.insert("10001001".to_owned(), "0100".to_owned());
+    result.insert("10001010".to_owned(), "0100".to_owned());
+    result.insert("10001011".to_owned(), "0101".to_owned());
+    result.insert("10001100".to_owned(), "0111".to_owned());
+    result.insert("10001101".to_owned(), "0110".to_owned());
+    result.insert("10001110".to_owned(), "0110".to_owned());
+    result.insert("10001111".to_owned(), "0111".to_owned());
+    result.insert("10010000".to_owned(), "0011".to_owned());
+    result.insert("10010001".to_owned(), "0010".to_owned());
+    result.insert("10010010".to_owned(), "0010".to_owned());
+    result.insert("10010011".to_owned(), "0011".to_owned());
+    result.insert("10010100".to_owned(), "0001".to_owned());
+    result.insert("10010101".to_owned(), "0000".to_owned());
+    result.insert("10010110".to_owned(), "0000".to_owned());
+    result.insert("10010111".to_owned(), "0001".to_owned());
+    result.insert("10011000".to_owned(), "0001".to_owned());
+    result.insert("10011001".to_owned(), "0000".to_owned());
+    result.insert("10011010".to_owned(), "0000".to_owned());
+    result.insert("10011011".to_owned(), "0001".to_owned());
+    result.insert("10011100".to_owned(), "0011".to_owned());
+    result.insert("10011101".to_owned(), "0010".to_owned());
+    result.insert("10011110".to_owned(), "0010".to_owned());
+    result.insert("10011111".to_owned(), "0011".to_owned());
+    result.insert("10100000".to_owned(), "0011".to_owned());
+    result.insert("10100001".to_owned(), "0010".to_owned());
+    result.insert("10100010".to_owned(), "0010".to_owned());
+    result.insert("10100011".to_owned(), "0011".to_owned());
+    result.insert("10100100".to_owned(), "0001".to_owned());
+    result.insert("10100101".to_owned(), "0000".to_owned());
+    result.insert("10100110".to_owned(), "0000".to_owned());
+    result.insert("10100111".to_owned(), "0001".to_owned());
+    result.insert("10101000".to_owned(), "0001".to_owned());
+    result.insert("10101001".to_owned(), "0000".to_owned());
+    result.insert("10101010".to_owned(), "0000".to_owned());
+    result.insert("10101011".to_owned(), "0001".to_owned());
+    result.insert("10101100".to_owned(), "0011".to_owned());
+    result.insert("10101101".to_owned(), "0010".to_owned());
+    result.insert("10101110".to_owned(), "0010".to_owned());
+    result.insert("10101111".to_owned(), "0011".to_owned());
+    result.insert("10110000".to_owned(), "0111".to_owned());
+    result.insert("10110001".to_owned(), "0110".to_owned());
+    result.insert("10110010".to_owned(), "0110".to_owned());
+    result.insert("10110011".to_owned(), "0111".to_owned());
+    result.insert("10110100".to_owned(), "0101".to_owned());
+    result.insert("10110101".to_owned(), "0100".to_owned());
+    result.insert("10110110".to_owned(), "0100".to_owned());
+    result.insert("10110111".to_owned(), "0101".to_owned());
+    result.insert("10111000".to_owned(), "0101".to_owned());
+    result.insert("10111001".to_owned(), "0100".to_owned());
+    result.insert("10111010".to_owned(), "0100".to_owned());
+    result.insert("10111011".to_owned(), "0101".to_owned());
+    result.insert("10111100".to_owned(), "0111".to_owned());
+    result.insert("10111101".to_owned(), "0110".to_owned());
+    result.insert("10111110".to_owned(), "0110".to_owned());
+    result.insert("10111111".to_owned(), "0111".to_owned());
+    result.insert("11000000".to_owned(), "1111".to_owned());
+    result.insert("11000001".to_owned(), "1110".to_owned());
+    result.insert("11000010".to_owned(), "1110".to_owned());
+    result.insert("11000011".to_owned(), "1111".to_owned());
+    result.insert("11000100".to_owned(), "1101".to_owned());
+    result.insert("11000101".to_owned(), "1100".to_owned());
+    result.insert("11000110".to_owned(), "1100".to_owned());
+    result.insert("11000111".to_owned(), "1101".to_owned());
+    result.insert("11001000".to_owned(), "1101".to_owned());
+    result.insert("11001001".to_owned(), "1100".to_owned());
+    result.insert("11001010".to_owned(), "1100".to_owned());
+    result.insert("11001011".to_owned(), "1101".to_owned());
+    result.insert("11001100".to_owned(), "1111".to_owned());
+    result.insert("11001101".to_owned(), "1110".to_owned());
+    result.insert("11001110".to_owned(), "1110".to_owned());
+    result.insert("11001111".to_owned(), "1111".to_owned());
+    result.insert("11010000".to_owned(), "1011".to_owned());
+    result.insert("11010001".to_owned(), "1010".to_owned());
+    result.insert("11010010".to_owned(), "1010".to_owned());
+    result.insert("11010011".to_owned(), "1011".to_owned());
+    result.insert("11010100".to_owned(), "1001".to_owned());
+    result.insert("11010101".to_owned(), "1000".to_owned());
+    result.insert("11010110".to_owned(), "1000".to_owned());
+    result.insert("11010111".to_owned(), "1001".to_owned());
+    result.insert("11011000".to_owned(), "1001".to_owned());
+    result.insert("11011001".to_owned(), "1000".to_owned());
+    result.insert("11011010".to_owned(), "1000".to_owned());
+    result.insert("11011011".to_owned(), "1001".to_owned());
+    result.insert("11011100".to_owned(), "1011".to_owned());
+    result.insert("11011101".to_owned(), "1010".to_owned());
+    result.insert("11011110".to_owned(), "1010".to_owned());
+    result.insert("11011111".to_owned(), "1011".to_owned());
+    result.insert("11100000".to_owned(), "1011".to_owned());
+    result.insert("11100001".to_owned(), "1010".to_owned());
+    result.insert("11100010".to_owned(), "1010".to_owned());
+    result.insert("11100011".to_owned(), "1011".to_owned());
+    result.insert("11100100".to_owned(), "1001".to_owned());
+    result.insert("11100101".to_owned(), "1000".to_owned());
+    result.insert("11100110".to_owned(), "1000".to_owned());
+    result.insert("11100111".to_owned(), "1001".to_owned());
+    result.insert("11101000".to_owned(), "1001".to_owned());
+    result.insert("11101001".to_owned(), "1000".to_owned());
+    result.insert("11101010".to_owned(), "1000".to_owned());
+    result.insert("11101011".to_owned(), "1001".to_owned());
+    result.insert("11101100".to_owned(), "1011".to_owned());
+    result.insert("11101101".to_owned(), "1010".to_owned());
+    result.insert("11101110".to_owned(), "1010".to_owned());
+    result.insert("11101111".to_owned(), "1011".to_owned());
+    result.insert("11110000".to_owned(), "1111".to_owned());
+    result.insert("11110001".to_owned(), "1110".to_owned());
+    result.insert("11110010".to_owned(), "1110".to_owned());
+    result.insert("11110011".to_owned(), "1111".to_owned());
+    result.insert("11110100".to_owned(), "1101".to_owned());
+    result.insert("11110101".to_owned(), "1100".to_owned());
+    result.insert("11110110".to_owned(), "1100".to_owned());
+    result.insert("11110111".to_owned(), "1101".to_owned());
+    result.insert("11111000".to_owned(), "1101".to_owned());
+    result.insert("11111001".to_owned(), "1100".to_owned());
+    result.insert("11111010".to_owned(), "1100".to_owned());
+    result.insert("11111011".to_owned(), "1101".to_owned());
+    result.insert("11111100".to_owned(), "1111".to_owned());
+    result.insert("11111101".to_owned(), "1110".to_owned());
+    result.insert("11111110".to_owned(), "1110".to_owned());
+    result.insert("11111111".to_owned(), "1111".to_owned());
+
+    result
+}
+
+
+fn expand_to_size(initial_state: String, min_size: usize) -> String {
+    let mut state = initial_state;
+
+    while state.len() < min_size {
+        let flipped: String = state.chars().map(|ch| {
+            match ch {
+                '0' => '1',
+                _ => '0'
+            }
+        }).rev().collect();
+
+        state = state + "0" + &flipped;
+    }
+
+    state
+}
+
+
+fn checksum_round(s: String, lookup: &HashMap<String, String>) -> String {
+    let mut result = "".to_owned();
+
+    // Use our lookup table as much as possible
+    let mut i = 0;
+    while (i + 8) < (s.len()) {
+        result += lookup.get(&(s[i..(i + 8)]).to_owned()).unwrap();
+        i += 8;
+    }
+
+    // and manually handle the remainder...
+    while i < (s.len() - 1) {
+        if s.chars().nth(i).unwrap() == s.chars().nth(i+1).unwrap() {
+            result += "1";
+        } else {
+            result += "0";
+        }
+
+        i += 2;
+    }
+
+    result
+}
+
+
+fn checksum(s: String, lookup: &HashMap<String, String>) -> String {
+    let mut c = checksum_round(s, lookup);
+
+    while (c.len() % 2) == 0 {
+        c = checksum_round(c, lookup);
+    }
+
+    return c;
+}
+
+fn day16() {
+    // Part 1
+    // let initial = "01111010110010011";
+    // let n = 272;
+
+    // Part 2
+    let initial = "01111010110010011";
+    let n = 35651584;
+
+    let lookup = checksum_lookup_table();
+
+    let expanded = expand_to_size(initial.to_owned(), n);
+
+    println!("{}", checksum((&expanded[0..n]).to_owned(), &lookup));
+}
 
 fn main() {
     // day1();
@@ -1595,6 +1930,7 @@ fn main() {
     // day12();
     // day13();
     // day14();
+    // day15();
 
-    day15();
+    day16();
 }
