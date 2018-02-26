@@ -1577,7 +1577,6 @@ fn day15() {
 
 }
 
-*/
 
 use std::collections::HashMap;
 
@@ -1915,6 +1914,95 @@ fn day16() {
     println!("{}", checksum((&expanded[0..n]).to_owned(), &lookup));
 }
 
+*/
+
+extern crate crypto;
+use crypto::md5::Md5;
+use crypto::digest::Digest;
+
+#[derive(Eq, PartialEq, Debug)]
+struct Position {
+    x: i32,
+    y: i32,
+}
+
+impl Position {
+    fn add(&self, other: &Position) -> Position {
+        Position { x: (self.x + other.x), y: (self.y + other.y) }
+    }
+}
+
+struct Candidate<'a> {
+    position: Position,
+    path: Vec<&'a str>,
+}
+
+fn hash(passcode: &str, path: &Vec<&str>) -> String {
+    let mut md5 = Md5::new();
+    let mut out = vec![0; md5.output_bytes()];
+
+    md5.input_str(passcode);
+
+    for char in path {
+        md5.input(char.as_bytes());
+    }
+
+    md5.result(&mut out);
+
+    out.iter().take(2).map(|b| format!("{:02x}", b)).collect()
+}
+
+struct Direction<'a> (&'a str, Position);
+
+fn day17() {
+    let directions = vec!(Direction("U", Position { x: 0, y: -1 }),
+                          Direction("D", Position { x: 0, y: 1 }),
+                          Direction("L", Position { x: -1, y: 0 }),
+                          Direction("R", Position { x: 1, y: 0 }));
+
+    let passcode = "mmsxrhfx";
+
+    let target = Position { x: 3, y: 3 };
+    let mut candidates: Vec<Candidate> = vec!(Candidate { position: Position { x: 0, y: 0 }, path: Vec::new() });
+    let mut result: Vec<Candidate> = Vec::new();
+
+    while candidates.len() > 0 {
+        let candidate = candidates.remove(0);
+
+        if candidate.position == target {
+            result.push(candidate);
+            continue;
+        }
+
+        let doors = hash(passcode, &candidate.path);
+        // println!("{}{} -> {}", passcode, candidate.path.join(""), doors);
+
+
+        for d in 0..directions.len() {
+            if doors.chars().nth(d).unwrap() >= 'b' && doors.chars().nth(d).unwrap() <= 'f' {
+                // The door is open
+                let mut new_path = candidate.path.clone();
+                new_path.push(directions[d].0);
+
+                let new_position = candidate.position.add(&directions[d].1);
+
+                if (new_position.x >= 0 && new_position.y >= 0) && (new_position.x <= 3 && new_position.y <= 3) {
+                    // println!("Moving {} from {:?}", directions[d].0, candidate.position);
+                    // println!("New position {:?}", new_position);
+
+                    candidates.push(Candidate { position: new_position,
+                                                path: new_path });
+                }
+            }
+        }
+    }
+
+    result.sort_by_key(|candidate| candidate.path.len());
+    println!("Shortest: {}", result[0].path.join(""));
+    println!("Longest: {}", result[result.len() - 1].path.join(""));
+
+}
+
 fn main() {
     // day1();
     // day2();
@@ -1931,6 +2019,7 @@ fn main() {
     // day13();
     // day14();
     // day15();
+    // day16();
 
-    day16();
+    day17();
 }
