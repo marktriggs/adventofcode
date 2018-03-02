@@ -1914,7 +1914,6 @@ fn day16() {
     println!("{}", checksum((&expanded[0..n]).to_owned(), &lookup));
 }
 
-*/
 
 extern crate crypto;
 use crypto::md5::Md5;
@@ -2003,6 +2002,46 @@ fn day17() {
 
 }
 
+*/
+
+// Too low: 501
+fn day18() {
+    // . = safe; ^ = TRAP
+    let mut last_row = ".^^..^...^..^^.^^^.^^^.^^^^^^.^.^^^^.^^.^^^^^^.^...^......^...^^^..^^^.....^^^^^^^^^....^^...^^^^..^".to_owned();
+    let mut padded = String::new();
+    let mut safe_count = 0;
+
+    for _ in 0..400000 {
+        safe_count += last_row.chars().filter(|&ch| ch == '.').count();
+        // println!("{}", last_row);
+
+        padded.clear();
+
+        padded.push('.');
+        padded.push_str(&last_row);
+        padded.push('.');
+
+        last_row.clear();
+
+        for i in 1..(padded.len() - 1) {
+            let left = padded.chars().nth(i - 1).unwrap();
+            let centre = padded.chars().nth(i).unwrap();
+            let right = padded.chars().nth(i + 1).unwrap();
+
+            if (left == '^' && centre == '^' && right == '.') ||
+                (left == '.' && centre == '^' && right == '^') ||
+                (left == '^' && centre == '.' && right == '.') ||
+                (left == '.' && centre == '.' && right == '^') {
+                    last_row.push('^');
+                } else {
+                    last_row.push('.');
+                }
+        }
+    }
+
+    println!("Number of safe tiles: {}", safe_count);
+}
+
 fn main() {
     // day1();
     // day2();
@@ -2020,6 +2059,6 @@ fn main() {
     // day14();
     // day15();
     // day16();
-
-    day17();
+    // day17();
+    day18();
 }
