@@ -2880,8 +2880,6 @@ fn day23() {
     println!("Final state: {:?}", &registers);
 }
 
-*/
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -3073,6 +3071,188 @@ fn day24() {
     println!("Shortest path: {}", best_cost);
 }
 
+*/
+
+use std::collections::HashMap;
+
+const DAY25_INPUT : &str = "
+cpy a d
+cpy 7 c
+cpy 365 b
+inc d
+dec b
+jnz b -2
+dec c
+jnz c -5
+cpy d a
+jnz 0 0
+cpy a b
+cpy 0 a
+cpy 2 c
+jnz b 2
+jnz 1 6
+dec b
+dec c
+jnz c -4
+inc a
+jnz 1 -7
+cpy 2 b
+jnz c 2
+jnz 1 4
+dec b
+dec c
+jnz 1 -4
+jnz 0 0
+out b
+jnz a -19
+jnz 1 -21
+";
+
+fn to_register(name: &str) -> char {
+    name.chars().nth(0).unwrap()
+}
+
+fn deref_value(value: &str, registers: &HashMap<char, i64>) -> i64 {
+    match to_register(value) {
+        r @ 'a'...'z' => {
+            *registers.get(&r).unwrap()
+        },
+        _ => { value.parse().unwrap() }
+    }
+}
+
+fn run_program(init_value: i64) -> Option<Vec<i64>> {
+    let mut instructions: Vec<String> = DAY25_INPUT.trim().split("\n").map(|s| {
+        if &s[0..1] == "#" {
+            "nop".to_string()
+        } else {
+            s.to_string()
+        }}).collect();
+
+    let mut registers = "abcd".chars().fold(HashMap::new(), |mut acc, register| {
+        acc.insert(register, 0);
+        acc
+    });
+
+    registers.insert('a', init_value);
+
+    let mut pc: i64 = 0;
+
+    let mut transmitted : Vec<i64> = Vec::new();
+
+    loop {
+        // println!("PC: {}; REGS: {:?}", pc, registers);
+
+        if pc < 0 || pc >= (instructions.len() as i64) {
+            break;
+        }
+
+        let instruction = (&instructions[pc as usize]).clone();
+        let bits: Vec<&str> = instruction.split(" ").collect();
+
+        match bits[0] {
+            "out" => {
+                let value = deref_value(bits[1], &registers);
+
+                if value != 1 && value != 0 {
+                    // No good.
+                    return None;
+                }
+
+                if transmitted.len() > 0 && transmitted[transmitted.len() - 1] == value {
+                    return None;
+                }
+
+                transmitted.push(value);
+
+                if transmitted.len() > 1000 {
+                    return Some(transmitted);
+                }
+            }
+
+            "tgl" => {
+                let offset = deref_value(bits[1], &registers);
+
+                if (pc + offset) >= 0 && ((pc + offset) as usize) < instructions.len() {
+                    println!{"Toggle: {} ({:?})", (pc + offset), instructions[(pc + offset) as usize]};
+                    let target_instruction = (pc + offset) as usize;
+                    let target_bits: Vec<String> = instructions[target_instruction].clone().split(" ").map(str::to_string).collect();
+
+                    match target_bits.len() {
+                        3 => {
+                            if target_bits[0] == "jnz" {
+                                instructions[target_instruction] = format!("{} {} {}", "cpy", target_bits[1], target_bits[2]);
+                            } else {
+                                instructions[target_instruction] = format!("{} {} {}", "jnz", target_bits[1], target_bits[2]);
+                            }
+                        },
+                        2 => {
+                            if target_bits[0] == "inc" {
+                                instructions[target_instruction] = format!("{} {}", "dec", target_bits[1]);
+                            } else {
+                                instructions[target_instruction] = format!("{} {}", "inc", target_bits[1]);
+                            }
+                        },
+                        _ => {
+                            panic!("Invalid instruction: {:?}", target_bits);
+                        }
+                    };
+                }
+            },
+            "cpy" => {
+                let value = deref_value(bits[1], &registers);
+                registers.insert(to_register(bits[2]), value);
+            },
+            "mul" => {
+                let value1 = deref_value(bits[1], &registers);
+                let value2 = deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[2]), value1 * value2);
+            },
+            "nop" => {},
+            "inc" => {
+                let new_value = deref_value(bits[1], &registers) + 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "dec" => {
+                let new_value = deref_value(bits[1], &registers) - 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "jnz" => {
+                let x = deref_value(bits[1], &registers);
+                let y = deref_value(bits[2], &registers);
+
+                if x != 0 {
+                    // Compensate for the increment we're going to get anyway.
+                    pc -= 1;
+                    pc += y;
+                }
+            },
+            _ => { panic!("WTF?! {}", bits[0]); },
+        }
+
+        pc += 1;
+    }
+
+    return None;
+}
+
+
+fn day25() {
+    let mut i = 0;
+
+    loop {
+        let transmitted = run_program(i);
+
+        match transmitted {
+            Some(_) => {
+                println!("Woot: {}", i);
+            },
+            None => {}
+        }
+
+        i += 1;
+    }
+}
 
 fn main() {
     // day1();
@@ -3098,8 +3278,10 @@ fn main() {
     // day21();
     // day22();
     // day23();
+    // day24();
 
-    day24();
+    day25();
+
 }
 
 
