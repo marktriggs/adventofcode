@@ -1,3 +1,6 @@
+// (cd ../ && cargo build && scp target/debug/adventofcode2016 mozart:tmp/ && ssh mozart '(cd /home/mst/tmp; RUST_BACKTRACE=1 ~/tmp/adventofcode2016)')
+
+
 // use regex::Regex;
 // use std::cell::RefCell;
 // use std::collections::HashMap;
@@ -2002,8 +2005,6 @@ fn day17() {
 
 }
 
-*/
-
 // Too low: 501
 fn day18() {
     // . = safe; ^ = TRAP
@@ -2042,6 +2043,844 @@ fn day18() {
     println!("Number of safe tiles: {}", safe_count);
 }
 
+
+fn day19_pt1() {
+    let count: usize = 3014603;
+    let mut elves: Vec<i32> = (1..(count + 1) as i32).collect();
+
+    let mut next_pos = 0;
+    let mut remaining_elves = count;
+    let mut keep = true;
+
+    loop {
+        if remaining_elves == 1 {
+            break
+        }
+
+        if elves[next_pos] >= 0 {
+            if !keep {
+                elves[next_pos] = -1;
+                remaining_elves -= 1;
+            }
+
+            keep = !keep;
+        }
+
+        next_pos += 1;
+
+        if next_pos >= count {
+            next_pos = 0;
+        }
+    }
+
+    println!("{:?}", elves.iter().find(|&&n| n >= 0).unwrap());
+}
+
+// Nuttiness :)
+fn day19_pt2() {
+    let count: usize = 3014603;
+    let mut elves: Vec<i32> = (1..(count + 1) as i32).collect();
+
+    let mut next_pos = 0;
+    let mut next_victim = count / 2;
+    let mut remaining_elves = count;
+
+    loop {
+        if remaining_elves == 1 {
+            break
+        }
+
+        if elves[next_pos] >= 0 {
+            while elves[next_victim] < 0 {
+                next_victim += 1;
+
+                if next_victim >= count { next_victim = 0; }
+            }
+
+            elves[next_victim] = -1;
+
+            while elves[next_victim] < 0 {
+                next_victim += 1;
+                if next_victim >= count { next_victim = 0; }
+            }
+
+            if (remaining_elves % 2) == 1 {
+                next_victim += 1;
+                if next_victim >= count { next_victim = 0; }
+            }
+
+            remaining_elves -= 1;
+        }
+
+        next_pos += 1;
+
+        if next_pos >= count { next_pos = 0; }
+    }
+
+    println!("{:?}", elves.iter().find(|&&n| n >= 0).unwrap());
+}
+fn day19() {
+    day19_pt1();
+    day19_pt2();
+}
+
+// NOTE: Better way to do this would be sort the ranges by lower, merge
+// overlapping ranges, then just look for the gaps between them.  But I felt
+// like loading it all into memory just because I could :)
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+fn first_set_bit(bitvec: &Vec<u32>) -> Option<u32> {
+    for (count, &segment) in bitvec.iter().enumerate() {
+        if segment != 0 {
+            for offset in 0..32 {
+                if (segment >> (32 - offset - 1) & 1) == 1 {
+                    println!("Found a thing in segment: {}", count);
+                    return Some((count as u32 * 32) + offset);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn count_set_bits(bitvec: &Vec<u32>) -> usize {
+    let mut result = 0;
+
+    for &segment in bitvec {
+        if segment != 0 {
+            for offset in 0..32 {
+                if (segment >> (32 - offset - 1) & 1) == 1 {
+                    result += 1;
+                }
+            }
+        }
+    }
+
+    result
+}
+
+fn day20() {
+    let max: u64 = 4294967296;
+
+    // Could just use a bitset, but for giggles...
+    let mut valid_addresses: Vec<u32> = vec!(0xFFFFFFFF; (max / 32) as usize);
+
+    let f = File::open("advent-files/day20_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    for range in br.lines().map(Result::unwrap) {
+        let range: Vec<usize> = range.split("-").map(str::parse).map(Result::unwrap).collect();
+
+        for bit_to_clear in range[0]..(range[1] + 1) {
+            let segment = bit_to_clear / 32;
+            let offset = bit_to_clear % 32;
+
+            valid_addresses[segment] &= !(1 << (32 - offset - 1));
+        }
+    }
+
+    println!("Scanning for valid address...");
+    println!("First valid address: {}", first_set_bit(&valid_addresses).unwrap());
+    println!("Number of valid addresses: {}", count_set_bits(&valid_addresses));
+}
+
+extern crate regex;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use regex::Regex;
+
+
+fn day21_pt1() {
+    let f = File::open("advent-files/day21_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let swap_position = Regex::new(r"swap position (\d+) with position (\d+)").unwrap();
+    let swap_letter = Regex::new(r"swap letter (\w) with letter (\w)").unwrap();
+    let rotate = Regex::new(r"rotate (left|right) (\d+) steps?").unwrap();
+    let rotate_by_letter = Regex::new(r"rotate based on position of letter (\w)").unwrap();
+    let reverse_by_position = Regex::new(r"reverse positions (\d+) through (\d+)").unwrap();
+    let move_position = Regex::new(r"move position (\d+) to position (\d+)").unwrap();
+
+    let mut input: Vec<String> = "abcdefgh".chars().map(|c| c.to_string()).collect();
+
+    for instruction in br.lines().map(Result::unwrap) {
+        // println!("Partial result: {}", input.join(""));
+
+        if let Some(args) = swap_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let tmp = input[positions[0]].clone();
+            input[positions[0]] = input[positions[1]].clone();
+            input[positions[1]] = tmp;
+        } else if let Some(args) = swap_letter.captures(&instruction) {
+            let letters: Vec<&str> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str()).collect();
+
+            let pos_a = input.iter().position(|c| c == letters[0]).unwrap();
+            let pos_b = input.iter().position(|c| c == letters[1]).unwrap();
+
+            let tmp = input[pos_a].clone();
+            input[pos_a] = input[pos_b].clone();
+            input[pos_b] = tmp;
+        } else if let Some(args) = rotate.captures(&instruction) {
+            let direction = &args[1];
+            let places: usize = args[2].parse().unwrap();
+
+            if places > 0 {
+                let mut pos = if direction == "left" {
+                    places % input.len()
+                } else {
+                    input.len() - (places % input.len())
+                };
+
+
+                let mut rotated = Vec::with_capacity(input.len());
+
+                for _ in 0..input.len() {
+                    rotated.push(input[pos].clone());
+                    pos = (pos + 1 ) % input.len();
+                }
+
+                input = rotated;
+            }
+        } else if let Some(args) = rotate_by_letter.captures(&instruction) {
+            let letter = &args[1];
+            let letter_idx = input.iter().position(|c| c == letter).unwrap();
+
+            let mut rotations = letter_idx + 1;
+            if letter_idx >= 4 {
+                rotations += 1;
+            }
+
+            if (rotations % input.len()) > 0 {
+                let mut pos = input.len() - (rotations % input.len());
+                let mut rotated = Vec::with_capacity(input.len());
+
+                for _ in 0..input.len() {
+                    rotated.push(input[pos].clone());
+                    pos = (pos + 1) % input.len();
+                }
+
+                input = rotated;
+            }
+        } else if let Some(args) = reverse_by_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let mut pos_a = positions[0];
+            let mut pos_b = positions[1];
+
+            while pos_a < pos_b {
+                let tmp = input[pos_a].clone();
+                input[pos_a] = input[pos_b].clone();
+                input[pos_b] = tmp;
+
+                pos_a += 1;
+                pos_b -= 1;
+            }
+        } else if let Some(args) = move_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let pos_a = positions[0];
+            let pos_b = positions[1];
+
+            let elt = input.remove(pos_a);
+            input.insert(pos_b, elt);
+        } else {
+            panic!(format!("Parse error for instruction: {}", instruction));
+        }
+    }
+
+    println!("Result: {}", input.join(""));
+}
+
+fn day21_pt2() {
+    let f = File::open("advent-files/day21_input_backwards.txt").expect("open file");
+
+    let br = BufReader::new(f);
+
+    let swap_position = Regex::new(r"^swap position (\d+) with position (\d+)").unwrap();
+    let swap_letter = Regex::new(r"^swap letter (\w) with letter (\w)").unwrap();
+    let rotate = Regex::new(r"^rotate (left|right) (\d+) steps?").unwrap();
+    let rotate_by_letter = Regex::new(r"^rotate based on position of letter (\w)").unwrap();
+    let left_rotate_by_letter = Regex::new(r"^rotate left based on position of letter (\w)").unwrap();
+    let reverse_by_position = Regex::new(r"^reverse positions (\d+) through (\d+)").unwrap();
+    let undo_move_position = Regex::new(r"^undo move position (\d+) to position (\d+)").unwrap();
+    let move_position = Regex::new(r"^move position (\d+) to position (\d+)").unwrap();
+
+    let mut input: Vec<String> = "fbgdceah".chars().map(|c| c.to_string()).collect();
+
+    for instruction in br.lines().map(Result::unwrap) {
+        // println!("Partial result: {}", input.join(""));
+
+        if let Some(args) = swap_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let tmp = input[positions[0]].clone();
+            input[positions[0]] = input[positions[1]].clone();
+            input[positions[1]] = tmp;
+        } else if let Some(args) = swap_letter.captures(&instruction) {
+            let letters: Vec<&str> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str()).collect();
+
+            let pos_a = input.iter().position(|c| c == letters[0]).unwrap();
+            let pos_b = input.iter().position(|c| c == letters[1]).unwrap();
+
+            let tmp = input[pos_a].clone();
+            input[pos_a] = input[pos_b].clone();
+            input[pos_b] = tmp;
+        } else if let Some(args) = rotate.captures(&instruction) {
+            let direction = &args[1];
+            let places: usize = args[2].parse().unwrap();
+
+            if places > 0 {
+                let mut pos = if direction == "left" {
+                    places % input.len()
+                } else {
+                    input.len() - (places % input.len())
+                };
+
+
+                let mut rotated = Vec::with_capacity(input.len());
+
+                for _ in 0..input.len() {
+                    rotated.push(input[pos].clone());
+                    pos = (pos + 1 ) % input.len();
+                }
+
+                input = rotated;
+            }
+        } else if let Some(args) = rotate_by_letter.captures(&instruction) {
+            let letter = &args[1];
+            let letter_idx = input.iter().position(|c| c == letter).unwrap();
+
+            let mut rotations = letter_idx + 1;
+            if letter_idx >= 4 {
+                rotations += 1;
+            }
+
+            if (rotations % input.len()) > 0 {
+                let mut pos = input.len() - (rotations % input.len());
+                let mut rotated = Vec::with_capacity(input.len());
+
+                for _ in 0..input.len() {
+                    rotated.push(input[pos].clone());
+                    pos = (pos + 1) % input.len();
+                }
+
+                input = rotated;
+            }
+        } else if let Some(args) = left_rotate_by_letter.captures(&instruction) {
+            let letter = &args[1];
+            let letter_idx = input.iter().position(|c| c == letter).unwrap();
+
+            let mut pos = match letter_idx {
+                1 => 1,
+                3 => 2,
+                5 => 3,
+                7 => 4,
+                2 => 6,
+                4 => 7,
+                6 => 0,
+                0 => 1,
+                _ => panic!("Bugger")
+            };
+
+
+            let mut rotated = Vec::with_capacity(input.len());
+
+            for _ in 0..input.len() {
+                rotated.push(input[pos].clone());
+                pos = (pos + 1) % input.len();
+            }
+
+            input = rotated;
+        } else if let Some(args) = reverse_by_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let mut pos_a = positions[0];
+            let mut pos_b = positions[1];
+
+            while pos_a < pos_b {
+                let tmp = input[pos_a].clone();
+                input[pos_a] = input[pos_b].clone();
+                input[pos_b] = tmp;
+
+                pos_a += 1;
+                pos_b -= 1;
+            }
+        } else if let Some(args) = move_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let pos_a = positions[0];
+            let pos_b = positions[1];
+
+            let elt = input.remove(pos_a);
+            input.insert(pos_b, elt);
+        } else if let Some(args) = undo_move_position.captures(&instruction) {
+            let positions: Vec<usize> = args.iter().map(Option::unwrap).skip(1).map(|m| m.as_str().parse().unwrap()).collect();
+
+            let pos_a = positions[0];
+            let pos_b = positions[1];
+
+            let elt = input.remove(pos_b);
+            input.insert(pos_a, elt);
+        } else {
+            panic!(format!("Parse error for instruction: {}", instruction));
+        }
+    }
+
+    println!("Result: {}", input.join(""));
+}
+
+
+fn day21() {
+    day21_pt1();
+    day21_pt2();
+}
+
+
+extern crate regex;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use regex::Regex;
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+struct Node {
+    x: usize,
+    y: usize,
+    used_tb: usize,
+    avail_tb: usize,
+}
+
+fn day22_pt1() {
+    let f = File::open("advent-files/day22_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let delim = Regex::new(" +").unwrap();
+
+    let mut nodes = Vec::new();
+    for line in br.lines().skip(2).map(Result::unwrap) {
+        let row: Vec<&str> = delim.split(&line).collect();
+
+        let node = Node {
+            x: 0,               // unused
+            y: 0,               // unused
+            used_tb: row[2].replace("T", "").parse().unwrap(),
+            avail_tb: row[3].replace("T", "").parse().unwrap(),
+        };
+
+        nodes.push(node);
+    }
+
+    let mut matching_pairs_count = 0;
+    for i in 0..nodes.len() {
+        for j in (i+1)..nodes.len() {
+            if (nodes[i].used_tb > 0 && nodes[i].used_tb <= nodes[j].avail_tb) ||
+                (nodes[j].used_tb > 0 && nodes[j].used_tb <= nodes[i].avail_tb) {
+                    // println!("Match: [{}: {}/{}] -- [{}: {}/{}]",
+                    //          i, nodes[i].used_tb, nodes[i].used_tb + nodes[i].avail_tb,
+                    //          j, nodes[j].used_tb, nodes[j].used_tb + nodes[j].avail_tb)
+                        // ;
+                    matching_pairs_count += 1;
+                }
+        }
+    }
+
+    println!("Found {} matching pairs", matching_pairs_count);
+}
+
+use std::collections::HashSet;
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+struct State {
+    grid: Vec<Vec<Option<Node>>>,
+    target_data_x: usize,
+    target_data_y: usize,
+}
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+struct PackedState (usize, usize, Vec<usize>);
+
+fn packed_state(state: &State) -> PackedState {
+    let mut result = vec!(0 ;state.grid.len() * state.grid.len());
+
+    for y in 0..state.grid.len() {
+        for x in 0..state.grid[0].len() {
+            let node = state.grid[y][x].clone().unwrap();
+            result[(y * state.grid.len()) + x] = node.used_tb;
+        }
+    }
+
+    PackedState(state.target_data_x, state.target_data_y, result)
+}
+
+
+
+impl State {
+    fn from_nodes(nodes: Vec<Node>) -> State {
+        let max_x = nodes.iter().map(|node| node.x).max().unwrap();
+        let max_y = nodes.iter().map(|node| node.y).max().unwrap();
+
+        let mut grid: Vec<Vec<Option<Node>>> = (0..(max_y + 1)).map(|_| {
+            (0..(max_x + 1)).map(|_| { None }).collect()
+        }).collect();
+
+        for node in nodes {
+            grid[node.y][node.x] = Some(node.clone())
+        }
+
+        State {
+            grid: grid,
+            target_data_x: max_x,
+            target_data_y: 0,
+        }
+    }
+
+    fn move_data(&self, source: &Node, target: &Node) -> State {
+        let mut new_grid: Vec<Vec<Option<Node>>> = self.grid.iter().map(|row| row.iter().cloned().collect()).collect();
+
+        new_grid[source.y][source.x] = Some(Node {
+            avail_tb: source.used_tb + source.avail_tb,
+            used_tb: 0,
+            x: source.x,
+            y: source.y,
+        });
+
+        new_grid[target.y][target.x] = Some(Node {
+            avail_tb: (target.avail_tb - source.used_tb),
+            used_tb: (target.used_tb + source.used_tb),
+            x: target.x,
+            y: target.y,
+        });
+
+        let mut result = State {
+            grid: new_grid,
+            target_data_x: self.target_data_x,
+            target_data_y: self.target_data_y,
+        };
+
+        if self.target_data_x == source.x && self.target_data_y == source.y {
+            result.target_data_x = target.x;
+            result.target_data_y = target.y;
+        }
+
+        result
+    }
+
+    fn already_seen(&self, state: &State, seen_states: &HashSet<PackedState>) -> bool {
+        return seen_states.contains(&packed_state(&state))
+    }
+
+    fn record_state(&self, state: &State, seen_states: &mut HashSet<PackedState>) {
+        seen_states.insert(packed_state(state));
+    }
+
+    fn next_states(&self, seen_states: &mut HashSet<PackedState>) -> Vec<State> {
+        let mut next_states = Vec::new();
+
+        for y in 0..self.grid.len() {
+            for x in 0..self.grid[0].len() {
+                let node = self.grid[y][x].clone().unwrap();
+
+                for offset in &[[-1, 0], [1, 0], [0, -1], [0, 1]] {
+                    let new_x = x as i32 + offset[0];
+                    let new_y = y as i32 + offset[1];
+
+                    if new_y >= 0 && new_y < self.grid.len() as i32 && new_x >= 0 && new_x < self.grid[new_y as usize].len() as i32 {
+                        let target_node = self.grid[new_y as usize][new_x as usize].clone().unwrap();
+
+                        if target_node.avail_tb >= node.used_tb && node.used_tb > 0 {
+                            let mut new_state = self.move_data(&node, &target_node);
+
+                            if !self.already_seen(&new_state, seen_states) {
+                                self.record_state(&new_state, seen_states);
+                                next_states.push(new_state);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        next_states
+    }
+}
+
+struct Chain {
+    state: State,
+    steps: usize
+}
+
+// Naive brute-force solution (doesn't work :)
+// THINKME: A better version of state?  What if each node just knew how much space it used, how much it had left, and which nodes data it held?
+fn day22_pt2() {
+    let f = File::open("advent-files/day22_input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let delim = Regex::new(" +").unwrap();
+    let device_pattern = Regex::new("/dev/grid/node-x([0-9]+)-y([0-9]+)").unwrap();
+
+    let mut nodes = Vec::new();
+    for line in br.lines().skip(2).map(Result::unwrap) {
+        let row: Vec<&str> = delim.split(&line).collect();
+
+        let device = device_pattern.captures(row[0]).unwrap();
+
+        let mut node = Node {
+            x: device[1].parse().unwrap(),
+            y: device[2].parse().unwrap(),
+            used_tb: row[2].replace("T", "").parse().unwrap(),
+            avail_tb: row[3].replace("T", "").parse().unwrap(),
+        };
+
+        // Bucket our nodes to save on state space.
+        if node.used_tb > 400 {
+            node.used_tb = 1000;
+            node.avail_tb = 0;
+        } else if node.used_tb > 0 {
+            node.used_tb = 80;
+            node.avail_tb = 20;
+        } else {
+            node.avail_tb = 100
+        }
+
+        nodes.push(node);
+    }
+
+    let mut seen_states = HashSet::new();
+
+    let mut queue = vec!(Chain {
+        state: State::from_nodes(nodes),
+        steps: 0,
+    });
+
+    seen_states.insert(packed_state(&queue[0].state));
+
+
+    let mut loopcount = 0;
+
+    'outer: while queue.len() > 0 {
+        loopcount += 1;
+
+        let chain = queue.remove(0);
+
+        let next_states = chain.state.next_states(&mut seen_states);
+
+        for next_state in next_states {
+            if next_state.target_data_x == 0 && next_state.target_data_y == 0 {
+                println!("Win! {} steps", chain.steps + 1);
+                break 'outer
+            }
+
+            queue.push(Chain {
+                state: next_state,
+                steps: chain.steps + 1
+            });
+        }
+
+        if loopcount > 1000000 {
+            break;
+        }
+    }
+
+    println!("Finished...");
+}
+
+
+fn day22() {
+    day22_pt1();
+    day22_pt2();
+}
+*/
+
+use std::collections::HashMap;
+
+
+const DAY23_SAMPLE_INPUT: &str = "
+cpy 2 a
+tgl a
+tgl a
+tgl a
+cpy 1 a
+dec a
+dec a
+";
+
+const DAY23_INPUT: &str = "
+cpy a b
+dec b
+cpy a d
+cpy 0 a
+cpy b c
+inc a
+dec c
+jnz c -2
+dec d
+jnz d -5
+dec b
+cpy b c
+cpy c d
+dec d
+inc c
+jnz d -2
+tgl c
+cpy -16 c
+jnz 1 c
+cpy 79 c
+jnz 74 d
+inc a
+inc d
+jnz d -2
+inc c
+jnz c -5
+";
+
+const DAY23_INPUT_OPTIMIZED: &str = "
+cpy a b
+dec b
+nop
+nop
+nop
+mul b a
+cpy 0 c
+cpy 0 d
+nop
+nop
+nop
+dec b
+cpy b c
+cpy c d
+dec d
+inc c
+jnz d -2
+tgl c
+cpy -16 c
+jnz 1 c
+cpy 79 c
+jnz 74 d
+inc a
+inc d
+jnz d -2
+inc c
+jnz c -5
+";
+
+
+const MAGIC_START_NUMBER: i64 = 12;
+
+
+fn to_register(name: &str) -> char {
+    name.chars().nth(0).unwrap()
+}
+
+fn deref_value(value: &str, registers: &HashMap<char, i64>) -> i64 {
+    match to_register(value) {
+        r @ 'a'...'z' => {
+            *registers.get(&r).unwrap()
+        },
+        _ => { value.parse().unwrap() }
+    }
+}
+
+fn day23() {
+    let mut instructions: Vec<String> = DAY23_INPUT_OPTIMIZED.trim().split("\n").map(|s| {
+        if &s[0..1] == "#" {
+            "nop".to_string()
+        } else {
+            s.to_string()
+        }}).collect();
+
+    let mut registers = "abcd".chars().fold(HashMap::new(), |mut acc, register| {
+        if register == 'a' {
+            acc.insert(register, MAGIC_START_NUMBER);
+        } else {
+            acc.insert(register, 0);
+        }
+        acc
+    });
+
+    let mut pc: i64 = 0;
+
+    loop {
+        // println!("PC: {}; REGS: {:?}", pc, registers);
+
+        if pc < 0 || pc >= (instructions.len() as i64) {
+            break;
+        }
+
+        let instruction = (&instructions[pc as usize]).clone();
+        let bits: Vec<&str> = instruction.split(" ").collect();
+
+        match bits[0] {
+            "tgl" => {
+                let offset = deref_value(bits[1], &registers);
+
+                if (pc + offset) >= 0 && ((pc + offset) as usize) < instructions.len() {
+                    println!{"Toggle: {} ({:?})", (pc + offset), instructions[(pc + offset) as usize]};
+                    let target_instruction = (pc + offset) as usize;
+                    let target_bits: Vec<String> = instructions[target_instruction].clone().split(" ").map(str::to_string).collect();
+
+                    match target_bits.len() {
+                        3 => {
+                            if target_bits[0] == "jnz" {
+                                instructions[target_instruction] = format!("{} {} {}", "cpy", target_bits[1], target_bits[2]);
+                            } else {
+                                instructions[target_instruction] = format!("{} {} {}", "jnz", target_bits[1], target_bits[2]);
+                            }
+                        },
+                        2 => {
+                            if target_bits[0] == "inc" {
+                                instructions[target_instruction] = format!("{} {}", "dec", target_bits[1]);
+                            } else {
+                                instructions[target_instruction] = format!("{} {}", "inc", target_bits[1]);
+                            }
+                        },
+                        _ => {
+                            panic!("Invalid instruction: {:?}", target_bits);
+                        }
+                    };
+                }
+            },
+            "cpy" => {
+                let value = deref_value(bits[1], &registers);
+                registers.insert(to_register(bits[2]), value);
+            },
+            "mul" => {
+                let value1 = deref_value(bits[1], &registers);
+                let value2 = deref_value(bits[2], &registers);
+                registers.insert(to_register(bits[2]), value1 * value2);
+            },
+            "nop" => {},
+            "inc" => {
+                let new_value = deref_value(bits[1], &registers) + 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "dec" => {
+                let new_value = deref_value(bits[1], &registers) - 1;
+                registers.insert(to_register(bits[1]), new_value);
+            },
+            "jnz" => {
+                let x = deref_value(bits[1], &registers);
+                let y = deref_value(bits[2], &registers);
+
+                if x != 0 {
+                    // Compensate for the increment we're going to get anyway.
+                    pc -= 1;
+                    pc += y;
+                }
+            },
+            _ => { panic!("WTF?! {}", bits[0]); },
+        }
+
+        pc += 1;
+    }
+
+    println!("Final state: {:?}", &registers);
+}
+
 fn main() {
     // day1();
     // day2();
@@ -2060,5 +2899,14 @@ fn main() {
     // day15();
     // day16();
     // day17();
-    day18();
+    // day18();
+    // day19();
+    // day20();
+    // day21();
+    // day22();
+    day23();
 }
+
+
+
+
