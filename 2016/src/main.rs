@@ -2694,7 +2694,6 @@ fn day22() {
     day22_pt1();
     day22_pt2();
 }
-*/
 
 use std::collections::HashMap;
 
@@ -2881,6 +2880,200 @@ fn day23() {
     println!("Final state: {:?}", &registers);
 }
 
+*/
+
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+type Location = char;
+
+#[derive(Debug)]
+struct Grid {
+    data: Vec<Vec<Location>>,
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+struct Position {
+    x: usize,
+    y: usize,
+}
+
+
+impl Grid {
+    fn new() -> Grid {
+        Grid { data: Vec::new() }
+    }
+
+    fn load(input: &mut BufRead) -> Grid {
+        let mut result = Grid::new();
+
+        for line in input.lines().map(Result::unwrap) {
+            result.data.push(line.chars().collect());
+        }
+
+        result
+    }
+
+    fn position_of(&self, location: Location) -> Option<Position> {
+        for y in 0..self.data.len() {
+            for x in 0..self.data[y].len() {
+                if self.data[y][x] == location {
+                    return Some(Position { x, y })
+                }
+            }
+        }
+
+        return None;
+    }
+
+    fn get(&self, position: &Position) -> Option<Location> {
+        if position.y < self.data.len() &&
+            position.x < self.data[position.y].len() {
+                return Some(self.data[position.y][position.x])
+            }
+
+        None
+    }
+}
+
+struct Candidate {
+    position: Position,
+    cost: usize,
+}
+
+struct ShortestPath {
+    paths: HashMap<(Position, Position), usize>,
+}
+
+impl ShortestPath {
+    fn new() -> ShortestPath {
+        ShortestPath { paths: HashMap::new() }
+    }
+
+    fn add_location(&mut self, start: &Position, end: &Position, cost: usize) {
+        self.paths.insert((start.clone(), end.clone()), cost);
+    }
+
+    fn cost(&self, start: &Position, end: &Position) -> usize {
+        match self.paths.get(&(start.clone(), end.clone())) {
+            Some(&cost) => { cost },
+            None => { std::usize::MAX }
+        }
+    }
+}
+
+fn surrounding_positions(pos: Position) -> Vec<Position> {
+    let mut result = Vec::new();
+
+    for &(x_offset, y_offset) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+        if ((pos.x as i64) + x_offset >= 0) && ((pos.y as i64) + y_offset >= 0) {
+            result.push(Position {
+                x: ((pos.x as i64) + x_offset) as usize,
+                y: ((pos.y as i64) + y_offset) as usize,
+            });
+        }
+    }
+
+    result
+}
+
+use std::fmt::Debug;
+
+fn all_permutations<T: Clone+Debug>(elts: Vec<T>) -> Vec<Vec<T>> {
+    let mut result: Vec<Vec<T>> = Vec::new();
+    result.push(Vec::new());
+
+    for i in (0..elts.len()).rev() {
+        let elt = elts.get(i).unwrap();
+        let mut expanded = Vec::new();
+
+        while !result.is_empty() {
+            let candidate = result.remove(0);
+
+            for pos in 0..candidate.len() + 1 {
+                // Insert 'elt' at every possible position
+                let mut permutation = candidate.clone();
+                permutation.insert(pos, elt.clone());
+                expanded.push(permutation);
+            }
+        }
+
+        result = expanded;
+
+    }
+
+    result
+}
+
+fn day24() {
+    let f = File::open("advent-files/day24_input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+
+    let grid = Grid::load(&mut br);
+
+    let mut paths = ShortestPath::new();
+    let locations = ['0', '1', '2', '3', '4', '5', '6', '7'];
+
+    for &start in locations.iter() {
+        let start_position = grid.position_of(start).unwrap();
+
+        paths.add_location(&start_position, &start_position, 0);
+
+        let mut queue: Vec<Candidate> = Vec::new();
+        queue.push(Candidate {
+            position: start_position.clone(),
+            cost: 0,
+        });
+
+        while !queue.is_empty() {
+            let candidate = queue.remove(0);
+
+            for new_position in surrounding_positions(candidate.position) {
+                match grid.get(&new_position) {
+                    Some(location) => {
+                        if location == '#' {
+                            // No good!
+                        } else {
+                            if paths.cost(&start_position, &new_position) > (candidate.cost + 1) {
+                                // We've got a better one...
+                                paths.add_location(&start_position, &new_position, candidate.cost + 1);
+                                queue.push(Candidate {
+                                    position: new_position,
+                                    cost: candidate.cost + 1,
+                                });
+                            }
+                        }
+                    },
+                    None => {},
+                }
+            }
+        }
+    }
+
+    let mut best_cost = std::usize::MAX;
+
+    for permutation in all_permutations(['1', '2', '3', '4', '5', '6', '7'].to_vec()) {
+        let mut start = '0';
+        let mut cost = 0;
+
+        for end in permutation {
+            cost += paths.cost(&grid.position_of(start).unwrap(), &grid.position_of(end).unwrap());
+            start = end;
+        }
+
+        // Part 2: return to start!
+        cost += paths.cost(&grid.position_of(start).unwrap(), &grid.position_of('0').unwrap());
+
+        if cost < best_cost {
+            best_cost = cost;
+        }
+    }
+
+    println!("Shortest path: {}", best_cost);
+}
+
+
 fn main() {
     // day1();
     // day2();
@@ -2904,7 +3097,9 @@ fn main() {
     // day20();
     // day21();
     // day22();
-    day23();
+    // day23();
+
+    day24();
 }
 
 
