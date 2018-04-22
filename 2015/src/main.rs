@@ -1,6 +1,5 @@
 // (cd ../ && cargo build && scp target/debug/adventofcode2016 mozart:tmp/ && ssh mozart '(cd /home/mst/tmp; RUST_BACKTRACE=1 ~/tmp/adventofcode2016)')
 
-
 // use regex::Regex;
 // use std::cell::RefCell;
 // use std::collections::HashMap;
@@ -800,61 +799,50 @@ fn day11() {
     println!("Next next password: {}", next_password("hxbxxyzz"));
 }
 
-*/
-
 use std::fs::File;
-use std::io::{Read, BufReader};
+use std::io::{BufReader, Read};
 
 extern crate serde_json;
-use serde_json::{Value};
+use serde_json::Value;
 
+fn sum_numbers_pt1(initial_value: Value) -> i64 {
+    let mut result: i64 = 0;
+    let mut queue: Vec<Value> = vec![initial_value];
 
-fn sum_numbers_pt1(initial_value: &Value) -> i64 {
-    let mut total: i64 = 0;
-    let mut queue: Vec<Value> = vec!(initial_value.clone());
-
-    while queue.len() > 0 {
-        let v = queue.pop().unwrap();
-
+    while let Some(v) = queue.pop() {
         match v {
-            Value::Null => {},
-            Value::Bool(_) => {},
-            Value::Number(n) => { total += n.as_i64().unwrap() },
-            Value::String(_) => {},
-            Value::Array(values) => { queue.extend(values) },
-            Value::Object(obj) => {
-                queue.extend(obj.values().cloned().collect::<Vec<Value>>())
-            },
+            Value::Number(n) => result += n.as_i64().unwrap(),
+            Value::Array(values) => queue.extend(values),
+            Value::Object(obj) => queue.extend(obj.values().cloned()),
+            _ => {}
         }
     }
 
-    total
+    result
 }
 
-fn sum_numbers_pt2(initial_value: &Value) -> i64 {
+fn sum_numbers_pt2(initial_value: Value) -> i64 {
     let mut total: i64 = 0;
-    let mut queue: Vec<Value> = vec!(initial_value.clone());
+    let mut queue: Vec<Value> = vec![initial_value];
 
-    while queue.len() > 0 {
-        let v = queue.pop().unwrap();
-
+    while let Some(v) = queue.pop() {
         match v {
-            Value::Null => {},
-            Value::Bool(_) => {},
-            Value::Number(n) => { total += n.as_i64().unwrap() },
-            Value::String(_) => {},
-            Value::Array(values) => { queue.extend(values) },
+            Value::Number(n) => total += n.as_i64().unwrap(),
+            Value::Array(values) => queue.extend(values),
             Value::Object(obj) => {
-                if (obj.values().find(|&value| value.is_string() && value.as_str().unwrap() == "red")).is_none() {
+                if (obj.values()
+                    .find(|&value| value.is_string() && value.as_str().unwrap() == "red"))
+                    .is_none()
+                {
                     queue.extend(obj.values().cloned().collect::<Vec<Value>>())
                 }
-            },
+            }
+            _ => {}
         }
     }
 
     total
 }
-
 
 fn day12() {
     let f = File::open("advent-files/day12-input.txt").expect("open file");
@@ -865,11 +853,114 @@ fn day12() {
 
     let v: Value = serde_json::from_str(&input).unwrap();
 
-    println!("Summed numbers: {}", sum_numbers_pt1(&v));
-    println!("Summed numbers (pt2): {}", sum_numbers_pt2(&v));
+    println!("Summed numbers: {}", sum_numbers_pt1(v.clone()));
+    println!("Summed numbers (pt2): {}", sum_numbers_pt2(v.clone()));
 }
 
+*/
 
+
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+
+fn all_permutations<T: Clone>(elts: Vec<T>) -> Vec<Vec<T>> {
+    let mut result: Vec<Vec<T>> = Vec::new();
+    result.push(Vec::new());
+
+    for i in (0..elts.len()).rev() {
+        let elt = elts.get(i).unwrap();
+        let mut expanded = Vec::new();
+
+        while !result.is_empty() {
+            let candidate = result.remove(0);
+
+            for pos in 0..candidate.len() + 1 {
+                // Insert 'elt' at every possible position
+                let mut permutation = candidate.clone();
+                permutation.insert(pos, elt.clone());
+                expanded.push(permutation);
+            }
+        }
+
+        result = expanded;
+    }
+
+    result
+}
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+struct Pairing {
+    subject_person: String,
+    object_person: String,
+}
+
+fn day13() {
+    let f = File::open("advent-files/day13-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut pairing_costs: HashMap<Pairing, i64> = HashMap::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        let bits: Vec<String> = line.split(" ").map(str::to_owned).collect();
+
+        let pairing = Pairing { subject_person: bits[0].clone(), object_person: bits[10].clone() };
+        let magnitude: i64 = bits[3].parse().unwrap();
+
+        let multiplier = match bits[2].as_ref() {
+            "gain" => { 1 },
+            "lose" => { -1 },
+            _ => panic!("Parse error: {}", bits[2]),
+        };
+
+        pairing_costs.insert(pairing, multiplier * magnitude);
+    }
+
+    // 751: too high!
+    let mut all_people: Vec<String> = pairing_costs
+        .keys()
+        .map(|pairing| pairing.subject_person.clone())
+        .collect();
+
+    for person in &all_people {
+        pairing_costs.insert(Pairing { subject_person: "MarkTriggs".to_owned(),
+                                       object_person: person.clone() },
+                             0);
+
+        pairing_costs.insert(Pairing { subject_person: person.clone(),
+                                       object_person: "MarkTriggs".to_owned() },
+                             0);
+    }
+
+    all_people.push("MarkTriggs".to_owned());
+
+    all_people.sort();
+    all_people.dedup();
+
+    let mut happiest: i64 = std::i64::MIN;
+
+    let people_count = all_people.len() as i64;
+
+    for permutation in all_permutations(all_people) {
+        let mut happiness = 0;
+
+        for i in 0..permutation.len() {
+            let subject = permutation[i].clone();
+            let left_neighbour = permutation[((((i as i64 - 1) % people_count) + people_count) % people_count) as usize].clone();
+            let right_neighbour = permutation[((((i as i64 + 1) % people_count) + people_count) % people_count) as usize].clone();
+
+            happiness += *(pairing_costs.get(&Pairing { subject_person: subject.clone(), object_person: left_neighbour }).unwrap());
+            happiness += *(pairing_costs.get(&Pairing { subject_person: subject.clone(), object_person: right_neighbour }).unwrap());
+        }
+
+        if happiness > happiest {
+            happiest = happiness;
+        }
+    }
+
+    println!("MOST HAPPY: {}", happiest);
+}
 
 fn main() {
     // day1();
@@ -883,6 +974,7 @@ fn main() {
     // day9();
     // day10();
     // day11();
+    // day12();
 
-    day12();
+    day13();
 }
