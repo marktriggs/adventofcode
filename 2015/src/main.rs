@@ -699,8 +699,6 @@ fn day9() {
     println!("Best distance: {}", best);
 }
 
-*/
-
 fn look_and_say(s: String) -> String {
     let mut result = String::with_capacity(s.len());
 
@@ -736,6 +734,143 @@ fn day10() {
 }
 
 
+use std::collections::HashSet;
+
+const PASSWORD_LETTERS: &str = "abcdefghjkmnpqrstuvwxyz";
+
+fn is_good_password(password: &Vec<char>) -> bool {
+    let codes: Vec<i64> = password.iter().map(|&ch| ch as i64).collect();
+    let mut has_run = false;
+    let mut pairs: HashSet<char> = HashSet::new();
+
+    for i in 0..codes.len() - 2 {
+        if (codes[i + 1] - codes[i]) == 1 && (codes[i + 2] - codes[i + 1]) == 1 {
+            has_run = true;
+            break
+        }
+    }
+
+    for i in 0..codes.len() - 1 {
+        if codes[i] == codes[i + 1] {
+            pairs.insert(password[i]);
+
+            if pairs.len() == 2 {
+                break;
+            }
+        }
+    }
+
+    has_run && pairs.len() == 2
+}
+
+fn tick_password(password: &mut Vec<char>, password_chars: &Vec<char>) {
+    let mut i: i64 = (password.len() - 1) as i64;
+    while i >= 0 {
+        let old_ch = password[i as usize];
+        let pos = password_chars.iter().position(|&ch| ch == old_ch).unwrap();
+
+        password[i as usize] = password_chars[(pos + 1) % password_chars.len()];
+
+        if pos < password_chars.len() - 1 {
+            break;
+        }
+
+        i -= 1;
+    }
+}
+
+
+fn next_password(start_password: &str) -> String {
+    let password_chars: Vec<char> = PASSWORD_LETTERS.chars().collect();
+    let mut password: Vec<char> = start_password.chars().collect();
+
+    loop {
+        tick_password(&mut password, &password_chars);
+
+        if is_good_password(&password) {
+            break;
+        }
+    }
+
+    password.iter().collect()
+}
+
+fn day11() {
+    println!("Next password: {}", next_password("hxbxwxba"));
+    println!("Next next password: {}", next_password("hxbxxyzz"));
+}
+
+*/
+
+use std::fs::File;
+use std::io::{Read, BufReader};
+
+extern crate serde_json;
+use serde_json::{Value};
+
+
+fn sum_numbers_pt1(initial_value: &Value) -> i64 {
+    let mut total: i64 = 0;
+    let mut queue: Vec<Value> = vec!(initial_value.clone());
+
+    while queue.len() > 0 {
+        let v = queue.pop().unwrap();
+
+        match v {
+            Value::Null => {},
+            Value::Bool(_) => {},
+            Value::Number(n) => { total += n.as_i64().unwrap() },
+            Value::String(_) => {},
+            Value::Array(values) => { queue.extend(values) },
+            Value::Object(obj) => {
+                queue.extend(obj.values().cloned().collect::<Vec<Value>>())
+            },
+        }
+    }
+
+    total
+}
+
+fn sum_numbers_pt2(initial_value: &Value) -> i64 {
+    let mut total: i64 = 0;
+    let mut queue: Vec<Value> = vec!(initial_value.clone());
+
+    while queue.len() > 0 {
+        let v = queue.pop().unwrap();
+
+        match v {
+            Value::Null => {},
+            Value::Bool(_) => {},
+            Value::Number(n) => { total += n.as_i64().unwrap() },
+            Value::String(_) => {},
+            Value::Array(values) => { queue.extend(values) },
+            Value::Object(obj) => {
+                if (obj.values().find(|&value| value.is_string() && value.as_str().unwrap() == "red")).is_none() {
+                    queue.extend(obj.values().cloned().collect::<Vec<Value>>())
+                }
+            },
+        }
+    }
+
+    total
+}
+
+
+fn day12() {
+    let f = File::open("advent-files/day12-input.txt").expect("open file");
+    let mut br = BufReader::new(f);
+
+    let mut input = String::new();
+    br.read_to_string(&mut input).unwrap();
+
+    let v: Value = serde_json::from_str(&input).unwrap();
+
+    println!("Summed numbers: {}", sum_numbers_pt1(&v));
+    println!("Summed numbers (pt2): {}", sum_numbers_pt2(&v));
+}
+
+
+
 fn main() {
     // day1();
     // day2();
@@ -746,5 +881,8 @@ fn main() {
     // day7();
     // day8();
     // day9();
-    day10();
+    // day10();
+    // day11();
+
+    day12();
 }
