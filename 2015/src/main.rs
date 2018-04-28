@@ -22,17 +22,17 @@ use std::io::Read;
 use std::io::BufReader;
 
 fn day1() {
-    let f = File::open("advent-files/day1-input.txt").expect("open file");
-    let mut br = BufReader::new(f);
+let f = File::open("advent-files/day1-input.txt").expect("open file");
+let mut br = BufReader::new(f);
 
-    let mut input = String::new();
-    br.read_to_string(&mut input).unwrap();
+let mut input = String::new();
+br.read_to_string(&mut input).unwrap();
 
-    let result = input.trim().chars().enumerate().fold(0, |floor, (idx, ch)| {
-        let new_floor = match ch {
-            '(' => { floor + 1 }
-            ')' => { floor - 1 }
-            _ => { panic!("Invalid input: {}", ch) }
+let result = input.trim().chars().enumerate().fold(0, |floor, (idx, ch)| {
+let new_floor = match ch {
+'(' => { floor + 1 }
+')' => { floor - 1 }
+_ => { panic!("Invalid input: {}", ch) }
         };
 
         if floor == 0 && new_floor == -1 {
@@ -857,8 +857,6 @@ fn day12() {
     println!("Summed numbers (pt2): {}", sum_numbers_pt2(v.clone()));
 }
 
-*/
-
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -962,6 +960,646 @@ fn day13() {
     println!("MOST HAPPY: {}", happiest);
 }
 
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+#[derive(Debug)]
+struct Reindeer {
+    name: String,
+    top_speed: usize,
+    sprint_time: usize,
+    rest_time: usize,
+
+    distance_travelled: usize,
+    points: usize,
+}
+
+fn day14_pt1() {
+    let f = File::open("advent-files/day14-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut reindeer: Vec<Reindeer> = Vec::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        let bits: Vec<String> = line.split(" ").map(str::to_owned).collect();
+
+        reindeer.push(Reindeer {
+            name: bits[0].clone(),
+            top_speed: bits[3].parse().unwrap(),
+            sprint_time: bits[6].parse().unwrap(),
+            rest_time: bits[13].parse().unwrap(),
+
+            distance_travelled: 0,
+            points: 0,
+        });
+    }
+
+    for i in 0..2503 {
+        for mut r in &mut reindeer {
+            if i % (r.sprint_time + r.rest_time) < r.sprint_time {
+                r.distance_travelled += r.top_speed
+            }
+        }
+    }
+
+    println!("Winner: {:?}", reindeer.iter().max_by_key(|r| r.distance_travelled));
+}
+
+fn day14_pt2() {
+    let f = File::open("advent-files/day14-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut reindeer: Vec<Reindeer> = Vec::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        let bits: Vec<String> = line.split(" ").map(str::to_owned).collect();
+
+        reindeer.push(Reindeer {
+            name: bits[0].clone(),
+            top_speed: bits[3].parse().unwrap(),
+            sprint_time: bits[6].parse().unwrap(),
+            rest_time: bits[13].parse().unwrap(),
+
+            distance_travelled: 0,
+            points: 0,
+        });
+    }
+
+    for i in 0..2503 {
+        for mut r in &mut reindeer {
+            if i % (r.sprint_time + r.rest_time) < r.sprint_time {
+                r.distance_travelled += r.top_speed;
+            }
+        }
+
+        let max = reindeer.iter().map(|r| r.distance_travelled).max().unwrap();
+
+        for r in &mut reindeer {
+            if r.distance_travelled == max {
+                r.points += 1;;
+            }
+        }
+    }
+
+    println!("Winner: {:?}", reindeer.iter().max_by_key(|r| r.points));
+}
+
+fn day14() {
+    day14_pt1();
+    day14_pt2();
+}
+
+use std::collections::HashSet;
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+struct Properties {
+    capacity: i64,
+    durability: i64,
+    flavor: i64,
+    texture: i64,
+    calories: i64,
+}
+
+#[derive(Clone, Debug)]
+struct Ingredient {
+    name: String,
+    properties: Properties,
+}
+
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
+struct IngredientSet {
+    ingredients: Vec<String>,
+}
+
+impl IngredientSet {
+    fn new() -> IngredientSet {
+        IngredientSet { ingredients: Vec::new() }
+    }
+
+    fn push(&self, ingredient: String) -> IngredientSet {
+        let mut result = self.ingredients.clone();
+        result.push(ingredient);
+        result.sort();
+
+        IngredientSet { ingredients: result }
+    }
+}
+
+
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+struct Bowl {
+    ingredients: IngredientSet,
+    properties: Properties,
+}
+
+fn score(bowl: &Bowl) -> i64 {
+    if bowl.properties.capacity < 0 ||
+        bowl.properties.durability < 0 ||
+        bowl.properties.flavor < 0 ||
+        bowl.properties.texture < 0 {
+            return 0;
+        }
+
+    bowl.properties.capacity * bowl.properties.durability * bowl.properties.flavor * bowl.properties.texture
+}
+
+fn add_to_bowl(bowl: &Bowl, ingredient: &Ingredient) -> Bowl {
+    Bowl {
+        ingredients: bowl.ingredients.push(ingredient.name.clone()),
+        properties: properties_combine(&bowl.properties, &ingredient.properties),
+    }
+}
+
+fn properties_combine(a: &Properties, b: &Properties) -> Properties {
+    Properties {
+        capacity: a.capacity + b.capacity,
+        durability: a.durability + b.durability,
+        flavor: a.flavor + b.flavor,
+        texture: a.texture + b.texture,
+        calories: a.calories + b.calories,
+    }
+}
+
+fn day15_pt1() {
+    let mut ingredients: Vec<Ingredient> = Vec::new();
+
+    // ingredients.push(Ingredient {
+    //     name: "Butterscotch".to_owned(),
+    //     properties: Properties {
+    //         capacity: -1,
+    //         durability: -2,
+    //         flavor: 6,
+    //         texture: 3,
+    //         calories: 8,
+    //     },
+    // });
+    //
+    // ingredients.push(Ingredient {
+    //     name: "Cinnamon".to_owned(),
+    //     properties: Properties {
+    //         capacity: 2,
+    //         durability: 3,
+    //         flavor: -2,
+    //         texture: -1,
+    //         calories: 3,
+    //     },
+    // });
+
+
+    ingredients.push(Ingredient {
+        name: "Sprinkles".to_owned(),
+        properties: Properties {
+            capacity: 5,
+            durability: -1,
+            flavor: 0,
+            texture: 0,
+            calories: 5
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "PeanutButter".to_owned(),
+        properties: Properties {
+            capacity: -1,
+            durability: 3,
+            flavor: 0,
+            texture: 0,
+            calories: 1
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "Frosting".to_owned(),
+        properties: Properties {
+            capacity: 0,
+            durability: -1,
+            flavor: 4,
+            texture: 0,
+            calories: 6
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "Sugar".to_owned(),
+        properties: Properties {
+            capacity: -1,
+            durability: 0,
+            flavor: 0,
+            texture: 2,
+            calories: 8
+        },
+    });
+
+    let mut candidates: HashSet<Bowl> = ingredients
+        .iter()
+        .map(|ingredient| Bowl {
+            ingredients: {
+                IngredientSet::new().push(ingredient.name.clone())
+            },
+            properties: ingredient.properties.clone()
+        }).collect();
+
+    for i in 0..99 {
+        println!("Round {}", i);
+        let mut new_candidates = Vec::new();
+        for candidate in &candidates {
+            let mut potential_bowls: Vec<(i64, Bowl)> = ingredients
+                .iter()
+                .map(|ingredient| {
+                    let new_bowl = add_to_bowl(&candidate, &ingredient);
+                    (score(&new_bowl), new_bowl)
+                })
+                .collect();
+
+            potential_bowls.sort_by_key(|&(score, _)| -score);
+
+            let best_score = potential_bowls[0].0;
+
+            for &(_, ref bowl) in potential_bowls.iter().take_while(|&&(score, _)| score == best_score) {
+                new_candidates.push(bowl.clone())
+            }
+        }
+
+        new_candidates.sort_by_key(|candidate| -score(&candidate));
+        let best_score = score(&new_candidates[0]);
+        candidates = new_candidates.iter().take_while(|&candidate| score(&candidate) == best_score).cloned().collect();
+
+        println!("{} candidates", candidates.len());
+    }
+
+    println!("Best score was: {}", score(candidates.iter().nth(0).unwrap()));
+    println!("Recipe: {:?}", candidates.iter().nth(0).unwrap());
+}
+
+fn day15_pt2() {
+    let mut ingredients: Vec<Ingredient> = Vec::new();
+
+    ingredients.push(Ingredient {
+        name: "Sprinkles".to_owned(),
+        properties: Properties {
+            capacity: 5,
+            durability: -1,
+            flavor: 0,
+            texture: 0,
+            calories: 5
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "PeanutButter".to_owned(),
+        properties: Properties {
+            capacity: -1,
+            durability: 3,
+            flavor: 0,
+            texture: 0,
+            calories: 1
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "Frosting".to_owned(),
+        properties: Properties {
+            capacity: 0,
+            durability: -1,
+            flavor: 4,
+            texture: 0,
+            calories: 6
+        },
+    });
+    ingredients.push(Ingredient {
+        name: "Sugar".to_owned(),
+        properties: Properties {
+            capacity: -1,
+            durability: 0,
+            flavor: 0,
+            texture: 2,
+            calories: 8
+        },
+    });
+
+    let mut candidates: HashSet<Bowl> = ingredients
+        .iter()
+        .map(|ingredient| Bowl {
+            ingredients: {
+                IngredientSet::new().push(ingredient.name.clone())
+            },
+            properties: ingredient.properties.clone()
+        }).collect();
+
+    for i in 0..99 {
+        println!("Round {}", i);
+        let mut new_candidates = Vec::new();
+        for candidate in &candidates {
+            for ingredient in &ingredients {
+                let new_bowl = add_to_bowl(&candidate, &ingredient);
+
+                if new_bowl.properties.calories <= 500 {
+                    new_candidates.push(new_bowl)
+                }
+            }
+        }
+
+        candidates = new_candidates.iter().cloned().collect::<HashSet<Bowl>>();
+
+        println!("{} candidates", candidates.len());
+    }
+
+    println!("Best score was: {}", candidates.iter().filter(|bowl| bowl.properties.calories == 500).map(score).max().unwrap());
+}
+
+fn day15() {
+    day15_pt1();
+    day15_pt2();
+}
+
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+
+    // children: usize,
+    // cats: usize,
+    // samoyeds: usize,
+    // pomeranians: usize,
+    // akitas: usize,
+    // vizslas: usize,
+    // goldfish: usize,
+    // trees: usize,
+    // cars: usize,
+    // perfumes: usize,
+
+#[derive(Debug)]
+struct Sue {
+    name: String,
+    properties: HashMap<String, usize>,
+}
+
+fn day16_pt1() {
+    let f = File::open("advent-files/day16-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut sues: Vec<Sue> = Vec::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        let mut bits: Vec<String> = line.replace(":", "").replace(",", "").split(" ").map(str::to_owned).collect();
+
+        bits.remove(0);
+        let sue_name = bits.remove(0);
+        let mut sue =  Sue { name: sue_name, properties: HashMap::new() };
+
+        while !bits.is_empty() {
+            let prop = bits.remove(0);
+            let value = bits.remove(0);
+            sue.properties.insert(prop, value.parse().unwrap());
+        }
+
+        sues.push(sue)
+    }
+
+    let mut target_sue = Sue { name: "target".to_owned(), properties: HashMap::new() };
+
+    target_sue.properties.insert("children".to_owned(), 3);
+    target_sue.properties.insert("cats".to_owned(), 7);
+    target_sue.properties.insert("samoyeds".to_owned(), 2);
+    target_sue.properties.insert("pomeranians".to_owned(), 3);
+    target_sue.properties.insert("akitas".to_owned(), 0);
+    target_sue.properties.insert("vizslas".to_owned(), 0);
+    target_sue.properties.insert("goldfish".to_owned(), 5);
+    target_sue.properties.insert("trees".to_owned(), 3);
+    target_sue.properties.insert("cars".to_owned(), 2);
+    target_sue.properties.insert("perfumes".to_owned(), 1);
+
+    let candidates: Vec<&Sue> = sues.iter().filter(|&sue| {
+        sue.properties.iter().all(|(key, value)| {
+            match target_sue.properties.get(key) {
+                Some(v) => { v == value }
+                None => { true }
+            }
+        })
+    }).collect();
+
+    println!("Candidates: {:?}", candidates);
+
+}
+
+fn day16_pt2() {
+    let f = File::open("advent-files/day16-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut sues: Vec<Sue> = Vec::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        let mut bits: Vec<String> = line.replace(":", "").replace(",", "").split(" ").map(str::to_owned).collect();
+
+        bits.remove(0);
+        let sue_name = bits.remove(0);
+        let mut sue =  Sue { name: sue_name, properties: HashMap::new() };
+
+        while !bits.is_empty() {
+            let prop = bits.remove(0);
+            let value = bits.remove(0);
+            sue.properties.insert(prop, value.parse().unwrap());
+        }
+
+        sues.push(sue)
+    }
+
+    let mut target_sue = Sue { name: "target".to_owned(), properties: HashMap::new() };
+
+    target_sue.properties.insert("children".to_owned(), 3);
+    target_sue.properties.insert("cats".to_owned(), 7);
+    target_sue.properties.insert("samoyeds".to_owned(), 2);
+    target_sue.properties.insert("pomeranians".to_owned(), 3);
+    target_sue.properties.insert("akitas".to_owned(), 0);
+    target_sue.properties.insert("vizslas".to_owned(), 0);
+    target_sue.properties.insert("goldfish".to_owned(), 5);
+    target_sue.properties.insert("trees".to_owned(), 3);
+    target_sue.properties.insert("cars".to_owned(), 2);
+    target_sue.properties.insert("perfumes".to_owned(), 1);
+
+    let candidates: Vec<&Sue> = sues.iter().filter(|&sue| {
+        sue.properties.iter().all(|(key, value)| {
+            if key == "cats" || key == "trees" {
+                match target_sue.properties.get(key) {
+                    Some(v) => { v < value }
+                    None => { true }
+                }
+            } else if key == "pomeranians" || key == "goldfish" {
+                match target_sue.properties.get(key) {
+                    Some(v) => { v > value }
+                    None => { true }
+                }
+
+            } else {
+                match target_sue.properties.get(key) {
+                    Some(v) => { v == value }
+                    None => { true }
+                }
+            }
+        })
+    }).collect();
+
+    println!("Candidates: {:?}", candidates);
+}
+
+
+fn day16() {
+    day16_pt1();
+    day16_pt2();
+}
+
+fn combinations_pt1(target: usize, containers: &mut Vec<usize>) -> usize {
+    if target == 0 {
+        return 1;
+    }
+
+    let mut count = 0;
+
+    for (idx, &container) in containers.iter().enumerate() {
+        if container <= target {
+            let mut new_containers: Vec<usize> = containers.iter().skip(idx + 1).cloned().collect();
+            count += combinations_pt1(target - container, &mut new_containers);
+        }
+    }
+
+    count
+}
+
+fn combinations_pt2(target: usize, containers: &mut Vec<usize>, container_count: usize) -> Vec<usize> {
+    if target == 0 {
+        return vec!(container_count);
+    }
+
+    let mut result: Vec<usize> = Vec::new();
+
+    for (idx, &container) in containers.iter().enumerate() {
+        if container <= target {
+            let mut new_containers: Vec<usize> = containers.iter().skip(idx + 1).cloned().collect();
+            result.append(&mut combinations_pt2(target - container, &mut new_containers, container_count + 1));
+        }
+    }
+
+    result
+}
+
+fn day17() {
+    let mut containers = vec!(43, 3, 4, 10, 21, 44, 4, 6, 47, 41, 34, 17, 17, 44, 36, 31, 46, 9, 27, 38);
+    println!("pt1 {}", combinations_pt1(150, &mut containers));
+
+    let mut containers = vec!(43, 3, 4, 10, 21, 44, 4, 6, 47, 41, 34, 17, 17, 44, 36, 31, 46, 9, 27, 38);
+    let mut container_counts = combinations_pt2(150, &mut containers, 0);
+    container_counts.sort();
+
+    println!("pt2 {:?}", container_counts.iter().take_while(|&&elt| elt == container_counts[0]).count());
+
+}
+
+
+*/
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+type Row = Vec<bool>;
+type Grid = Vec<Row>;
+
+fn next_grid_pt1(lights: &Grid) -> Grid {
+    let mut result = lights.clone();
+
+    for y in 0..lights.len() as i64 {
+        let row = &lights[y as usize];
+        for x in 0..row.len() as i64 {
+            let mut neighbours_on_count = 0;
+
+            for &xoffset in &[-1, 0, 1] {
+                for &yoffset in &[-1, 0, 1] {
+                    if xoffset == 0 && yoffset == 0 {
+                        continue;
+                    }
+
+                    if ((x + xoffset) >= 0 && (x + xoffset) < row.len() as i64) &&
+                        ((y + yoffset) >= 0 && (y + yoffset) < lights.len() as i64) {
+                            if lights[(y + yoffset) as usize][(x + xoffset) as usize] {
+                                neighbours_on_count += 1;
+                            }
+                        }
+                }
+            }
+
+            if lights[y as usize][x as usize] {
+                if neighbours_on_count != 2 && neighbours_on_count != 3 {
+                    result[y as usize][x as usize] = false
+                }
+            } else {
+                if neighbours_on_count == 3 {
+                    result[y as usize][x as usize] = true
+                }
+            }
+        }
+    }
+
+    result
+}
+
+fn next_grid_pt2(lights: &Grid) -> Grid {
+    let mut result = lights.clone();
+
+    for y in 0..lights.len() as i64 {
+        let row = &lights[y as usize];
+        for x in 0..row.len() as i64 {
+            let mut neighbours_on_count = 0;
+
+            for &xoffset in &[-1, 0, 1] {
+                for &yoffset in &[-1, 0, 1] {
+                    if xoffset == 0 && yoffset == 0 {
+                        continue;
+                    }
+
+                    if ((x + xoffset) >= 0 && (x + xoffset) < row.len() as i64) &&
+                        ((y + yoffset) >= 0 && (y + yoffset) < lights.len() as i64) {
+                            if lights[(y + yoffset) as usize][(x + xoffset) as usize] {
+                                neighbours_on_count += 1;
+                            }
+                        }
+                }
+            }
+
+            if lights[y as usize][x as usize] {
+                if neighbours_on_count != 2 && neighbours_on_count != 3 {
+                    result[y as usize][x as usize] = false
+                }
+            } else {
+                if neighbours_on_count == 3 {
+                    result[y as usize][x as usize] = true
+                }
+            }
+        }
+    }
+
+    // Corners always on
+    result[0][0] = true;
+    result[0][lights.len() - 1] = true;
+    result[lights.len() - 1][0] = true;
+    result[lights.len() - 1][lights.len() - 1] = true;
+
+    result
+}
+
+fn day18_solve(next_grid: fn(&Grid) -> Grid) {
+    let f = File::open("advent-files/day18-input.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let mut lights: Grid = br.lines().map(Result::unwrap).map(|line| {
+        line.chars().map(|ch| ch == '#').collect()
+    }).collect();
+
+    for _ in 0..100 {
+        lights = next_grid(&lights);
+    }
+
+    println!("There are {} lights on", lights.iter().map(|row| row.iter().filter(|&&ch| ch).count()).sum::<usize>());
+}
+
+fn day18() {
+    day18_solve(next_grid_pt1);
+    day18_solve(next_grid_pt2);
+}
+
 fn main() {
     // day1();
     // day2();
@@ -975,6 +1613,11 @@ fn main() {
     // day10();
     // day11();
     // day12();
+    // day13();
+    // day14();
+    // day15();
+    // day16();
+    // day17();
 
-    day13();
+    day18();
 }
