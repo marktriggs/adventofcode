@@ -1490,8 +1490,6 @@ fn day17() {
 }
 
 
-*/
-
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -1600,6 +1598,277 @@ fn day18() {
     day18_solve(next_grid_pt2);
 }
 
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+extern crate rand;
+use rand::{Rng, thread_rng};
+
+
+fn load_mappings(f: File) -> HashMap<String, Vec<String>> {
+    let br = BufReader::new(f);
+    let mut result = HashMap::new();
+
+    for line in br.lines().map(Result::unwrap) {
+        // FIXME: hack
+        if line.chars().nth(0).unwrap() == '#' {
+            continue;
+        }
+
+        let mut bits: Vec<String> = line.split(" => ").map(str::to_owned).collect();
+        let entry = result.entry(bits.remove(0)).or_insert(Vec::new());
+        entry.push(bits.remove(0));
+    }
+
+    result
+}
+
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
+enum Token {
+    Mappable(String),
+    Literal(String),
+}
+
+impl Token {
+    fn to_string(&self) -> String {
+        match self {
+            &Token::Mappable(ref s) => { s.clone() },
+            &Token::Literal(ref s) => { s.clone() },
+        }
+    }
+}
+
+fn tokenise(input: &String, mappings: &HashMap<String, Vec<String>>) -> Vec<Token> {
+    let mut result = Vec::new();
+
+    let max_key_len = mappings.keys().map(|s: &String| s.len()).max().unwrap();
+
+    let mut i = 0;
+    let mut literal = String::new();
+
+    while i < input.len() {
+        let mut found_token = false;
+        for j in 1..(max_key_len + 1) {
+            if i + j <= input.len() {
+                let potential_key = &input[i..i+j];
+
+                if mappings.contains_key(potential_key) {
+                    // Push any literal chars we've read up to this token
+                    if literal.len() > 0 {
+                        result.push(Token::Literal(literal.clone()));
+                        literal.clear();
+                    }
+
+                    result.push(Token::Mappable(potential_key.to_owned()));
+                    i += j;
+                    found_token = true;
+                    break
+                }
+            }
+        }
+
+        if !found_token {
+            literal.push(input.chars().nth(i).unwrap());
+            i += 1;
+        }
+    }
+
+    if literal.len() > 0 {
+        result.push(Token::Literal(literal.clone()));
+    }
+
+    result
+}
+
+fn day19_pt1() {
+    let f = File::open("advent-files/day19-input.txt").expect("open file");
+    let mappings = load_mappings(f);
+
+    let input = "CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr".to_owned();
+
+    let tokens = tokenise(&input, &mappings);
+
+    let mut result: HashSet<String> = HashSet::new();
+
+    for i in 0..tokens.len() {
+        let prefix = (0..i).map(|i| tokens[i].to_string()).collect::<String>();
+        let suffix = (i+1..tokens.len()).map(|i| tokens[i].to_string()).collect::<String>();
+
+        match tokens[i] {
+            Token::Mappable(ref s) => {
+                for replacement in mappings.get(s).unwrap() {
+                    let mut new = String::new();
+                    new.push_str(&prefix);
+                    new.push_str(replacement);
+                    new.push_str(&suffix);
+
+                    result.insert(new);
+                }
+            },
+            Token::Literal(ref s) => {
+                let mut new = String::new();
+                new.push_str(&prefix);
+                new.push_str(&s);
+                new.push_str(&suffix);
+
+                result.insert(new);
+            },
+        }
+    }
+
+    // Subtract one because our original (unsubstituted) string doesn't count as a derivation
+    println!("Total possible strings: {}", result.len() - 1);
+}
+
+
+
+// The trick here ended up being to reverse the production rule strings + the input.  That way the rules like:
+//  *[terminal]
+// become [terminal]* and the matches get eaten up eagerly
+
+
+fn day19_pt2() {
+    let f = File::open("advent-files/day19-input.txt").expect("open file");
+    let mappings = load_mappings(f);
+
+
+    // let nonterminals = vec!("Al", "B", "Ca", "F", "H", "Mg", "N", "O", "P", "Si", "Th", "Ti", "e");
+    // let terminals = vec!("Rn", "Ar", "Y", "C");
+
+    let reverse_mappings = {
+        let mut result: HashMap<String, Vec<String>> = HashMap::new();
+        for (k, replacements) in &mappings {
+            for r in replacements {
+                if result.contains_key(k) {
+                    panic!("EEK");
+                }
+
+                result.insert(r.chars().rev().collect(), vec!(k.chars().rev().collect()));
+            }
+        }
+
+        result
+    };
+
+    let orig_input = "CRnCaSiRnBSiRnFArTiBPTiTiBFArPBCaSiThSiRnTiBPBPMgArCaSiRnTiMgArCaSiThCaSiRnFArRnSiRnFArTiTiBFArCaCaSiRnSiThCaCaSiRnMgArFYSiRnFYCaFArSiThCaSiThPBPTiMgArCaPRnSiAlArPBCaCaSiRnFYSiThCaRnFArArCaCaSiRnPBSiRnFArMgYCaCaCaCaSiThCaCaSiAlArCaCaSiRnPBSiAlArBCaCaCaCaSiThCaPBSiThPBPBCaSiRnFYFArSiThCaSiRnFArBCaCaSiRnFYFArSiThCaPBSiThCaSiRnPMgArRnFArPTiBCaPRnFArCaCaCaCaSiRnCaCaSiRnFYFArFArBCaSiThFArThSiThSiRnTiRnPMgArFArCaSiThCaPBCaSiRnBFArCaCaPRnCaCaPMgArSiRnFYFArCaSiThRnPBPMgAr".to_owned();
+    let orig_input_reversed = orig_input.chars().rev().collect::<String>();
+
+    let mut rng = thread_rng();
+
+    loop {
+        let mut input = orig_input_reversed.clone();
+        let mut rounds = 0;
+        // let mut substitutions: Vec<(String, String, String)> = Vec::new();
+
+        loop {
+            if input == "e" {
+                println!("Got it in {} rounds", rounds);
+                // for substitution in substitutions {
+                //     println!("{}", substitution.2);
+                //     println!("{} -> {}", substitution.0, substitution.1);
+                //     println!("");
+                // }
+                return;
+            }
+
+            rounds += 1;
+
+            let tokens = tokenise(&input, &reverse_mappings);
+
+            let mut mappable_idxs: Vec<usize> = tokens.iter().enumerate().filter(|&(_, token)| {
+                match token {
+                    &Token::Mappable(_) => true,
+                    _ => false,
+                }
+            }).map(|(idx, _)| idx).collect();
+
+            if mappable_idxs.len() == 0 {
+                println!("Stuck on: {}", input);
+                break;
+            }
+
+            // rng.shuffle(&mut mappable_idxs);
+
+            let idx = mappable_idxs.remove(0);
+
+            let mut next_input = String::new();
+            let mut prefix: String = "".to_owned();
+
+            if idx > 0 {
+                prefix = tokens[0..idx].iter().map(Token::to_string).collect();
+            }
+            let suffix: String = tokens[(idx+1)..tokens.len()].iter().map(Token::to_string).collect();
+            next_input.push_str(&prefix);
+            if let Token::Mappable(ref s) = tokens[idx] {
+                let mapping = &reverse_mappings.get(s).unwrap()[0];
+
+                // substitutions.push((s.clone(), mapping.clone(), input.clone()));
+
+                next_input.push_str(mapping);
+            }
+            next_input.push_str(&suffix);
+
+            input = next_input;
+        }
+    }
+}
+
+fn day19() {
+    // day19_pt1();
+    day19_pt2();
+}
+
+*/
+
+fn day20_pt1() {
+    let elves = 1000000;
+    let houses = 1000000;
+
+    let mut presents = vec![0; houses];
+
+    for elf in 1..elves {
+        let mut house = elf;
+        while house < houses {
+            presents[house] += elf * 10;
+
+            house += elf;
+        }
+    }
+
+    let target = (1..houses).find (|&house| presents[house] >= 29000000).unwrap();
+
+    println!("House {} got {} presents", target, presents[target]);
+}
+
+
+fn day20_pt2() {
+    let elves = 10000000;
+    let houses = 10000000;
+
+    let mut presents = vec![0; houses];
+
+    for elf in 1..elves {
+        let mut delivered = 0;
+        let mut house = elf;
+        while house < houses && delivered < 50 {
+            presents[house] += elf * 11;
+
+            house += elf;
+            delivered += 1;
+        }
+    }
+
+    let target = (1..houses).find (|&house| presents[house] >= 29000000).unwrap();
+
+    println!("House {} got {} presents", target, presents[target]);
+}
+
+fn day20() {
+    day20_pt1();
+    day20_pt2();
+}
+
 fn main() {
     // day1();
     // day2();
@@ -1618,6 +1887,8 @@ fn main() {
     // day15();
     // day16();
     // day17();
+    // day18();
+    // day19();
 
-    day18();
+    day20();
 }
