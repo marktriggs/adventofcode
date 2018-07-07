@@ -1819,8 +1819,6 @@ fn day19() {
     day19_pt2();
 }
 
-*/
-
 fn day20_pt1() {
     let elves = 1000000;
     let houses = 1000000;
@@ -1836,11 +1834,12 @@ fn day20_pt1() {
         }
     }
 
-    let target = (1..houses).find (|&house| presents[house] >= 29000000).unwrap();
+    let target = (1..houses)
+        .find(|&house| presents[house] >= 29000000)
+        .unwrap();
 
     println!("House {} got {} presents", target, presents[target]);
 }
-
 
 fn day20_pt2() {
     let elves = 10000000;
@@ -1859,7 +1858,9 @@ fn day20_pt2() {
         }
     }
 
-    let target = (1..houses).find (|&house| presents[house] >= 29000000).unwrap();
+    let target = (1..houses)
+        .find(|&house| presents[house] >= 29000000)
+        .unwrap();
 
     println!("House {} got {} presents", target, presents[target]);
 }
@@ -1867,6 +1868,572 @@ fn day20_pt2() {
 fn day20() {
     day20_pt1();
     day20_pt2();
+}
+
+
+use std::cmp::max;
+
+#[derive(Debug)]
+struct Jerk {
+    hp: i64,
+    damage: i64,
+    armour: i64,
+    budget: i64,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+struct Perk {
+    name: &'static str,
+    cost: i64,
+    damage: i64,
+    armour: i64
+}
+
+const WEAPONS: &[Perk] = &[
+    Perk { name: "Dagger",     cost: 8,  damage: 4, armour: 0 },
+    Perk { name: "Shortsword", cost: 10, damage: 5, armour: 0 },
+    Perk { name: "Warhammer",  cost: 25, damage: 6, armour: 0 },
+    Perk { name: "Longsword",  cost: 40, damage: 7, armour: 0 },
+    Perk { name: "Greataxe",   cost: 74, damage: 8, armour: 0 },
+];
+
+const ARMOUR: &[Perk] = &[
+    Perk { name: "Naked",      cost: 0,   damage: 0, armour: 0 },
+    Perk { name: "Leather",    cost: 13,  damage: 0, armour: 1 },
+    Perk { name: "Chainmail",  cost: 31,  damage: 0, armour: 2 },
+    Perk { name: "Splintmail", cost: 53,  damage: 0, armour: 3 },
+    Perk { name: "Bandedmail", cost: 75,  damage: 0, armour: 4 },
+    Perk { name: "Platemail",  cost: 102, damage: 0, armour: 5 },
+];
+
+const RINGS: &[Perk] = &[
+    Perk { name: "Defense+1", cost: 20,  damage: 0, armour: 1 },
+    Perk { name: "Damage+1",  cost: 25,  damage: 1, armour: 0 },
+    Perk { name: "Defense+2", cost: 40,  damage: 0, armour: 2 },
+    Perk { name: "Damage+2",  cost: 50,  damage: 2, armour: 0 },
+    Perk { name: "Defense+3", cost: 80,  damage: 0, armour: 3 },
+    Perk { name: "Damage+3",  cost: 100, damage: 3, armour: 0 },
+];
+
+fn day21_pt1() {
+    let boss = Jerk { hp: 104, damage: 8, armour: 1, budget: 0 };
+
+    let mut best_cost = std::i64::MAX;
+
+    for weapon in WEAPONS {
+        for armour in ARMOUR {
+            // We can choose 0, 1 or 2 rings.  Use bits 000000 through 111111 to
+            // represent possible permutations, but ignore those with > 2 bits set.
+            for mut ring_combination in 0..64 as u64 {
+                let mut me = Jerk {
+                    hp: 100,
+                    damage: weapon.damage,
+                    armour: armour.armour,
+                    budget: weapon.cost + armour.cost
+                };
+
+                if ring_combination.count_ones() > 2 {
+                    continue;
+                }
+
+                for i in 0..8 {
+                    if ((ring_combination >> i) & 1) == 1 {
+                        let ring = &RINGS[i];
+                        me.damage += ring.damage;
+                        me.armour += ring.armour;
+                        me.budget += ring.cost;
+                    }
+                }
+
+                // FIGHT
+                let boss_damage_per_round = max(boss.damage - me.armour, 1);
+                let my_damage_per_round = max(me.damage - boss.armour, 1);
+
+                let hits_needed_to_kill_boss = (boss.hp as f64 / my_damage_per_round as f64).ceil();
+                let hits_needed_to_kill_me = (me.hp as f64 / boss_damage_per_round as f64).ceil();
+
+                if hits_needed_to_kill_me >= hits_needed_to_kill_boss {
+                    if me.budget < best_cost {
+                        best_cost = me.budget;
+                    }
+                }
+            }
+        }
+    }
+
+    println!("I only spent {}!", best_cost);
+}
+
+
+fn day21_pt2() {
+    let boss = Jerk { hp: 104, damage: 8, armour: 1, budget: 0 };
+
+    let mut worst_cost = std::i64::MIN;
+
+    for weapon in WEAPONS {
+        for armour in ARMOUR {
+            // We can choose 0, 1 or 2 rings.  Use bits 000000 through 111111 to
+            // represent possible permutations, but ignore those with > 2 bits set.
+            for ring_combination in 0..64 as u64 {
+                let mut me = Jerk {
+                    hp: 100,
+                    damage: weapon.damage,
+                    armour: armour.armour,
+                    budget: weapon.cost + armour.cost
+                };
+
+                if ring_combination.count_ones() > 2 {
+                    continue;
+                }
+
+                for i in 0..8 {
+                    if ((ring_combination >> i) & 1) == 1 {
+                        let ring = &RINGS[i];
+                        me.damage += ring.damage;
+                        me.armour += ring.armour;
+                        me.budget += ring.cost;
+                    }
+                }
+
+                // FIGHT
+                let boss_damage_per_round = max(boss.damage - me.armour, 1);
+                let my_damage_per_round = max(me.damage - boss.armour, 1);
+
+                let hits_needed_to_kill_boss = (boss.hp as f64 / my_damage_per_round as f64).ceil();
+                let hits_needed_to_kill_me = (me.hp as f64 / boss_damage_per_round as f64).ceil();
+
+                if hits_needed_to_kill_me < hits_needed_to_kill_boss {
+                    if me.budget > worst_cost {
+                        worst_cost = me.budget;
+                    }
+                }
+            }
+        }
+    }
+
+    println!("I spent {} and all I got was this lousy t-shirt!", worst_cost);
+}
+
+fn day21() {
+    day21_pt1();
+    day21_pt2();
+}
+
+
+use std::cmp;
+
+#[derive(Clone)]
+struct GameState<'a> {
+    boss_hitpoints: i64,
+    boss_damage: i64,
+
+    player_hitpoints: i64,
+    player_armour: i64,
+    player_mana: i64,
+
+    active_effects: Vec<ActiveEffect<'a>>,
+    mana_spent: i64,
+    boss_defeated: bool,
+}
+
+trait Effect {
+    fn started(&self, &mut GameState);
+    fn finished(&self, &mut GameState);
+    fn apply_round(&self, &mut GameState);
+    fn name(&self) -> &'static str;
+    fn cost(&self) -> i64;
+    fn duration(&self) -> i64;
+}
+
+#[derive(Clone)]
+struct ActiveEffect<'a> {
+    rounds_remaining: i64,
+    effect: &'a Box<Effect>,
+}
+
+struct MagicMissile;
+impl Effect for MagicMissile {
+    fn started(&self, g: &mut GameState) { g.boss_hitpoints -= 4; }
+    fn finished(&self, _: &mut GameState) {}
+    fn apply_round(&self, _: &mut GameState) {}
+    fn name(&self) -> &'static str { "MagicMissile" }
+    fn cost(&self) -> i64 { 53 }
+    fn duration(&self) -> i64 { 0 }
+}
+
+struct Drain;
+impl Effect for Drain {
+    fn started(&self, g: &mut GameState) { g.boss_hitpoints -= 2; g.player_hitpoints += 2 }
+    fn finished(&self, _: &mut GameState) {}
+    fn apply_round(&self, _: &mut GameState) {}
+    fn name(&self) -> &'static str { "Drain" }
+    fn cost(&self) -> i64 { 73 }
+    fn duration(&self) -> i64 { 0 }
+}
+
+struct Shield;
+impl Effect for Shield {
+    fn started(&self, g: &mut GameState) { g.player_armour += 7; }
+    fn finished(&self, g: &mut GameState) { g.player_armour -= 7; }
+    fn apply_round(&self, _: &mut GameState) {}
+    fn name(&self) -> &'static str { "Shield" }
+    fn cost(&self) -> i64 { 113 }
+    fn duration(&self) -> i64 { 6 }
+}
+
+struct Poison;
+impl Effect for Poison {
+    fn started(&self, _g: &mut GameState) {}
+    fn finished(&self, _g: &mut GameState) {}
+    fn apply_round(&self, g: &mut GameState) { g.boss_hitpoints -= 3; }
+    fn name(&self) -> &'static str { "Poison" }
+    fn cost(&self) -> i64 { 173 }
+    fn duration(&self) -> i64 { 6 }
+}
+
+struct Recharge;
+impl Effect for Recharge {
+    fn started(&self, _g: &mut GameState) {}
+    fn finished(&self, _g: &mut GameState) {}
+    fn apply_round(&self, g: &mut GameState) { g.player_mana += 101 }
+    fn name(&self) -> &'static str { "Recharge" }
+    fn cost(&self) -> i64 { 229 }
+    fn duration(&self) -> i64 { 5 }
+}
+
+
+fn next_states<'a>(iteration: i64, starting_states: Vec<GameState<'a>>, available_effects: &'a Vec<Box<Effect>>, best_so_far: i64) -> Vec<GameState<'a>> {
+    let mut result: Vec<GameState> = Vec::new();
+    let players_move = iteration % 2 == 0;
+    let bosses_move = !players_move;
+
+    for mut state in starting_states.iter().filter(|&state| !state.boss_defeated).cloned() {
+        // Part 2: we immediately lose a HP on the player's turn, and if that kills us, we lose
+        if players_move {
+            state.player_hitpoints -= 1;
+
+            if state.player_hitpoints <= 0 {
+                // Player dead!
+                continue;
+            }
+        }
+
+        // Work through our active effects
+        {
+            let mut i = 0;
+            while i < state.active_effects.len() {
+                state.active_effects[i].rounds_remaining -= 1;
+
+                if state.active_effects[i].rounds_remaining < 0 {
+                    // println!("Effect is over: {}", state.active_effects[i].effect.name());
+                    state.active_effects[i].effect.finished(&mut state);
+                    state.active_effects.remove(i);
+                } else {
+                    state.active_effects[i].effect.apply_round(&mut state);
+                    i += 1;
+                }
+
+                if state.boss_hitpoints <= 0 {
+                    state.boss_defeated = true;
+                    break;
+                }
+            }
+        }
+
+        if state.boss_defeated {
+            // println!("Boss died!  Spent {} in mana", state.mana_spent);
+            result.push(state);
+            continue;
+        }
+
+        if bosses_move {
+            // Boss moves
+            state.player_hitpoints -= cmp::max(1, state.boss_damage - state.player_armour);
+
+            if state.player_hitpoints > 0 {
+                result.push(state);
+            } else {
+                // println!("Player died!");
+            }
+        } else {
+            let state = state;  // immutable reborrow
+            // Otherwise, player moves...
+            //
+            // If the boss is still kicking, choose our next effect.
+            for effect in available_effects {
+                if state.active_effects.iter().any(|active_effect| {
+                    active_effect.rounds_remaining > 0 && active_effect.effect.name() == effect.name()
+                }) {
+                    // println!("Can't cast effect {} because it's already active", effect.name());
+                    continue;
+                }
+
+                if state.player_mana < effect.cost() || state.mana_spent + effect.cost() >= best_so_far {
+                    // println!("Can't afford to cast effect {}", effect.name());
+                    continue;
+                }
+
+                // OK, try the effect...
+                // println!("Started effect: {}", effect.name());
+                let mut new_state = state.clone();
+                new_state.player_mana -= effect.cost();
+                new_state.mana_spent += effect.cost();
+                effect.started(&mut new_state);
+
+                // Part 2: that might have knocked the boss over.
+                if new_state.boss_hitpoints <= 0 {
+                    new_state.boss_defeated = true;
+                }
+
+                new_state.active_effects.insert(0, ActiveEffect { rounds_remaining: effect.duration(), effect: &effect });
+                result.push(new_state);
+            }
+        }
+    }
+
+    result
+}
+
+
+// pt2: 1242; too high
+fn day22() {
+    let available_effects: Vec<Box<Effect>> = vec!(
+        Box::new(MagicMissile),
+        Box::new(Drain),
+        Box::new(Shield),
+        Box::new(Poison),
+        Box::new(Recharge),
+    );
+
+    // initial state
+    let mut states = vec!(
+        GameState {
+            boss_hitpoints: 51,
+            boss_damage: 9,
+
+            player_hitpoints: 50,
+            player_mana: 500,
+            player_armour: 0,
+
+            active_effects: Vec::new(),
+            mana_spent: 0,
+            boss_defeated: false,
+        }
+    );
+
+    let mut lowest_spend: i64 = std::i64::MAX;
+    for iteration in 0..1000 {
+        states = next_states(iteration, states, &available_effects, lowest_spend);
+
+        // println!("Iteration {}: {} states left", iteration, states.len());
+
+        for state in &states {
+            if state.boss_defeated {
+                if state.mana_spent < lowest_spend {
+                    lowest_spend = state.mana_spent;
+                }
+            }
+        }
+    }
+
+    println!("Lowest spend: {}", lowest_spend);
+}
+
+
+extern crate regex;
+use regex::Regex;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+
+fn day23() {
+    let f = File::open("advent-files/day23.txt").expect("open file");
+    let br = BufReader::new(f);
+
+    let instructions: Vec<String> = br.lines().map(Result::unwrap).collect();
+    let mut registers: HashMap<String, usize> = HashMap::new();
+
+    registers.insert("a".to_owned(), 1);
+    registers.insert("b".to_owned(), 0);
+
+    let mut pc: i64 = 0;
+
+    let hlf = Regex::new("hlf (.)").unwrap();
+    let tpl = Regex::new("tpl (.)").unwrap();
+    let inc = Regex::new("inc (.)").unwrap();
+    let jmp = Regex::new("jmp ([+-])([0-9]+)").unwrap();
+    let jie = Regex::new("jie (.), ([+-])([0-9]+)").unwrap();
+    let jio = Regex::new("jio (.), ([+-])([0-9]+)").unwrap();
+
+    while pc >= 0 && pc < instructions.len() as i64 {
+        let old_pc = pc;
+        // println!("PC: {}; registers: {:?}", pc + 1, registers);
+
+        let instruction = &instructions[pc as usize];
+        let mut jumped: bool = false;
+
+        if let Some(captures) = hlf.captures(&instruction) {
+            let register = captures.get(1).unwrap().as_str();
+            let mut entry = registers.entry(register.to_string()).or_insert(0);
+            *entry /= 2;
+        } else if let Some(captures) = tpl.captures(&instruction) {
+            let register = captures.get(1).unwrap().as_str();
+            let mut entry = registers.entry(register.to_string()).or_insert(0);
+            *entry *= 3;
+        } else if let Some(captures) = inc.captures(&instruction) {
+            let register = captures.get(1).unwrap().as_str();
+            let mut entry = registers.entry(register.to_string()).or_insert(0);
+            *entry += 1;
+        } else if let Some(captures) = jmp.captures(&instruction) {
+            jumped = true;
+            let direction = captures.get(1).unwrap().as_str();
+            let magnitude: i64 = captures.get(2).unwrap().as_str().parse().unwrap();
+
+            if direction == "+" {
+                pc += magnitude;
+            } else {
+                pc -= magnitude;
+            }
+        } else if let Some(captures) = jie.captures(&instruction) {
+            let register = captures.get(1).unwrap().as_str();
+            let direction = captures.get(2).unwrap().as_str();
+            let magnitude: i64 = captures.get(3).unwrap().as_str().parse().unwrap();
+
+            let entry = registers.entry(register.to_string()).or_insert(0);
+
+            if *entry % 2 == 0 {
+                if direction == "+" {
+                    pc += magnitude;
+                } else {
+                    pc -= magnitude;
+                }
+                jumped = true;
+            }
+        } else if let Some(captures) = jio.captures(&instruction) {
+            let register = captures.get(1).unwrap().as_str();
+            let direction = captures.get(2).unwrap().as_str();
+            let magnitude: i64 = captures.get(3).unwrap().as_str().parse().unwrap();
+
+            let entry = registers.entry(register.to_string()).or_insert(0);
+
+            if *entry == 1 {
+                if direction == "+" {
+                    pc += magnitude;
+                } else {
+                    pc -= magnitude;
+                }
+                jumped = true;
+            }
+        }
+
+        // println!("PC: {}; registers: {:?}", old_pc + 1, registers);
+
+        if !jumped {
+            pc += 1;
+        }
+    }
+
+    println!("{:?}", registers);
+}
+
+
+fn total_weight(g: u64, weights: &Vec<u64>) -> u64 {
+    let mut total = 0;
+    for bit in 0..weights.len() {
+        if (1 << bit) & g != 0 {
+            total += weights[bit]
+        }
+    }
+
+    total
+}
+
+
+fn entanglement(g: u64, weights: &Vec<u64>) -> u64 {
+    let mut entanglement = 1;
+    for bit in 0..weights.len() {
+        if (1 << bit) & g != 0 {
+            entanglement *= weights[bit]
+        }
+    }
+
+    entanglement
+}
+
+fn day24() {
+    let weights = vec!(113, 109, 107, 103, 101, 97, 89, 83, 79, 73, 71, 67, 61, 59, 53, 43, 41, 37, 31, 29, 23, 19, 17, 13, 7, 5, 3, 2, 1);
+    // let weights = vec!(1, 2, 3, 4, 5, 7, 8, 9, 10, 11);
+    let target = weights.iter().fold(0, |a, b| a + b) / 4;
+
+    // let target = 20;
+
+    let mut possible_groupings: Vec<u64> = Vec::new();
+
+    // What's the smallest group making up `target` for our first group?
+    for set in 0..(1 << weights.len()) {
+        let sum = total_weight(set, &weights);
+        if sum == target {
+            possible_groupings.push(set);
+        }
+    }
+
+    let min_size = possible_groupings.iter().min_by_key(|g| g.count_ones()).unwrap().count_ones();
+    println!("Smallest set size: {}", min_size);
+
+    let mut possible_first_groups: Vec<u64> = possible_groupings.iter().filter(|&g| g.count_ones() == min_size as u32).cloned().collect();
+
+    println!("Possible first groups: {:?}", possible_first_groups);
+
+    // let entanglements = possible_first_groups.iter().map(|&g| entanglement(g, &weights)).collect::<Vec<u64>>();
+    // println!("Entanglements: {:?}", entanglements);
+
+    println!("Entanglement: {}", possible_first_groups.iter().map(|&g| entanglement(g, &weights)).min().unwrap());
+
+    // for g1 in possible_first_groups {
+    //     for i2 in 0..possible_groupings.len() {
+    //         for i3 in (i2 + 1)..possible_groupings.len() {
+    //             let g2 = possible_groupings[i2];
+    //             let g3 = possible_groupings[i3];
+    //             if g1 & g2 == 0 && g2 & g3 == 0 && g1 & g3 == 0 {
+    //                 println!("{} {} {}", g1, g2, g3);
+    //                 // println!("{} {} {}", total_weight(g1, &weights), total_weight(g2, &weights), total_weight(g2, &weights))
+    //             }
+    //         }
+    //     }
+    // }
+
+
+*/
+
+fn day25() {
+    let mut last_code: u64 = 20151125;
+    let mut x = 0;
+    let mut row;
+    let mut col;
+
+    'outer:
+    loop {
+        x += 1;
+
+        row = x;
+        col = 1;
+
+        for _ in 0..row {
+            row -= 1;
+            col += 1;
+            last_code = (last_code * 252533) % 33554393;
+
+            if row == 2981 && col == 3075 {
+                break 'outer
+            }
+        }
+
+
+    }
+
+    println!("{}", last_code);
 }
 
 fn main() {
@@ -1889,6 +2456,10 @@ fn main() {
     // day17();
     // day18();
     // day19();
-
-    day20();
+    // day20();
+    // day21();
+    // day22();
+    // day23();
+    // day24();
+    day25();
 }
