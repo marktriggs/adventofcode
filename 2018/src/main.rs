@@ -1,5 +1,6 @@
 // (cd ../; cargo run)
 
+#![allow(unused_parens)]
 #![allow(dead_code)]
 
 extern crate regex;
@@ -10,6 +11,27 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+
+fn regex_examples() {
+    let simple_match = Regex::new(r"s.mple match").unwrap();
+    if simple_match.is_match("simple match") {
+        println!("Matched!");
+    }
+
+    let extract_numbers = Regex::new(r"dimensions (\d+)x(\d+) left (\d+) top (\d+)").unwrap();
+    for cap in extract_numbers.captures_iter("dimensions 640x480 left 100 top 100") {
+        println!(
+            "width: {}; height: {}; left: {}; top: {}.  Full line: {}",
+            &cap[1], &cap[2], &cap[3], &cap[4], &cap[0]
+        );
+    }
+
+    let replace_regex = Regex::new(r"hello").unwrap();
+    println!(
+        "{}",
+        replace_regex.replace_all("hello hello hello", "goodbye")
+    );
+}
 
 fn input_lines(file: &str) -> impl Iterator<Item = String> {
     let f = File::open(file).expect(&format!("Failed to open input file: {}", &file));
@@ -95,10 +117,7 @@ fn day2_part2() {
 }
 
 #[derive(Hash, Eq, PartialEq)]
-struct Point {
-    x: u64,
-    y: u64,
-}
+struct Point(u64, u64);
 
 fn day3_part1() {
     let input = input_lines("input_files/day3.txt");
@@ -119,11 +138,7 @@ fn day3_part1() {
 
         for y in 0..height {
             for x in 0..width {
-                let entry = used
-                    .entry(Point {
-                        x: x + left,
-                        y: y + top,
-                    }).or_insert(0);
+                let entry = used.entry(Point(x + left, y + top)).or_insert(0);
                 *entry += 1;
             }
         }
@@ -157,11 +172,7 @@ fn day3_part2() {
 
         for y in 0..height {
             for x in 0..width {
-                let entry = used
-                    .entry(Point {
-                        x: x + left,
-                        y: y + top,
-                    }).or_insert(0);
+                let entry = used.entry(Point(x + left, y + top)).or_insert(0);
                 *entry += 1;
             }
         }
@@ -183,11 +194,7 @@ fn day3_part2() {
         let mut found = true;
         for y in 0..height {
             for x in 0..width {
-                let entry = used
-                    .get(&Point {
-                        x: x + left,
-                        y: y + top,
-                    }).unwrap();
+                let entry = used.get(&Point(x + left, y + top)).unwrap();
                 if *entry != 1 {
                     found = false;
                     break;
@@ -201,24 +208,132 @@ fn day3_part2() {
     }
 }
 
-fn regex_examples() {
-    let simple_match = Regex::new(r"s.mple match").unwrap();
-    if simple_match.is_match("simple match") {
-        println!("Matched!");
+#[derive(Debug)]
+struct Guard {
+    id: String,
+    sleep_time: usize,
+    sleep_minutes: Vec<usize>,
+}
+
+fn day4_new_guard(id: String) -> Guard {
+    Guard {
+        id: id,
+        sleep_time: 0,
+        sleep_minutes: vec![0; 60],
+    }
+}
+
+fn day4_part1() {
+    let mut events: Vec<String> = input_lines("input_files/day4.txt").collect();
+    events.sort();
+
+    let start_shift =
+        Regex::new(r"\[\d{4}-\d{2}-\d{2} (\d+):(\d+)\] Guard #(\d+) begins shift").unwrap();
+    let start_sleep = Regex::new(r"\[\d{4}-\d{2}-\d{2} 00:(\d+)\] falls asleep").unwrap();
+    let end_sleep = Regex::new(r"\[\d{4}-\d{2}-\d{2} 00:(\d+)\] wakes up").unwrap();
+
+    let mut guards: HashMap<String, Guard> = HashMap::new();
+    let mut active_guard: Option<String> = None;
+    let mut sleep_started = 0;
+
+    for event in events {
+        if let Some(cap) = start_shift.captures(&event) {
+            let name = cap[3].to_string();
+
+            guards
+                .entry(name.clone())
+                .or_insert_with(|| day4_new_guard(name.clone()));
+            active_guard = Some(name);
+        } else if let Some(cap) = start_sleep.captures(&event) {
+            sleep_started = cap[1].parse().unwrap();
+        } else if let Some(cap) = end_sleep.captures(&event) {
+            let sleep_ended = cap[1].parse().unwrap();
+            let guard = guards.get_mut(active_guard.as_ref().unwrap()).unwrap();
+
+            for time in sleep_started..sleep_ended {
+                guard.sleep_time += 1;
+                guard.sleep_minutes[time] += 1;
+            }
+        } else {
+            panic!("Bad input: {}", event);
+        }
     }
 
-    let extract_numbers = Regex::new(r"dimensions (\d+)x(\d+) left (\d+) top (\d+)").unwrap();
-    for cap in extract_numbers.captures_iter("dimensions 640x480 left 100 top 100") {
-        println!(
-            "width: {}; height: {}; left: {}; top: {}.  Full line: {}",
-            &cap[1], &cap[2], &cap[3], &cap[4], &cap[0]
-        );
-    }
+    let laziest_guard = guards
+        .values()
+        .max_by_key(|guard| guard.sleep_time)
+        .unwrap();
 
-    let replace_regex = Regex::new(r"hello").unwrap();
+    let most_sleepy_time: (usize, &usize) = laziest_guard
+        .sleep_minutes
+        .iter()
+        .enumerate()
+        .max_by_key(|(_minute, &sleep_occurrences)| sleep_occurrences)
+        .unwrap();
+
     println!(
-        "{}",
-        replace_regex.replace_all("hello hello hello", "goodbye")
+        "Laziest guard ({}) slept {} minutes",
+        laziest_guard.id, laziest_guard.sleep_time
+    );
+    println!(
+        "We'll strike at {} minutes past midnight",
+        most_sleepy_time.0
+    );
+}
+
+fn day4_part2() {
+    let mut events: Vec<String> = input_lines("input_files/day4.txt").collect();
+    events.sort();
+
+    let start_shift =
+        Regex::new(r"\[\d{4}-\d{2}-\d{2} (\d+):(\d+)\] Guard #(\d+) begins shift").unwrap();
+    let start_sleep = Regex::new(r"\[\d{4}-\d{2}-\d{2} 00:(\d+)\] falls asleep").unwrap();
+    let end_sleep = Regex::new(r"\[\d{4}-\d{2}-\d{2} 00:(\d+)\] wakes up").unwrap();
+
+    let mut guards: HashMap<String, Guard> = HashMap::new();
+    let mut active_guard: Option<String> = None;
+    let mut sleep_started = 0;
+
+    for event in events {
+        if let Some(cap) = start_shift.captures(&event) {
+            let name = cap[3].to_string();
+            guards
+                .entry(name.clone())
+                .or_insert_with(|| day4_new_guard(name.clone()));
+            active_guard = Some(name);
+        } else if let Some(cap) = start_sleep.captures(&event) {
+            sleep_started = cap[1].parse().unwrap();
+        } else if let Some(cap) = end_sleep.captures(&event) {
+            let sleep_ended = cap[1].parse().unwrap();
+            let guard = guards.get_mut(active_guard.as_ref().unwrap()).unwrap();
+
+            for time in sleep_started..sleep_ended {
+                guard.sleep_time += 1;
+                guard.sleep_minutes[time] += 1;
+            }
+        } else {
+            panic!("Bad input: {}", event);
+        }
+    }
+
+    let mut laziest_guard: Option<String> = None;
+    let mut laziest_minute = 0;
+    let mut laziest_count = 0;
+
+    for guard in guards.values() {
+        for (minute, &count) in guard.sleep_minutes.iter().enumerate() {
+            if count > laziest_count {
+                laziest_minute = minute;
+                laziest_guard = Some(guard.id.clone());
+                laziest_count = count;
+            }
+        }
+    }
+
+    println!(
+        "Laziest guard: {} was at minute {}",
+        laziest_guard.unwrap(),
+        laziest_minute
     );
 }
 
@@ -235,4 +350,7 @@ fn main() {
         day3_part1();
         day3_part2();
     }
+
+    day4_part1();
+    day4_part2();
 }
