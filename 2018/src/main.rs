@@ -1,4 +1,4 @@
-// (cd ../; cargo run)
+// (cd ../; cargo run --release)
 
 #![allow(unused_parens)]
 #![allow(dead_code)]
@@ -11,6 +11,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+
+const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
+const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
 
 fn regex_examples() {
     let simple_match = Regex::new(r"s.mple match").unwrap();
@@ -74,7 +77,7 @@ fn day2_part1() {
         let mut freqs = HashMap::new();
 
         for ch in code.chars() {
-            let mut entry = freqs.entry(ch).or_insert(0);
+            let entry = freqs.entry(ch).or_insert(0);
             *entry += 1
         }
 
@@ -104,7 +107,7 @@ fn day2_part2() {
             let mut key = code.to_owned();
             key.remove(idx);
 
-            let mut entry = tokens.entry(key).or_insert(HashSet::new());
+            let entry = tokens.entry(key).or_insert(HashSet::new());
             entry.insert(code.to_owned());
         }
     }
@@ -117,7 +120,24 @@ fn day2_part2() {
 }
 
 #[derive(Hash, Eq, PartialEq)]
-struct Point(u64, u64);
+struct Point {
+    x: u64,
+    y: u64,
+}
+
+impl Point {
+    fn parse_csv(s: &str) -> Point {
+        let parsed: Vec<u64> = s
+            .replace(" ", "")
+            .split(",")
+            .map(|s| s.parse::<u64>().unwrap())
+            .collect();
+        Point {
+            x: parsed[0],
+            y: parsed[1],
+        }
+    }
+}
 
 fn day3_part1() {
     let input = input_lines("input_files/day3.txt");
@@ -138,7 +158,12 @@ fn day3_part1() {
 
         for y in 0..height {
             for x in 0..width {
-                let entry = used.entry(Point(x + left, y + top)).or_insert(0);
+                let entry = used
+                    .entry(Point {
+                        x: x + left,
+                        y: y + top,
+                    })
+                    .or_insert(0);
                 *entry += 1;
             }
         }
@@ -172,7 +197,12 @@ fn day3_part2() {
 
         for y in 0..height {
             for x in 0..width {
-                let entry = used.entry(Point(x + left, y + top)).or_insert(0);
+                let entry = used
+                    .entry(Point {
+                        x: x + left,
+                        y: y + top,
+                    })
+                    .or_insert(0);
                 *entry += 1;
             }
         }
@@ -194,7 +224,12 @@ fn day3_part2() {
         let mut found = true;
         for y in 0..height {
             for x in 0..width {
-                let entry = used.get(&Point(x + left, y + top)).unwrap();
+                let entry = used
+                    .get(&Point {
+                        x: x + left,
+                        y: y + top,
+                    })
+                    .unwrap();
                 if *entry != 1 {
                     found = false;
                     break;
@@ -337,6 +372,248 @@ fn day4_part2() {
     );
 }
 
+fn day5_part1() {
+    let mut polymer: String = include_str!("../input_files/day5.txt").trim().to_owned();
+
+    let patterns: Vec<String> = ALPHABET
+        .chars()
+        .zip(ALPHABET_UPPER.chars())
+        .map(|(lower, upper)| format!("{}{}|{}{}", lower, upper, upper, lower))
+        .collect();
+
+    let replace_regex = Regex::new(&patterns.join("|")).unwrap();
+
+    loop {
+        let new_polymer = replace_regex.replace_all(&polymer, "");
+
+        if polymer != new_polymer {
+            polymer = new_polymer.to_string();
+        } else {
+            println!("End length: {}", polymer.len());
+            break;
+        }
+    }
+}
+
+fn day5_part2() {
+    let patterns: Vec<String> = ALPHABET
+        .chars()
+        .zip(ALPHABET_UPPER.chars())
+        .map(|(lower, upper)| format!("{}{}|{}{}", lower, upper, upper, lower))
+        .collect();
+
+    let replace_regex = Regex::new(&patterns.join("|")).unwrap();
+
+    let mut lengths = Vec::new();
+
+    for kill in ALPHABET.chars() {
+        let mut polymer: String = include_str!("../input_files/day5.txt").trim().to_owned();
+
+        let killupper: String = kill.to_uppercase().to_string();
+
+        polymer = polymer.replace(kill, "");
+        polymer = polymer.replace(&killupper, "");
+
+        loop {
+            let new_polymer = replace_regex.replace_all(&polymer, "");
+
+            if polymer != new_polymer {
+                polymer = new_polymer.to_string();
+            } else {
+                lengths.push(polymer.len());
+                break;
+            }
+        }
+    }
+
+    println!("Best: {}", lengths.iter().min().unwrap());
+}
+
+fn day5_part1_alternative() {
+    let polymer = include_str!("../input_files/day5.txt").trim();
+
+    let mut input = polymer.as_bytes().to_vec();
+
+    loop {
+        let mut done = true;
+        let mut i = 0;
+
+        // Mark
+        while i < input.len() - 1 {
+            if (input[i] as i32 - input[i + 1] as i32).abs() == 32 {
+                done = false;
+                input[i] = 0;
+                input[i + 1] = 0;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+
+        if done {
+            break;
+        }
+
+        // Sweep
+        input.retain(|&b| b > 0);
+    }
+
+    println!("End length: {}", input.len());
+}
+
+fn day5_part2_alternative() {
+    let mut lengths = Vec::new();
+
+    for kill in ALPHABET.chars() {
+        let killupper: String = kill.to_uppercase().to_string();
+
+        let mut polymer: String = include_str!("../input_files/day5.txt").trim().to_owned();
+
+        polymer = polymer.replace(kill, "");
+        polymer = polymer.replace(&killupper, "");
+
+        let mut input = polymer.as_bytes().to_vec();
+
+        loop {
+            let mut done = true;
+            let mut i = 0;
+
+            // Mark
+            while i < input.len() - 1 {
+                if (input[i] as i32 - input[i + 1] as i32).abs() == 32 {
+                    done = false;
+                    input[i] = 0;
+                    input[i + 1] = 0;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+
+            if done {
+                break;
+            }
+
+            // Sweep
+            input.retain(|&b| b > 0);
+        }
+
+        lengths.push(input.len());
+    }
+
+    println!("Best: {}", lengths.iter().min().unwrap());
+}
+
+fn abs_diff(a: u64, b: u64) -> u64 {
+    if a > b {
+        a - b
+    } else {
+        b - a
+    }
+}
+
+fn manhattan_distance(p1: &Point, p2: &Point) -> u64 {
+    abs_diff(p1.x, p2.x) + abs_diff(p1.y, p2.y)
+}
+
+fn closest_point(points: &Vec<Point>, point: &Point) -> Option<usize> {
+    let mut distances: Vec<u64> = points
+        .iter()
+        .map(|p| manhattan_distance(&point, &p))
+        .collect();
+
+    distances.sort();
+
+    if distances[0] != distances[1] {
+        // We have a distinct closest point.  Find it and return its index.
+        for i in 0..points.len() {
+            if manhattan_distance(&points[i], &point) == distances[0] {
+                return Some(i);
+            }
+        }
+
+        unreachable!();
+    } else {
+        // Equidistant
+        None
+    }
+}
+
+fn day6_part1() {
+    let input: Vec<String> = input_lines("input_files/day6.txt").collect();
+
+    let points: Vec<Point> = input.iter().map(|s| Point::parse_csv(s)).collect();
+
+    // we'll define a grid whose top-left is 0,0 and whose bottom right is max_x+1, max_y+1
+    let max_x: usize = (&points.iter().map(|p| p.x).max().unwrap() + 1) as usize;
+    let max_y: usize = (&points.iter().map(|p| p.y).max().unwrap() + 1) as usize;
+
+    let mut grid: Vec<Vec<Option<usize>>> = (0..max_y).map(|_| vec![None; max_x]).collect();
+
+    for y in 0..max_y {
+        for x in 0..max_x {
+            let point = Point {
+                x: x as u64,
+                y: y as u64,
+            };
+
+            grid[y][x] = closest_point(&points, &point);
+        }
+    }
+
+    // Any point on the outer edge of our grid is infinite and not counted
+    let mut excluded_points = HashSet::new();
+
+    for e in grid.first().unwrap() {
+        excluded_points.insert(e);
+    }
+    for e in grid.last().unwrap() {
+        excluded_points.insert(e);
+    }
+    for y in 0..max_y {
+        excluded_points.insert(&grid[y][0]);
+    }
+
+    let mut frequencies = HashMap::new();
+    for p in grid.iter().flatten() {
+        if p.is_some() && !excluded_points.contains(p) {
+            let entry = frequencies.entry(p).or_insert(0);
+            *entry += 1;
+        }
+    }
+
+    println!("Winner: {}", frequencies.values().max().unwrap());
+}
+
+fn distance_sums(points: &Vec<Point>, point: &Point) -> u64 {
+    points.iter().map(|p| manhattan_distance(&point, &p)).sum()
+}
+
+fn day6_part2() {
+    let input: Vec<String> = input_lines("input_files/day6.txt").collect();
+
+    let points: Vec<Point> = input.iter().map(|s| Point::parse_csv(s)).collect();
+
+    let max_x = (&points.iter().map(|p| p.x).max().unwrap() + 1) as usize;
+    let max_y = (&points.iter().map(|p| p.y).max().unwrap() + 1) as usize;
+
+    let mut region_size = 0;
+
+    for y in 0..max_y {
+        for x in 0..max_x {
+            let point = Point {
+                x: x as u64,
+                y: y as u64,
+            };
+            if distance_sums(&points, &point) < 10000 {
+                region_size += 1;
+            }
+        }
+    }
+
+    println!("Region size: {}", region_size);
+}
+
 fn main() {
     if false {
         regex_examples();
@@ -349,8 +626,20 @@ fn main() {
 
         day3_part1();
         day3_part2();
+
+        day4_part1();
+        day4_part2();
+
+        day5_part1();
+        day5_part2();
+
+        day5_part1_alternative();
+        day5_part2_alternative();
+
+        day6_part1();
+        day6_part2();
     }
 
-    day4_part1();
-    day4_part2();
+    day6_part1();
+    day6_part2();
 }
