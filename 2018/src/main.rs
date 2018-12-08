@@ -614,6 +614,154 @@ fn day6_part2() {
     println!("Region size: {}", region_size);
 }
 
+fn day7_part1() {
+    let input: Vec<String> = input_lines("input_files/day7.txt").collect();
+
+    // K requires V[] to start
+    let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for s in input {
+        let mut bits: Vec<String> = s.split(" ").map(str::to_owned).collect();
+
+        let dependent = bits.remove(7);
+        let depends_on = bits.remove(1);
+
+        dependencies
+            .entry(depends_on.clone())
+            .or_insert(HashSet::new());
+        let dep_e = dependencies
+            .entry(dependent.clone())
+            .or_insert(HashSet::new());
+        dep_e.insert(depends_on.clone());
+    }
+
+    // Steps we've already run
+    let mut completed_steps = HashSet::new();
+
+    // Our final ordering
+    let mut result = String::new();
+
+    while completed_steps.len() != dependencies.len() {
+        // Find the dependencies that haven't yet been run, and whose
+        // dependencies have been satisfied.
+        let mut ready: Vec<String> = dependencies
+            .keys()
+            .filter(|&k| {
+                !completed_steps.contains(k)
+                    && dependencies.get(k).unwrap().is_subset(&completed_steps)
+            })
+            .map(|s| s.to_owned())
+            .collect();
+
+        // Run the first in alphabetic order
+        ready.sort();
+        let next_step = ready.remove(0);
+        result.push_str(&next_step);
+        completed_steps.insert(next_step.clone());
+    }
+
+    println!("{}", result);
+}
+
+#[derive(Clone, Debug)]
+struct WorkerJob {
+    work_remaining: usize,
+    task: String,
+}
+
+fn task_cost(task: &str) -> usize {
+    (task.chars().next().unwrap() as i64 - 64) as usize
+}
+
+fn day7_part2() {
+    let input: Vec<String> = input_lines("input_files/day7.txt").collect();
+
+    let base_cost = 60;
+    let workers = 5;
+
+    // K requires all of V[] to start
+    let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for s in input {
+        let mut bits: Vec<String> = s.split(" ").map(str::to_owned).collect();
+
+        let dependent = bits.remove(7);
+        let depends_on = bits.remove(1);
+
+        dependencies
+            .entry(depends_on.clone())
+            .or_insert(HashSet::new());
+
+        dependencies
+            .entry(dependent.clone())
+            .or_insert(HashSet::new())
+            .insert(depends_on.clone());
+    }
+
+    let ordered_tasks: Vec<String> = {
+        let mut v: Vec<String> = dependencies.keys().cloned().collect();
+        v.sort();
+        v
+    };
+
+    // Steps we've already run
+    let mut completed_steps = HashSet::new();
+
+    // The amount of work each worker is performing
+    let mut worker_workloads: Vec<Option<WorkerJob>> = vec![None; workers];
+    let mut work_in_progress = HashSet::new();
+
+    let mut seconds_elapsed = 0;
+
+    loop {
+        // Handle work currently running
+        for i in 0..worker_workloads.len() {
+            // If the worker is doing something, decrement their workload
+            if let Some(ref mut job) = worker_workloads[i] {
+                if job.work_remaining == 1 {
+                    // Task complete!
+                    work_in_progress.remove(&job.task);
+                    completed_steps.insert(job.task.clone());
+                    worker_workloads[i] = None;
+                } else {
+                    job.work_remaining -= 1;
+                }
+            };
+        }
+
+        if completed_steps.len() == dependencies.len() {
+            // We're done!
+            break;
+        }
+
+        // Allocate new work to anyone who needs it
+        for i in 0..worker_workloads.len() {
+            if worker_workloads[i].is_some() {
+                // Worker is occupied
+                continue;
+            }
+
+            if let Some(next_task) = ordered_tasks.iter().find(|&k| {
+                !completed_steps.contains(k)
+                    && !work_in_progress.contains(k)
+                    && dependencies.get(k).unwrap().is_subset(&completed_steps)
+            }) {
+                // If the worker is free, assign some work.
+                work_in_progress.insert(next_task.clone());
+
+                worker_workloads[i] = Some(WorkerJob {
+                    task: next_task.clone(),
+                    work_remaining: base_cost + &task_cost(next_task),
+                });
+            }
+        }
+
+        seconds_elapsed += 1;
+    }
+
+    println!("{}", seconds_elapsed);
+}
+
 fn main() {
     if false {
         regex_examples();
@@ -640,6 +788,6 @@ fn main() {
         day6_part2();
     }
 
-    day6_part1();
-    day6_part2();
+    day7_part1();
+    day7_part2();
 }
