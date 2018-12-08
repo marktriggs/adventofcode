@@ -770,6 +770,113 @@ fn day7_part2() {
     println!("{}", seconds_elapsed);
 }
 
+fn sample_input(input: &str) -> Vec<String> {
+    input.trim().split("\n").map(str::to_owned).collect()
+}
+
+fn day8_sum_metadata(input: &mut Vec<u64>, total: u64) -> u64 {
+    if input.is_empty() {
+        return total;
+    }
+
+    let child_count = input.remove(0);
+    let metadata_count = input.remove(0);
+
+    let mut new_total = total;
+    for _ in 0..child_count {
+        new_total += day8_sum_metadata(input, 0)
+    }
+
+    for _ in 0..metadata_count {
+        new_total += input.remove(0);
+    }
+
+    new_total
+}
+
+fn day8_part1() {
+    let input_s = include_str!("../input_files/day8.txt").trim().to_owned();
+
+    let mut input: Vec<u64> = input_s
+        .trim()
+        .split(" ")
+        .map(|s| s.parse().unwrap())
+        .collect();
+
+    println!("{}", day8_sum_metadata(&mut input, 0));
+}
+
+#[derive(Debug)]
+struct Node {
+    idx: usize,
+    metadata: Vec<usize>,
+    child_indexes: Vec<usize>,
+}
+
+fn day8_parse_nodes(input: &mut Vec<usize>, result: &mut Vec<Node>) {
+    if input.is_empty() {
+        // Done!
+        return;
+    }
+
+    let child_count = input.remove(0);
+    let metadata_count = input.remove(0);
+
+    let new_node = Node {
+        idx: result.len(),
+        metadata: Vec::new(),
+        child_indexes: Vec::new(),
+    };
+
+    let my_idx = result.len();
+    result.push(new_node);
+
+    for _ in 0..child_count as usize {
+        let idx = result.len();
+        result[my_idx].child_indexes.push(idx);
+        day8_parse_nodes(input, result);
+    }
+
+    for _ in 0..metadata_count {
+        result[my_idx].metadata.push(input.remove(0));
+    }
+}
+
+fn calculate_value(nodes: &Vec<Node>, idx: usize) -> usize {
+    let target_node = &nodes[idx];
+
+    if target_node.child_indexes.is_empty() {
+        // sum of metadata entries
+        target_node.metadata.iter().sum()
+    } else {
+        // metadata entries are indexes!
+        let mut result = 0;
+
+        for &m in &target_node.metadata {
+            if m > 0 && (m - 1) < target_node.child_indexes.len() {
+                result += calculate_value(nodes, target_node.child_indexes[m - 1]);
+            }
+        }
+
+        result
+    }
+}
+
+fn day8_part2() {
+    let input_s = include_str!("../input_files/day8.txt").trim().to_owned();
+
+    let mut input: Vec<usize> = input_s
+        .trim()
+        .split(" ")
+        .map(|s| s.parse().unwrap())
+        .collect();
+    let mut output: Vec<Node> = Vec::new();
+
+    day8_parse_nodes(&mut input, &mut output);
+
+    println!("Value of root node: {}", calculate_value(&output, 0));
+}
+
 fn main() {
     if false {
         regex_examples();
@@ -794,8 +901,11 @@ fn main() {
 
         day6_part1();
         day6_part2();
+
+        day7_part1();
+        day7_part2();
     }
 
-    day7_part1();
-    day7_part2();
+    day8_part1();
+    day8_part2();
 }
