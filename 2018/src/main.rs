@@ -664,9 +664,10 @@ fn day7_part1() {
 }
 
 #[derive(Clone, Debug)]
-struct WorkerJob {
-    work_remaining: usize,
-    task: String,
+enum Worker {
+    Active { work_remaining: usize, task: String },
+
+    Idle,
 }
 
 fn task_cost(task: &str) -> usize {
@@ -676,27 +677,31 @@ fn task_cost(task: &str) -> usize {
 fn day7_part2() {
     let input: Vec<String> = input_lines("input_files/day7.txt").collect();
 
-    let base_cost = 60;
-    let workers = 5;
+    const BASE_COST: usize = 60;
+    const WORKER_COUNT: usize = 5;
 
-    // K requires all of V[] to start
-    let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
+    // Task K requires all of Tasks V[] to start
+    let dependencies = {
+        let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
 
-    for s in input {
-        let mut bits: Vec<String> = s.split(" ").map(str::to_owned).collect();
+        for s in input {
+            let mut bits: Vec<String> = s.split(" ").map(str::to_owned).collect();
 
-        let dependent = bits.remove(7);
-        let depends_on = bits.remove(1);
+            let task = bits.remove(7);
+            let prerequisite_task = bits.remove(1);
+
+            dependencies
+                .entry(prerequisite_task.clone())
+                .or_insert(HashSet::new());
+
+            dependencies
+                .entry(task.clone())
+                .or_insert(HashSet::new())
+                .insert(prerequisite_task.clone());
+        }
 
         dependencies
-            .entry(depends_on.clone())
-            .or_insert(HashSet::new());
-
-        dependencies
-            .entry(dependent.clone())
-            .or_insert(HashSet::new())
-            .insert(depends_on.clone());
-    }
+    };
 
     let ordered_tasks: Vec<String> = {
         let mut v: Vec<String> = dependencies.keys().cloned().collect();
@@ -704,55 +709,58 @@ fn day7_part2() {
         v
     };
 
-    // Steps we've already run
-    let mut completed_steps = HashSet::new();
+    // Tasks we've already run
+    let mut completed_tasks = HashSet::new();
 
-    // The amount of work each worker is performing
-    let mut worker_workloads: Vec<Option<WorkerJob>> = vec![None; workers];
+    // Our faithful workers, and the set of tasks they're currently chewing on
+    let mut workers: Vec<Worker> = vec![Worker::Idle; WORKER_COUNT];
     let mut work_in_progress = HashSet::new();
 
     let mut seconds_elapsed = 0;
 
     loop {
         // Handle work currently running
-        for i in 0..worker_workloads.len() {
+        for i in 0..workers.len() {
             // If the worker is doing something, decrement their workload
-            if let Some(ref mut job) = worker_workloads[i] {
-                if job.work_remaining == 1 {
+            if let Worker::Active {
+                ref mut work_remaining,
+                ref task,
+            } = workers[i]
+            {
+                if *work_remaining == 1 {
                     // Task complete!
-                    work_in_progress.remove(&job.task);
-                    completed_steps.insert(job.task.clone());
-                    worker_workloads[i] = None;
+                    completed_tasks.insert(work_in_progress.take(task).unwrap());
+                    workers[i] = Worker::Idle;
                 } else {
-                    job.work_remaining -= 1;
+                    *work_remaining -= 1;
                 }
             };
         }
 
-        if completed_steps.len() == dependencies.len() {
+        if completed_tasks.len() == ordered_tasks.len() {
             // We're done!
             break;
         }
 
         // Allocate new work to anyone who needs it
-        for i in 0..worker_workloads.len() {
-            if worker_workloads[i].is_some() {
+        for i in 0..workers.len() {
+            if let Worker::Active { .. } = workers[i] {
                 // Worker is occupied
                 continue;
             }
 
             if let Some(next_task) = ordered_tasks.iter().find(|&k| {
-                !completed_steps.contains(k)
+                !completed_tasks.contains(k)
                     && !work_in_progress.contains(k)
-                    && dependencies.get(k).unwrap().is_subset(&completed_steps)
+                    && dependencies.get(k).unwrap().is_subset(&completed_tasks)
             }) {
                 // If the worker is free, assign some work.
                 work_in_progress.insert(next_task.clone());
 
-                worker_workloads[i] = Some(WorkerJob {
+                workers[i] = Worker::Active {
                     task: next_task.clone(),
-                    work_remaining: base_cost + &task_cost(next_task),
-                });
+                    work_remaining: BASE_COST + &task_cost(next_task),
+                };
             }
         }
 
