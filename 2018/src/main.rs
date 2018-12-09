@@ -813,6 +813,7 @@ struct Node {
     child_indexes: Vec<usize>,
 }
 
+// Really could have just used regular ownership here: have Node own its children.  Oh well!
 fn day8_parse_nodes(input: &mut Vec<usize>, result: &mut Vec<Node>) {
     if input.is_empty() {
         // Done!
@@ -877,6 +878,110 @@ fn day8_part2() {
     println!("Value of root node: {}", calculate_value(&output, 0));
 }
 
+fn day9_part1() {
+    // 452 players; last marble is worth 70784 points
+
+    let max_marble = 70784;
+    let players = 452;
+
+    let mut board = vec![0];
+    board.reserve(max_marble);
+    let mut player_scores = vec![0; players];
+
+    let mut current_marble_idx = 0;
+    let mut current_player = 0;
+
+    for marble in 1..=max_marble {
+        if marble % 23 == 0 {
+            // player scores!
+            player_scores[current_player] += marble;
+            let len = board.len() as i64;
+            let idx_to_remove = ((((current_marble_idx as i64 - 7) % len) + len) % len) as usize;
+            let removed = board.remove(idx_to_remove);
+            player_scores[current_player] += removed;
+            current_marble_idx = idx_to_remove;
+
+        // println!("Player {} gets {} and {}", current_player, marble, removed);
+        } else {
+            // default case: place the next marble after the marble clockwise one step from current.
+            let mut place_at_pos = current_marble_idx + 2;
+
+            if place_at_pos >= board.len() {
+                place_at_pos = place_at_pos - board.len();
+            }
+
+            board.insert(place_at_pos, marble);
+            current_marble_idx = place_at_pos;
+        }
+
+        current_player += 1;
+
+        if current_player == players {
+            current_player = 0;
+        }
+    }
+
+    println!("{:?}", player_scores.iter().max().unwrap());
+}
+
+fn day9_part2() {
+    let max_marble = 7078400;
+    let players = 452;
+
+    // V[x] is to the left of x
+    let mut left_relationships: Vec<usize> = vec![0; max_marble + 1];
+
+    // V[x] is to the right of x
+    let mut right_relationships: Vec<usize> = vec![0; max_marble + 1];
+
+    let mut player_scores = vec![0; players];
+
+    let mut current_marble_idx = 0;
+    let mut current_player = 0;
+
+    for marble in 1..=max_marble {
+        if marble % 23 == 0 {
+            // player scores!
+            player_scores[current_player] += marble;
+
+            // Find the marble seven to the left and remove it.
+            let to_remove = (0..7).fold(current_marble_idx, |idx, _| left_relationships[idx]);
+
+            player_scores[current_player] += to_remove;
+
+            let left_of_victim = left_relationships[to_remove];
+            let right_of_victim = right_relationships[to_remove];
+
+            left_relationships[right_of_victim] = left_of_victim;
+            right_relationships[left_of_victim] = right_of_victim;
+
+            current_marble_idx = right_of_victim;
+
+        // println!("Player {} gets {} and {}", current_player, marble, removed);
+        } else {
+            // default case: place the next marble after the marble clockwise one step from current.
+            let insert_after = right_relationships[current_marble_idx];
+
+            let old_right = right_relationships[insert_after];
+            right_relationships[insert_after] = marble;
+            left_relationships[old_right] = marble;
+
+            right_relationships[marble] = old_right;
+            left_relationships[marble] = insert_after;
+
+            current_marble_idx = marble;
+        }
+
+        current_player += 1;
+
+        if current_player == players {
+            current_player = 0;
+        }
+    }
+
+    println!("{:?}", player_scores.iter().max().unwrap());
+}
+
 fn main() {
     if false {
         regex_examples();
@@ -904,8 +1009,11 @@ fn main() {
 
         day7_part1();
         day7_part2();
+
+        day8_part1();
+        day8_part2();
     }
 
-    day8_part1();
-    day8_part2();
+    day9_part1();
+    day9_part2();
 }
