@@ -3,6 +3,9 @@
 #![allow(unused_parens)]
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate lazy_static;
+
 extern crate regex;
 
 use regex::Regex;
@@ -10,7 +13,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Write};
 
 const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
 const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -956,8 +959,6 @@ fn day9_part2() {
             right_relationships[left_of_victim] = right_of_victim;
 
             current_marble_idx = right_of_victim;
-
-        // println!("Player {} gets {} and {}", current_player, marble, removed);
         } else {
             // default case: place the next marble after the marble clockwise one step from current.
             let insert_after = right_relationships[current_marble_idx];
@@ -980,6 +981,182 @@ fn day9_part2() {
     }
 
     println!("{:?}", player_scores.iter().max().unwrap());
+}
+
+#[derive(Debug)]
+struct PointOfLight {
+    position: (i64, i64),
+    velocity: (i64, i64),
+}
+
+lazy_static! {
+    static ref POINT_OF_LIGHT_REGEX: Regex =
+        { Regex::new(r"position=<(.+)> velocity=<(.*)>").unwrap() };
+}
+
+impl PointOfLight {
+    fn from_str(input: &str) -> PointOfLight {
+        for cap in POINT_OF_LIGHT_REGEX.captures_iter(input) {
+            let position: Vec<i64> = cap[1]
+                .replace(" ", "")
+                .split(",")
+                .map(|s| s.parse().unwrap())
+                .collect();
+            let velocity: Vec<i64> = cap[2]
+                .replace(" ", "")
+                .split(",")
+                .map(|s| s.parse().unwrap())
+                .collect();
+
+            return PointOfLight {
+                position: (position[0], position[1]),
+                velocity: (velocity[0], velocity[1]),
+            };
+        }
+
+        unreachable!();
+    }
+
+    fn tick(&mut self) {
+        self.position = (
+            self.position.0 + self.velocity.0,
+            self.position.1 + self.velocity.1,
+        );
+    }
+}
+
+fn write_frame(grid: &Vec<Vec<char>>, out: &mut impl Write) {
+    const PIXEL_SIZE: usize = 5;
+
+    let img_width = PIXEL_SIZE * grid[0].len();
+    let img_height = PIXEL_SIZE * grid.len();
+
+    out.write_all(b"P6\n").unwrap();
+    out.write_all(format!("{}\n", img_width).as_bytes())
+        .unwrap();
+    out.write_all(format!("{}\n", img_height).as_bytes())
+        .unwrap();
+    out.write_all(b"255\n").unwrap();
+
+    let mut output_row: Vec<u8> = Vec::new();
+
+    for row in grid {
+        output_row.clear();
+
+        for &cell in row {
+            let val = if cell == ' ' { 0 } else { 255 };
+
+            for _ in 0..PIXEL_SIZE {
+                // RGB
+                output_row.push(val);
+                output_row.push(val);
+                output_row.push(val);
+            }
+        }
+
+        for _ in 0..PIXEL_SIZE {
+            out.write_all(&output_row).unwrap();
+        }
+    }
+}
+
+// WARNING: dumps ppm files to stdout
+//
+// Run with: target/release/adventofcode2018 | ffmpeg -vcodec ppm -f image2pipe -framerate 60 -i - out.mp4
+//
+fn day10_part1() {
+    let input = input_lines("input_files/day10.txt");
+
+    const GRID_SIZE: usize = 200;
+
+    let mut points: Vec<PointOfLight> = input.map(|line| PointOfLight::from_str(&line)).collect();
+
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
+    for _frame in 0..15000 {
+        for p in &mut points {
+            p.tick();
+        }
+
+        let min_x = points.iter().map(|p| p.position.0).min().unwrap();
+        let min_y = points.iter().map(|p| p.position.1).min().unwrap();
+
+        let max_x = points.iter().map(|p| p.position.0).max().unwrap();
+        let max_y = points.iter().map(|p| p.position.1).max().unwrap();
+
+        let min_pos = [min_x, min_y].iter().min().unwrap().clone();
+        let max_pos = [max_x, max_y].iter().max().unwrap().abs();
+
+        let mut grid: Vec<Vec<char>> = (0..GRID_SIZE).map(|_| vec![' '; GRID_SIZE]).collect();
+
+        for p in &points {
+            let x = ((((p.position.0 - min_pos) as f64) / ((max_pos - min_pos) as f64))
+                * (GRID_SIZE - 1) as f64)
+                .floor() as usize;
+            let y = ((((p.position.1 - min_pos) as f64) / ((max_pos - min_pos) as f64))
+                * (GRID_SIZE - 1) as f64)
+                .floor() as usize;
+
+            grid[y as usize][x as usize] = '#';
+        }
+
+        write_frame(&grid, &mut handle);
+    }
+}
+
+fn day10_part2() {
+    let input = input_lines("input_files/day10.txt");
+
+    const GRID_SIZE: usize = 200;
+
+    let mut points: Vec<PointOfLight> = input.map(|line| PointOfLight::from_str(&line)).collect();
+
+    let mut seconds = 0;
+
+    for _ in 0..10123 {
+        seconds += 1;
+        for p in &mut points {
+            p.tick();
+        }
+    }
+
+    for frame in 0..1 {
+        seconds += 1;
+        println!("Produced frame {} at second {}", frame, seconds);
+
+        for p in &mut points {
+            p.tick();
+        }
+
+        let min_x = points.iter().map(|p| p.position.0).min().unwrap();
+        let min_y = points.iter().map(|p| p.position.1).min().unwrap();
+
+        let max_x = points.iter().map(|p| p.position.0).max().unwrap();
+        let max_y = points.iter().map(|p| p.position.1).max().unwrap();
+
+        let min_pos = [min_x, min_y].iter().min().unwrap().clone();
+        let max_pos = [max_x, max_y].iter().max().unwrap().abs();
+
+        // println!("{} {}", (max_x - min_x), (max_y - min_y));
+
+        let mut grid: Vec<Vec<char>> = (0..GRID_SIZE).map(|_| vec![' '; GRID_SIZE]).collect();
+
+        for p in &points {
+            let x = ((((p.position.0 - min_pos) as f64) / ((max_pos - min_pos) as f64))
+                * (GRID_SIZE - 1) as f64)
+                .floor() as usize;
+            let y = ((((p.position.1 - min_pos) as f64) / ((max_pos - min_pos) as f64))
+                * (GRID_SIZE - 1) as f64)
+                .floor() as usize;
+
+            grid[y as usize][x as usize] = '#';
+        }
+
+        // Show the grid
+        let mut out = File::create(format!("frame_{:07}.ppm", frame)).unwrap();
+        write_frame(&grid, &mut out);
+    }
 }
 
 fn main() {
@@ -1012,8 +1189,11 @@ fn main() {
 
         day8_part1();
         day8_part2();
-    }
 
-    day9_part1();
-    day9_part2();
+        day9_part1();
+        day9_part2();
+
+        day10_part1();
+        day10_part2();
+    }
 }
