@@ -12,8 +12,10 @@ use regex::Regex;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
+use std::str;
 
 const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
 const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -996,25 +998,21 @@ lazy_static! {
 
 impl PointOfLight {
     fn from_str(input: &str) -> PointOfLight {
-        for cap in POINT_OF_LIGHT_REGEX.captures_iter(input) {
-            let position: Vec<i64> = cap[1]
-                .replace(" ", "")
+        fn parse_pair(s: &str) -> Vec<i64> {
+            s.replace(" ", "")
                 .split(",")
                 .map(|s| s.parse().unwrap())
-                .collect();
-            let velocity: Vec<i64> = cap[2]
-                .replace(" ", "")
-                .split(",")
-                .map(|s| s.parse().unwrap())
-                .collect();
-
-            return PointOfLight {
-                position: (position[0], position[1]),
-                velocity: (velocity[0], velocity[1]),
-            };
+                .collect()
         }
 
-        unreachable!();
+        let cap = POINT_OF_LIGHT_REGEX.captures(input).unwrap();
+        let position = parse_pair(&cap[1]);
+        let velocity = parse_pair(&cap[2]);
+
+        PointOfLight {
+            position: (position[0], position[1]),
+            velocity: (velocity[0], velocity[1]),
+        }
     }
 
     fn tick(&mut self) {
@@ -1025,6 +1023,7 @@ impl PointOfLight {
     }
 }
 
+// Write out a frame as a PPM image
 fn write_frame(grid: &Vec<Vec<char>>, out: &mut impl Write) {
     const PIXEL_SIZE: usize = 5;
 
@@ -1054,6 +1053,7 @@ fn write_frame(grid: &Vec<Vec<char>>, out: &mut impl Write) {
             }
         }
 
+        // Repeat the row PIXEL_SIZE to make square pixels.
         for _ in 0..PIXEL_SIZE {
             out.write_all(&output_row).unwrap();
         }
@@ -1065,38 +1065,43 @@ fn write_frame(grid: &Vec<Vec<char>>, out: &mut impl Write) {
 // Run with: target/release/adventofcode2018 | ffmpeg -vcodec ppm -f image2pipe -framerate 60 -i - out.mp4
 //
 fn day10_part1() {
+    fn to_uniform(value: i64, min_value: i64, max_value: i64) -> f64 {
+        (value - min_value) as f64 / (max_value - min_value) as f64
+    }
+
     let input = input_lines("input_files/day10.txt");
 
     const GRID_SIZE: usize = 200;
+    const FRAMES_TO_GENERATE: usize = 15000;
 
     let mut points: Vec<PointOfLight> = input.map(|line| PointOfLight::from_str(&line)).collect();
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
-    for _frame in 0..15000 {
+    for _frame in 0..FRAMES_TO_GENERATE {
         for p in &mut points {
             p.tick();
         }
 
-        let min_x = points.iter().map(|p| p.position.0).min().unwrap();
-        let min_y = points.iter().map(|p| p.position.1).min().unwrap();
-
-        let max_x = points.iter().map(|p| p.position.0).max().unwrap();
-        let max_y = points.iter().map(|p| p.position.1).max().unwrap();
-
-        let min_pos = [min_x, min_y].iter().min().unwrap().clone();
-        let max_pos = [max_x, max_y].iter().max().unwrap().abs();
+        let min_pos = points
+            .iter()
+            .map(|p| vec![p.position.0, p.position.1])
+            .flatten()
+            .min()
+            .unwrap();
+        let max_pos = points
+            .iter()
+            .map(|p| vec![p.position.0, p.position.1])
+            .flatten()
+            .max()
+            .unwrap();
 
         let mut grid: Vec<Vec<char>> = (0..GRID_SIZE).map(|_| vec![' '; GRID_SIZE]).collect();
 
         for p in &points {
-            let x = ((((p.position.0 - min_pos) as f64) / ((max_pos - min_pos) as f64))
-                * (GRID_SIZE - 1) as f64)
-                .floor() as usize;
-            let y = ((((p.position.1 - min_pos) as f64) / ((max_pos - min_pos) as f64))
-                * (GRID_SIZE - 1) as f64)
-                .floor() as usize;
+            let x = (to_uniform(p.position.0, min_pos, max_pos) * (GRID_SIZE - 1) as f64).floor();
+            let y = (to_uniform(p.position.1, min_pos, max_pos) * (GRID_SIZE - 1) as f64).floor();
 
             grid[y as usize][x as usize] = '#';
         }
@@ -1106,6 +1111,10 @@ fn day10_part1() {
 }
 
 fn day10_part2() {
+    fn to_uniform(value: i64, min_value: i64, max_value: i64) -> f64 {
+        (value - min_value) as f64 / (max_value - min_value) as f64
+    }
+
     let input = input_lines("input_files/day10.txt");
 
     const GRID_SIZE: usize = 200;
@@ -1129,26 +1138,24 @@ fn day10_part2() {
             p.tick();
         }
 
-        let min_x = points.iter().map(|p| p.position.0).min().unwrap();
-        let min_y = points.iter().map(|p| p.position.1).min().unwrap();
-
-        let max_x = points.iter().map(|p| p.position.0).max().unwrap();
-        let max_y = points.iter().map(|p| p.position.1).max().unwrap();
-
-        let min_pos = [min_x, min_y].iter().min().unwrap().clone();
-        let max_pos = [max_x, max_y].iter().max().unwrap().abs();
-
-        // println!("{} {}", (max_x - min_x), (max_y - min_y));
+        let min_pos = points
+            .iter()
+            .map(|p| vec![p.position.0, p.position.1])
+            .flatten()
+            .min()
+            .unwrap();
+        let max_pos = points
+            .iter()
+            .map(|p| vec![p.position.0, p.position.1])
+            .flatten()
+            .max()
+            .unwrap();
 
         let mut grid: Vec<Vec<char>> = (0..GRID_SIZE).map(|_| vec![' '; GRID_SIZE]).collect();
 
         for p in &points {
-            let x = ((((p.position.0 - min_pos) as f64) / ((max_pos - min_pos) as f64))
-                * (GRID_SIZE - 1) as f64)
-                .floor() as usize;
-            let y = ((((p.position.1 - min_pos) as f64) / ((max_pos - min_pos) as f64))
-                * (GRID_SIZE - 1) as f64)
-                .floor() as usize;
+            let x = (to_uniform(p.position.0, min_pos, max_pos) * (GRID_SIZE - 1) as f64).floor();
+            let y = (to_uniform(p.position.1, min_pos, max_pos) * (GRID_SIZE - 1) as f64).floor();
 
             grid[y as usize][x as usize] = '#';
         }
@@ -1156,6 +1163,423 @@ fn day10_part2() {
         // Show the grid
         let mut out = File::create(format!("frame_{:07}.ppm", frame)).unwrap();
         write_frame(&grid, &mut out);
+    }
+}
+
+fn three_by_three_power(grid: &Vec<Vec<i64>>, x: usize, y: usize) -> i64 {
+    let mut result = 0;
+
+    for yoff in 0..3 {
+        for xoff in 0..3 {
+            result += grid[y + yoff][x + xoff];
+        }
+    }
+
+    result
+}
+
+fn day11_part1() {
+    const GRID_SIZE: usize = 300;
+    const INPUT: i64 = 9435;
+
+    let mut grid: Vec<Vec<i64>> = (0..GRID_SIZE).map(|_| vec![0; GRID_SIZE]).collect();
+
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            let rack_id: i64 = (x as i64 + 1) + 10;
+            let mut power_level: i64 = rack_id as i64 * (y as i64 + 1);
+
+            power_level += INPUT;
+            power_level *= rack_id;
+            power_level = (power_level / 100) % 10;
+            power_level -= 5;
+
+            grid[y][x] = power_level;
+        }
+    }
+
+    let mut best_three_by_three: i64 = i64::min_value();
+    let mut best_coordinate: (usize, usize) = (0, 0);
+
+    for y in 0..(GRID_SIZE - 3) {
+        for x in 0..(GRID_SIZE - 3) {
+            let value = three_by_three_power(&grid, x, y);
+
+            if value > best_three_by_three {
+                best_three_by_three = value;
+                best_coordinate = (x + 1, y + 1);
+            }
+        }
+    }
+
+    println!(
+        "Best value was at {:?} with value {}",
+        best_coordinate, best_three_by_three
+    );
+}
+
+fn grid_power(grid: &Vec<Vec<i64>>, x: usize, y: usize, size: usize) -> i64 {
+    let mut result = 0;
+
+    for yoff in 0..size {
+        for xoff in 0..size {
+            result += grid[y + yoff][x + xoff];
+        }
+    }
+
+    result
+}
+
+fn day11_part2() {
+    const GRID_SIZE: usize = 300;
+    const INPUT: i64 = 9435;
+
+    let mut grid: Vec<Vec<i64>> = (0..GRID_SIZE).map(|_| vec![0; GRID_SIZE]).collect();
+
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
+            let rack_id: i64 = (x as i64 + 1) + 10;
+            let mut power_level: i64 = rack_id as i64 * (y as i64 + 1);
+
+            power_level += INPUT;
+            power_level *= rack_id;
+            power_level = (power_level / 100) % 10;
+            power_level -= 5;
+
+            grid[y][x] = power_level;
+        }
+    }
+
+    let mut best_grid_value: i64 = i64::min_value();
+    let mut best_coordinate: (usize, usize) = (0, 0);
+    let mut best_size: usize = 0;
+
+    for size in 1..GRID_SIZE {
+        for y in 0..(GRID_SIZE - size) {
+            for x in 0..(GRID_SIZE - size) {
+                let value = grid_power(&grid, x, y, size);
+
+                if value > best_grid_value {
+                    best_grid_value = value;
+                    best_coordinate = (x + 1, y + 1);
+                    best_size = size;
+                }
+            }
+        }
+    }
+
+    println!(
+        "Best value was at {:?} with value {} and size {}",
+        best_coordinate, best_grid_value, best_size
+    );
+}
+
+fn day12_load_rules() -> HashSet<Vec<u8>> {
+    let mut result = HashSet::new();
+
+    result.insert(b"#..#.".to_vec());
+    result.insert(b"#...#".to_vec());
+    result.insert(b".##.#".to_vec());
+    result.insert(b"##...".to_vec());
+    result.insert(b"##.#.".to_vec());
+    result.insert(b".#.##".to_vec());
+    result.insert(b"#.#..".to_vec());
+    result.insert(b"#####".to_vec());
+    result.insert(b"..#.#".to_vec());
+    result.insert(b"...#.".to_vec());
+    result.insert(b"####.".to_vec());
+    result.insert(b".#...".to_vec());
+    result.insert(b"#.#.#".to_vec());
+    result.insert(b".##..".to_vec());
+    result.insert(b".#..#".to_vec());
+    result.insert(b"##.##".to_vec());
+    result.insert(b".###.".to_vec());
+
+    result
+}
+
+fn day12_part1() {
+    const RULE_LEN: usize = 5;
+    let initial_state = b"#....#.#....#....#######..##....###.##....##.#.#.##...##.##.#...#..###....#.#...##.###.##.###...#..#";
+
+    let padding: i64 = 11000;
+    let mut state: Vec<u8> = Vec::new();
+    let pot_numbers = ((0 - padding as i64)..(padding + initial_state.len() as i64));
+
+    state.extend(vec![b'.'; padding as usize]);
+    state.extend(initial_state.iter());
+    state.extend(vec![b'.'; padding as usize]);
+
+    let rules: HashSet<Vec<u8>> = day12_load_rules();
+
+    for generation in 0..21 {
+        // Print our running total
+        let result = pot_numbers.clone().zip(&state).fold(0, |acc, (idx, &elt)| {
+            acc + if elt == b'#' { idx } else { 0 }
+        });
+
+        println!("Generation result {}: {}", generation, result);
+
+        // Generate new state
+        let mut new_state = vec![b'.'; state.len()];
+
+        for i in 0..state.len() - RULE_LEN {
+            if rules.contains(&state[i..i + RULE_LEN]) {
+                new_state[i + 2] = b'#';
+            }
+        }
+
+        state = new_state;
+    }
+}
+
+fn day12_part2() {
+    // After much messing around, recognised that the above total for each
+    // subsequent generation ends up increasing by a constant of 98.  Used
+    // arithmetic to work out the 50b case!
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct Vector2 {
+    x: i64,
+    y: i64,
+}
+
+// [.0 .1
+//  .2 .3]
+struct Rotation(i64, i64, i64, i64);
+
+const RIGHT_ROTATE: Rotation = Rotation(0, -1, 1, 0);
+const LEFT_ROTATE: Rotation = Rotation(0, 1, -1, 0);
+const STRAIGHT_ROTATE: Rotation = Rotation(1, 0, 0, 1);
+
+const UP: Vector2 = Vector2 { x: 0, y: -1 };
+const DOWN: Vector2 = Vector2 { x: 0, y: 1 };
+const LEFT: Vector2 = Vector2 { x: -1, y: 0 };
+const RIGHT: Vector2 = Vector2 { x: 1, y: 0 };
+
+const INTERSECTION_TURNS: &[Rotation] = &[LEFT_ROTATE, STRAIGHT_ROTATE, RIGHT_ROTATE];
+
+#[derive(Debug)]
+struct Cart {
+    direction: Vector2,
+    next_intersection_turn_idx: usize,
+    last_move_tick: usize,
+}
+
+type Track = char;
+
+impl Default for Cart {
+    fn default() -> Cart {
+        Cart {
+            direction: UP,
+            next_intersection_turn_idx: 0,
+            last_move_tick: 0,
+        }
+    }
+}
+
+impl Cart {
+    fn adjust_direction(&mut self, current_track: Track) {
+        match current_track {
+            '-' | '|' => {
+                // Stay the course
+            }
+            '\\' => {
+                self.direction = Vector2 {
+                    x: self.direction.y,
+                    y: self.direction.x,
+                }
+            }
+            '/' => {
+                self.direction = Vector2 {
+                    x: self.direction.y * -1,
+                    y: self.direction.x * -1,
+                }
+            }
+            '+' => {
+                self.direction = rotate_vector2(
+                    &self.direction,
+                    &INTERSECTION_TURNS[self.next_intersection_turn_idx],
+                );
+                self.next_intersection_turn_idx =
+                    (self.next_intersection_turn_idx + 1) % INTERSECTION_TURNS.len();
+            }
+            _ => {
+                panic!("Unknown type of track: {}", current_track);
+            }
+        }
+    }
+}
+
+fn rotate_vector2(v: &Vector2, r: &Rotation) -> Vector2 {
+    Vector2 {
+        x: (v.x * r.0) + (v.y * r.1),
+        y: (v.x * r.2) + (v.y * r.3),
+    }
+}
+
+struct World {
+    map: Vec<Vec<Track>>,
+    carts: Vec<Vec<Option<Cart>>>,
+}
+
+impl fmt::Display for World {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for y in 0..self.map.len() {
+            for x in 0..self.map[0].len() {
+                if let Some(cart) = &self.carts[y][x] {
+                    write!(
+                        f,
+                        "{}",
+                        match cart.direction {
+                            LEFT => "<",
+                            UP => "^",
+                            DOWN => "v",
+                            RIGHT => ">",
+                            _ => unreachable!(),
+                        }
+                    )?;
+                } else {
+                    write!(f, "{}", self.map[y][x])?;
+                }
+            }
+            write!(f, "\n")?;
+        }
+
+        Ok(())
+    }
+}
+
+fn parse_cart_world(input: &str) -> World {
+    World {
+        map: input
+            .replace(">", "-")
+            .replace("<", "-")
+            .replace("^", "|")
+            .replace("v", "|")
+            .split("\n")
+            .filter(|&row| !row.is_empty())
+            .map(|row| row.chars().collect::<Vec<Track>>())
+            .collect(),
+
+        carts: input
+            .split("\n")
+            .filter(|&row| !row.is_empty())
+            .map(|row| {
+                row.chars()
+                    .map(|ch| match ch {
+                        '>' => Some(Cart {
+                            direction: RIGHT,
+                            ..Default::default()
+                        }),
+                        '^' => Some(Cart {
+                            direction: UP,
+                            ..Default::default()
+                        }),
+                        'v' => Some(Cart {
+                            direction: DOWN,
+                            ..Default::default()
+                        }),
+                        '<' => Some(Cart {
+                            direction: LEFT,
+                            ..Default::default()
+                        }),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .collect(),
+    }
+}
+
+fn day13_part1() {
+    let input = include_str!("../input_files/day13.txt").to_owned();
+    let mut world = parse_cart_world(&input);
+
+    let mut tick = 0;
+    loop {
+        tick += 1;
+
+        // println!("{}", world);
+
+        for y in 0..world.map.len() {
+            for x in 0..world.map[0].len() {
+                if let Some(cart) = &world.carts[y][x] {
+                    if (cart.last_move_tick == tick) {
+                        // Already moved this cart during this tick
+                        continue;
+                    }
+
+                    world.carts[y].push(None);
+                    let mut cart = world.carts[y].swap_remove(x).unwrap();
+
+                    cart.adjust_direction(world.map[y][x]);
+                    cart.last_move_tick = tick;
+
+                    let new_x = (x as i64 + cart.direction.x) as usize;
+                    let new_y = (y as i64 + cart.direction.y) as usize;
+
+                    if let Some(_) = world.carts[new_y][new_x] {
+                        println!("Collision at {} {} (coming from {} {})", new_x, new_y, x, y);
+                        return;
+                    } else {
+                        world.carts[new_y][new_x] = Some(cart);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn day13_part2() {
+    let input = include_str!("../input_files/day13.txt").to_owned();
+    let mut world = parse_cart_world(&input);
+
+    let mut tick = 0;
+    loop {
+        tick += 1;
+
+        // println!("{}", world);
+
+        for y in 0..world.map.len() {
+            for x in 0..world.map[0].len() {
+                if let Some(cart) = &world.carts[y][x] {
+                    if (cart.last_move_tick == tick) {
+                        // Already moved this cart during this tick
+                        continue;
+                    }
+
+                    world.carts[y].push(None);
+                    let mut cart = world.carts[y].swap_remove(x).unwrap();
+
+                    cart.adjust_direction(world.map[y][x]);
+                    cart.last_move_tick = tick;
+
+                    let new_x = (x as i64 + cart.direction.x) as usize;
+                    let new_y = (y as i64 + cart.direction.y) as usize;
+
+                    if let Some(_) = world.carts[new_y][new_x] {
+                        // Collision.  Remove the other cart too
+                        world.carts[new_y][new_x] = None;
+                    } else {
+                        world.carts[new_y][new_x] = Some(cart);
+                    }
+                }
+            }
+        }
+
+        let remaining_carts = world.carts.iter().flatten().filter(|&cart| cart.is_some());
+        if remaining_carts.count() == 1 {
+            for y in 0..world.map.len() {
+                for x in 0..world.map[0].len() {
+                    if let Some(_) = &world.carts[y][x] {
+                        println!("The loneliest cart: {},{}", x, y);
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1195,5 +1619,14 @@ fn main() {
 
         day10_part1();
         day10_part2();
+
+        day11_part1();
+        day11_part2();
+
+        day12_part1();
+        day12_part2();
     }
+
+    day13_part1();
+    day13_part2();
 }
