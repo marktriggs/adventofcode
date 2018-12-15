@@ -1583,6 +1583,86 @@ fn day13_part2() {
     }
 }
 
+fn day14_part1() {
+    let mut scores = vec![3, 7];
+
+    let mut elf1_current_idx = 0;
+    let mut elf2_current_idx = 1;
+
+    let input = 580741;
+    let output_length = 10;
+
+    while scores.len() < input + output_length {
+        // Expand scores
+        let mut sum = scores[elf1_current_idx] + scores[elf2_current_idx];
+        let pos = scores.len();
+        loop {
+            scores.insert(pos, sum % 10);
+            sum = sum / 10;
+
+            if sum == 0 {
+                break;
+            }
+        }
+
+        // Update elf current indexes
+        elf1_current_idx = (elf1_current_idx + scores[elf1_current_idx] + 1) % scores.len();
+        elf2_current_idx = (elf2_current_idx + scores[elf2_current_idx] + 1) % scores.len();
+    }
+
+    println!(
+        "{} to {}: {}",
+        input,
+        input + output_length,
+        &scores[input..input + output_length]
+            .iter()
+            .map(|score| format!("{}", score))
+            .collect::<String>()
+    );
+}
+
+fn day14_part2() {
+    let mut scores = vec![3, 7];
+
+    let mut elf1_current_idx = 0;
+    let mut elf2_current_idx = 1;
+
+    // 337: too low
+    // 141032488: too high
+    let input = &[5, 8, 0, 7, 4, 1];
+
+    loop {
+        // Expand scores
+        let mut sum = scores[elf1_current_idx] + scores[elf2_current_idx];
+        let mut new_digits = Vec::new();
+        loop {
+            new_digits.insert(0, sum % 10);
+
+            sum = sum / 10;
+
+            if sum == 0 {
+                break;
+            }
+        }
+
+        while !new_digits.is_empty() {
+            scores.push(new_digits.remove(0));
+
+            if scores.len() >= input.len()
+                && &scores[(scores.len() - input.len())..scores.len()] == input
+            {
+                println!("{:?}", &scores[(scores.len() - input.len())..scores.len()]);
+                println!("Result: {}", scores.len() - input.len());
+                return;
+            }
+        }
+
+        // Update elf current indexes
+        elf1_current_idx = (elf1_current_idx + scores[elf1_current_idx] + 1) % scores.len();
+        elf2_current_idx = (elf2_current_idx + scores[elf2_current_idx] + 1) % scores.len();
+    }
+}
+
 fn main() {
     if false {
         regex_examples();
@@ -1625,8 +1705,11 @@ fn main() {
 
         day12_part1();
         day12_part2();
+
+        day13_part1();
+        day13_part2();
     }
 
-    day13_part1();
-    day13_part2();
+    day14_part1();
+    day14_part2();
 }
