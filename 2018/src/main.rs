@@ -1854,7 +1854,13 @@ mod day15 {
             self.grid[y].swap_remove(x)
         }
 
-        fn try_attack(&mut self, active_unit: &mut Unit, x: usize, y: usize, attack_points: i64) -> bool {
+        fn try_attack(
+            &mut self,
+            active_unit: &mut Unit,
+            x: usize,
+            y: usize,
+            attack_points: i64,
+        ) -> bool {
             let mut attackable_positions: Vec<(usize, usize)> = Vec::new();
 
             // Don't just stand there: do something!
@@ -1871,8 +1877,6 @@ mod day15 {
                 return false;
             }
 
-            // println!("Going to attack position: {:?}", attackable_positions);
-
             // Unit with the lowest HP gets whacked.  If there are multiple with
             // the same HP, pick the reading order one (which in our case is the
             // position in the original array)
@@ -1888,7 +1892,6 @@ mod day15 {
             for (attackable_x, attackable_y) in attackable_positions {
                 if let Tile::Occupied(mut victim) = self.pop_tile(attackable_x, attackable_y) {
                     if victim.hitpoints == min_hp {
-                        // println!("Ouch!");
                         // Whack!
                         victim.hitpoints -= attack_points;
                         if victim.hitpoints > 0 {
@@ -1916,13 +1919,21 @@ mod day15 {
             let mut visited_tiles: HashSet<(usize, usize)> = HashSet::new();
 
             // Contains a list of the points making up a path currently under consideration
-            exploration_paths.push(vec!((init_x, init_y)));
+            exploration_paths.push(vec![(init_x, init_y)]);
 
             // Contains the coordinates of tiles we've already captured in an earlier path
             visited_tiles.insert((init_x, init_y));
 
+            let mut found_paths: Vec<Vec<(usize, usize)>> = Vec::new();
+
             while !exploration_paths.is_empty() {
                 let path = exploration_paths.remove(0);
+
+                if !found_paths.is_empty() && path.len() > found_paths[0].len() {
+                    // We're not getting any better...
+                    break;
+                }
+
                 let &(x, y) = path.last().unwrap();
 
                 for (adj_x, adj_y) in self.adjacent_tiles(x, y) {
@@ -1933,12 +1944,26 @@ mod day15 {
 
                     visited_tiles.insert((adj_x, adj_y));
 
-                    // If this adjacent tile contains an enemy, we've found our
-                    // winner.  And since we're operating in reading order,
-                    // there's no risk of ambiguity here.
+                    // If we find a path, we need to keep looking for others
+                    // with the same cost and then choose the winner based on
+                    // the minimum reading order of the REACHABLE SQUARE, NOT of
+                    // the next square we'll move to.
+                    //
+                    // Test case from reddit cleared this up:
+                    //
+                    // #######
+                    // #.E..G#
+                    // #.#####
+                    // #G#####
+                    // #######
+                    //
+                    // E should move right here, not left, because the
+                    // destination goblin in reading order is the one on the
+                    // same Y as the elf.
+                    //
                     if let Tile::Occupied(other_unit) = &self.grid[adj_y][adj_x] {
                         if unit.dislikes(&other_unit) {
-                            return Some((path[1].0, path[1].1));
+                            found_paths.push(path.clone());
                         }
                     } else if let Tile::Open = &self.grid[adj_y][adj_x] {
                         // One to explore
@@ -1950,11 +1975,27 @@ mod day15 {
                 }
             }
 
-            // If we couldn't find a path, there's no move to make
-            None
+            if found_paths.is_empty() {
+                None
+            } else {
+                // Find the minimum based on our destination square...
+                let best = found_paths
+                    .iter()
+                    .min_by(|path1, path2| {
+                        let p1_xy = path1.last().unwrap();
+                        let p2_xy = path2.last().unwrap();
+
+                        // reading order...
+                        ((p1_xy.1, p1_xy.0)).cmp(&(p2_xy.1, p2_xy.0))
+                    })
+                    .unwrap();
+
+                // ... but return the next move.
+                Some(best[1])
+            }
         }
 
-        pub fn next_round(&mut self, round: i64, elf_attack_points: i64) -> i64 {
+        pub fn next_round(&mut self, round: i64, elf_attack_points: i64) -> bool {
             for y in 0..self.height() {
                 for x in 0..self.width() {
                     if let Tile::Occupied(_) = &self.grid[y][x] {
@@ -1965,14 +2006,11 @@ mod day15 {
                                 continue;
                             }
 
-                            // If there's no one left to kill, that's this round over.
+                            // If there's no one left to kill, that's this round (and game) over.
                             if self.is_complete(&active_unit) {
                                 self.grid[y][x] = Tile::Occupied(active_unit);
-                                return 0;
+                                return true;
                             }
-
-
-                            // println!("Active: {:?}", active_unit);
 
                             active_unit.last_ticked = round;
 
@@ -1986,19 +2024,16 @@ mod day15 {
                                 // Attack successful.  Stay in position
                                 self.grid[y][x] = Tile::Occupied(active_unit);
                             } else {
-                                // println!("Attempting move");
                                 // Try moving
                                 if let Some((new_x, new_y)) = self.next_move(&mut active_unit, x, y)
                                 {
                                     assert!(self.grid[new_y][new_x] == Tile::Open);
-                                    // println!("Moving to {},{}", new_x, new_y);
 
                                     // Once we've moved, we can try another attack
                                     self.try_attack(&mut active_unit, new_x, new_y, attack_points);
 
                                     self.grid[new_y][new_x] = Tile::Occupied(active_unit);
                                 } else {
-                                    // println!("Can't move!");
                                     // Hold position
                                     self.grid[y][x] = Tile::Occupied(active_unit);
                                 }
@@ -2008,8 +2043,8 @@ mod day15 {
                 }
             }
 
-            // Full round was completed
-            1
+            // Game still in play
+            false
         }
 
         pub fn remaining_hp(&self) -> usize {
@@ -2027,123 +2062,119 @@ mod day15 {
         }
     }
 
-//     pub fn part1() {
-//         let mut world = World::from_str(
-//             "
-// ################################
-// #########.######################
-// #########..#####################
-// #########..G####################
-// ########....#GG#################
-// ########G......#################
-// ########........################
-// ###.####...#....################
-// #....###.###...G.###############
-// ##......####.....#.#G..#.#######
-// ###G.G...###.........#...#######
-// ###......##...........##########
-// #............G#####...##########
-// #..G##G......#######..##########
-// #.G.#.......#########..#########
-// ####..G.....#########...#.######
-// #...........#########..........#
-// ##.#.....#..#########.E.....E..#
-// ##.###..G.G.#########..........#
-// ##...........#######E.#.......##
-// #.............#####..........###
-// #....#.....E................####
-// ##.............##.E...........##
-// #....G.G.................###..##
-// #..............#.....E...###..##
-// #..##.##.G.....##E.......###.###
-// ###G..##.......###.###...##...##
-// #####.E##.E.G..######...E.#..###
-// ####...###..#..#######.......###
-// ####...###############.#########
-// #####..#########################
-// ################################
-// ",
-//         );
-// 
-//         let mut round = 0;
-// 
-//         while !world.is_complete() {
-//             println!("World:\n{:?}", world);
-//             round += world.next_round(round, DAMAGE);
-//         }
-// 
-//         println!("Combat complete after {} round(s)", round);
-//         println!("Hitpoints remaining: {}", world.remaining_hp());
-//     }
-
-
-    pub fn part2() {
+    pub fn part1() {
         for elf_attack_points in 3..4 {
+            let mut world = World::from_str(
+                "
+################################
+#########.######################
+#########..#####################
+#########..G####################
+########....#GG#################
+########G......#################
+########........################
+###.####...#....################
+#....###.###...G.###############
+##......####.....#.#G..#.#######
+###G.G...###.........#...#######
+###......##...........##########
+#............G#####...##########
+#..G##G......#######..##########
+#.G.#.......#########..#########
+####..G.....#########...#.######
+#...........#########..........#
+##.#.....#..#########.E.....E..#
+##.###..G.G.#########..........#
+##...........#######E.#.......##
+#.............#####..........###
+#....#.....E................####
+##.............##.E...........##
+#....G.G.................###..##
+#..............#.....E...###..##
+#..##.##.G.....##E.......###.###
+###G..##.......###.###...##...##
+#####.E##.E.G..######...E.#..###
+####...###..#..#######.......###
+####...###############.#########
+#####..#########################
+################################
+",
+            );
 
-            let mut world = World::from_str("
-#######
-#.E..G#
-#.#####
-#G#####
-#######
-");
-
-
-//             let mut world = World::from_str("
-// ################################
-// #########.######################
-// #########..#####################
-// #########..G####################
-// ########....#GG#################
-// ########G......#################
-// ########........################
-// ###.####...#....################
-// #....###.###...G.###############
-// ##......####.....#.#G..#.#######
-// ###G.G...###.........#...#######
-// ###......##...........##########
-// #............G#####...##########
-// #..G##G......#######..##########
-// #.G.#.......#########..#########
-// ####..G.....#########...#.######
-// #...........#########..........#
-// ##.#.....#..#########.E.....E..#
-// ##.###..G.G.#########..........#
-// ##...........#######E.#.......##
-// #.............#####..........###
-// #....#.....E................####
-// ##.............##.E...........##
-// #....G.G.................###..##
-// #..............#.....E...###..##
-// #..##.##.G.....##E.......###.###
-// ###G..##.......###.###...##...##
-// #####.E##.E.G..######...E.#..###
-// ####...###..#..#######.......###
-// ####...###############.#########
-// #####..#########################
-// ################################
-// ");
-
-            // 54680: too low.
-            // 56047: too high
             let mut round = 1;
 
             loop {
-                println!("Starting round {} World:\n{:?}", round, world);
-                println!("Hitpoints remaining: {}", world.remaining_hp());
                 let completed = world.next_round(round, elf_attack_points as i64);
 
-                if completed == 0 {
+                if completed {
                     round -= 1;
                     break;
                 } else {
-                    // println!("Ran {} round", round);
                     round += 1
                 }
-
             }
 
-            if true || world.all_elves_survived() {
+            println!("Combat complete after {} round(s)", round);
+            println!("Hitpoints remaining: {}", world.remaining_hp());
+
+            println!("Outcome: {}", world.remaining_hp() * round as usize);
+            break;
+        }
+    }
+
+    pub fn part2() {
+        for elf_attack_points in 4..1000 {
+            let mut world = World::from_str(
+                "
+################################
+#########.######################
+#########..#####################
+#########..G####################
+########....#GG#################
+########G......#################
+########........################
+###.####...#....################
+#....###.###...G.###############
+##......####.....#.#G..#.#######
+###G.G...###.........#...#######
+###......##...........##########
+#............G#####...##########
+#..G##G......#######..##########
+#.G.#.......#########..#########
+####..G.....#########...#.######
+#...........#########..........#
+##.#.....#..#########.E.....E..#
+##.###..G.G.#########..........#
+##...........#######E.#.......##
+#.............#####..........###
+#....#.....E................####
+##.............##.E...........##
+#....G.G.................###..##
+#..............#.....E...###..##
+#..##.##.G.....##E.......###.###
+###G..##.......###.###...##...##
+#####.E##.E.G..######...E.#..###
+####...###..#..#######.......###
+####...###############.#########
+#####..#########################
+################################
+",
+            );
+
+            let mut round = 1;
+
+            loop {
+                let completed = world.next_round(round, elf_attack_points as i64);
+
+                if completed {
+                    round -= 1;
+                    break;
+                } else {
+                    round += 1
+                }
+            }
+
+            if world.all_elves_survived() {
                 println!("Minimum damage needed: {}", elf_attack_points);
                 println!("Combat complete after {} round(s)", round);
                 println!("Hitpoints remaining: {}", world.remaining_hp());
@@ -2153,7 +2184,6 @@ mod day15 {
             }
         }
     }
-
 }
 
 fn main() {
@@ -2204,9 +2234,8 @@ fn main() {
 
         day14::part1();
         day14::part2();
-
-        // day15::part1();
     }
 
+    day15::part1();
     day15::part2();
 }
