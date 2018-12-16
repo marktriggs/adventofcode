@@ -1726,62 +1726,6 @@ mod day14 {
 mod day15 {
     use crate::shared::*;
 
-    /*
-    * each unit wakes up and either:
-
-      - attacks, if it's close enough
-
-        - determine all adjacent targets (these are in range)
-
-        - select the adjacent target with the fewest HP, tie breaking using reading order
-
-        - unit deals $attack_power damage to its target.  If the HP <= 0, they're dead.  Square becomes open
-
-        - all units have 200 HP and deal 3 damage
-
-      - moves, if it's not
-
-        - if it can't move, it ends its turn
-
-        - otherwise, it moves to an open square (up, left, right, down) selected as follows:
-
-          - select squares that are "in range", which means "adjacent to someone we want to attack"
-
-          - determine which of those squares are reachable (i.e. not obstructed by another unit or a wall)
-
-          - determine which reachable square is closest, measured by number of steps required to get there
-
-          - the closest is the path we take.  If two paths are tied, pick the one whose reachable square is first in reading order (cmp < y, then < x)
-
-          - if multiple paths to the chosen reachable square are available, choose the one whose first step is in reading order
-
-    * if all units of one side are gone, the combat is over
-
-    =======================================================================
-
-
-    So we need a unit type:
-
-      * typed enum
-      * remaining HP
-      * damage dealt
-
-    We probably need a world map:
-
-      * Open square
-      * Wall
-      * Occupying unit
-
-    World can own units?  They stop existing when they're dead...
-
-    Need to be able to scan the world to find paths.  Need quick access to adjacent cells...
-
-    Need world coordinates that we can compare using reading order
-
-    Could use the GOL trick of surrounding the world map with walls?  Prevent the need for special case checks...
-
-     */
-
     const DAMAGE: i64 = 3;
     const DEFAULT_HITPOINTS: i64 = 200;
 
@@ -1795,7 +1739,7 @@ mod day15 {
     struct Unit {
         race: Race,
         hitpoints: i64,
-        last_ticked: usize,
+        last_ticked: i64,
     }
 
     impl Unit {
@@ -1803,7 +1747,7 @@ mod day15 {
             Unit {
                 race: if ch == 'E' { Race::Elf } else { Race::Goblin },
                 hitpoints: DEFAULT_HITPOINTS,
-                last_ticked: 0,
+                last_ticked: -1,
             }
         }
 
@@ -1830,6 +1774,7 @@ mod day15 {
 
     struct World {
         grid: Vec<Vec<Tile>>,
+        dead_units: Vec<Unit>,
     }
 
     impl fmt::Debug for World {
@@ -1865,6 +1810,7 @@ mod day15 {
 
         pub fn from_str(s: &str) -> World {
             World {
+                dead_units: Vec::new(),
                 grid: s
                     .trim()
                     .split("\n")
@@ -1881,8 +1827,10 @@ mod day15 {
             }
         }
 
-        pub fn is_complete(&self) -> bool {
+        pub fn is_complete(&self, active_unit: &Unit) -> bool {
             let mut seen_types = HashSet::new();
+            seen_types.insert(&active_unit.race);
+
             // We're complete if everyone is dead, or if one side is dead.
             for tile in self.grid.iter().flatten() {
                 match tile {
@@ -1906,7 +1854,7 @@ mod day15 {
             self.grid[y].swap_remove(x)
         }
 
-        fn try_attack(&mut self, active_unit: &mut Unit, x: usize, y: usize) -> bool {
+        fn try_attack(&mut self, active_unit: &mut Unit, x: usize, y: usize, attack_points: i64) -> bool {
             let mut attackable_positions: Vec<(usize, usize)> = Vec::new();
 
             // Don't just stand there: do something!
@@ -1923,7 +1871,7 @@ mod day15 {
                 return false;
             }
 
-            println!("Going to attack position: {:?}", attackable_positions);
+            // println!("Going to attack position: {:?}", attackable_positions);
 
             // Unit with the lowest HP gets whacked.  If there are multiple with
             // the same HP, pick the reading order one (which in our case is the
@@ -1940,12 +1888,14 @@ mod day15 {
             for (attackable_x, attackable_y) in attackable_positions {
                 if let Tile::Occupied(mut victim) = self.pop_tile(attackable_x, attackable_y) {
                     if victim.hitpoints == min_hp {
-                        println!("Ouch!");
+                        // println!("Ouch!");
                         // Whack!
-                        victim.hitpoints -= DAMAGE;
+                        victim.hitpoints -= attack_points;
                         if victim.hitpoints > 0 {
-                            // Victim died
                             self.grid[attackable_y][attackable_x] = Tile::Occupied(victim);
+                        } else {
+                            // Victim died
+                            self.dead_units.push(victim);
                         }
                         break;
                     } else {
@@ -1957,81 +1907,9 @@ mod day15 {
             true
         }
 
-        // - otherwise, it moves to an open square (up, left, right, down) selected as follows:
-        //
-        // - select squares that are "in range", which means "adjacent to someone we want to attack"
-        //
-        // - determine which of those squares are reachable (i.e. not obstructed by another unit or a wall)
-        //
-        // - determine which reachable square is closest, measured by number of steps required to get there
-        //
-        // - the closest is the path we take.  If two paths are tied, pick the one whose reachable square is first in reading order (cmp < y, then < x)
-        //
-        // - if multiple paths to the chosen reachable square are available, choose the one whose first step is in reading order
-
-        // fn next_move(&self, unit: &Unit, x: usize, y: usize) -> Option<(usize, usize)> {
-        //     // Returns (x, y, cost)
-        //     fn next_move_helper(
-        //         world: &World,
-        //         unit: &Unit,
-        //         x: usize,
-        //         y: usize,
-        //         current_cost: usize,
-        //         visited: HashSet<(usize, usize)>,
-        //     ) -> Option<(usize, usize, usize)> {
-        //         for (adj_x, adj_y) in world.adjacent_tiles(x, y) {
-        //             // If we're adjacent to someone worth attacking, we've arrived
-        //             if let Tile::Occupied(ref other_unit) = &world.grid[adj_y][adj_x] {
-        //                 if unit.dislikes(other_unit) {
-        //                     return Some((adj_x, adj_y, current_cost));
-        //                 }
-        //             }
-        //         }
-        // 
-        //         // Otherwise, plan our next move
-        //         let mut candidates: Vec<(usize, usize, usize)> = Vec::new();
-        // 
-        //         for (adj_x, adj_y) in world.adjacent_tiles(x, y) {
-        //             let mut next_visited = visited.clone();
-        //             next_visited.insert((x, y));
-        // 
-        //             if !visited.contains(&(adj_x, adj_y)) && world.grid[adj_y][adj_x] == Tile::Open
-        //             {
-        //                 if let Some((_, _, new_cost)) = next_move_helper(
-        //                     world,
-        //                     unit,
-        //                     adj_x,
-        //                     adj_y,
-        //                     current_cost + 1,
-        //                     next_visited,
-        //                 ) {
-        //                     candidates.push((adj_x, adj_y, new_cost));
-        //                 }
-        //             }
-        //         }
-        // 
-        //         if candidates.is_empty() {
-        //             return None;
-        //         } else {
-        //             let min_cost = candidates.iter().map(|(_, _, cost)| cost).min().unwrap();
-        //             for c in &candidates {
-        //                 if c.2 == *min_cost {
-        //                     return Some((c.0, c.1, c.2));
-        //                 }
-        //             }
-        // 
-        //             unreachable!();
-        //         }
-        //     }
-        // 
-        //     if let Some((best_x, best_y, _)) =
-        //         next_move_helper(&self, unit, x, y, 0, HashSet::new())
-        //     {
-        //         Some((best_x, best_y))
-        //     } else {
-        //         None
-        //     }
-        // }
+        fn all_elves_survived(&self) -> bool {
+            !self.dead_units.iter().any(|u| u.race == Race::Elf)
+        }
 
         fn next_move(&self, unit: &Unit, init_x: usize, init_y: usize) -> Option<(usize, usize)> {
             let mut exploration_paths: Vec<Vec<(usize, usize)>> = Vec::new();
@@ -2076,7 +1954,7 @@ mod day15 {
             None
         }
 
-        pub fn next_round(&mut self, round: usize) {
+        pub fn next_round(&mut self, round: i64, elf_attack_points: i64) -> i64 {
             for y in 0..self.height() {
                 for x in 0..self.width() {
                     if let Tile::Occupied(_) = &self.grid[y][x] {
@@ -2087,33 +1965,40 @@ mod day15 {
                                 continue;
                             }
 
-                            println!("Active: {:?}", active_unit);
+                            // If there's no one left to kill, that's this round over.
+                            if self.is_complete(&active_unit) {
+                                self.grid[y][x] = Tile::Occupied(active_unit);
+                                return 0;
+                            }
+
+
+                            // println!("Active: {:?}", active_unit);
 
                             active_unit.last_ticked = round;
 
-                            if self.try_attack(&mut active_unit, x, y) {
-                                println!("Attacked!");
+                            let attack_points = if active_unit.race == Race::Elf {
+                                elf_attack_points
+                            } else {
+                                DAMAGE
+                            };
+
+                            if self.try_attack(&mut active_unit, x, y, attack_points) {
                                 // Attack successful.  Stay in position
                                 self.grid[y][x] = Tile::Occupied(active_unit);
-
-                                if self.is_complete() {
-                                    // If our attack killed the last enemy, our work here is done!
-                                    return;
-                                }
                             } else {
-                                println!("Attempting move");
+                                // println!("Attempting move");
                                 // Try moving
                                 if let Some((new_x, new_y)) = self.next_move(&mut active_unit, x, y)
                                 {
                                     assert!(self.grid[new_y][new_x] == Tile::Open);
-                                    println!("Moving to {},{}", new_x, new_y);
+                                    // println!("Moving to {},{}", new_x, new_y);
 
                                     // Once we've moved, we can try another attack
-                                    self.try_attack(&mut active_unit, new_x, new_y);
+                                    self.try_attack(&mut active_unit, new_x, new_y, attack_points);
 
                                     self.grid[new_y][new_x] = Tile::Occupied(active_unit);
                                 } else {
-                                    println!("Can't move!");
+                                    // println!("Can't move!");
                                     // Hold position
                                     self.grid[y][x] = Tile::Occupied(active_unit);
                                 }
@@ -2122,6 +2007,9 @@ mod day15 {
                     }
                 }
             }
+
+            // Full round was completed
+            1
         }
 
         pub fn remaining_hp(&self) -> usize {
@@ -2139,61 +2027,133 @@ mod day15 {
         }
     }
 
-    pub fn part1() {
-        // #######
-        // #E..G.#
-        // #...#.#
-        // #.G.#G#
-        // #######
+//     pub fn part1() {
+//         let mut world = World::from_str(
+//             "
+// ################################
+// #########.######################
+// #########..#####################
+// #########..G####################
+// ########....#GG#################
+// ########G......#################
+// ########........################
+// ###.####...#....################
+// #....###.###...G.###############
+// ##......####.....#.#G..#.#######
+// ###G.G...###.........#...#######
+// ###......##...........##########
+// #............G#####...##########
+// #..G##G......#######..##########
+// #.G.#.......#########..#########
+// ####..G.....#########...#.######
+// #...........#########..........#
+// ##.#.....#..#########.E.....E..#
+// ##.###..G.G.#########..........#
+// ##...........#######E.#.......##
+// #.............#####..........###
+// #....#.....E................####
+// ##.............##.E...........##
+// #....G.G.................###..##
+// #..............#.....E...###..##
+// #..##.##.G.....##E.......###.###
+// ###G..##.......###.###...##...##
+// #####.E##.E.G..######...E.#..###
+// ####...###..#..#######.......###
+// ####...###############.#########
+// #####..#########################
+// ################################
+// ",
+//         );
+// 
+//         let mut round = 0;
+// 
+//         while !world.is_complete() {
+//             println!("World:\n{:?}", world);
+//             round += world.next_round(round, DAMAGE);
+//         }
+// 
+//         println!("Combat complete after {} round(s)", round);
+//         println!("Hitpoints remaining: {}", world.remaining_hp());
+//     }
 
-        let mut world = World::from_str(
-            "
-################################
-#########.######################
-#########..#####################
-#########..G####################
-########....#GG#################
-########G......#################
-########........################
-###.####...#....################
-#....###.###...G.###############
-##......####.....#.#G..#.#######
-###G.G...###.........#...#######
-###......##...........##########
-#............G#####...##########
-#..G##G......#######..##########
-#.G.#.......#########..#########
-####..G.....#########...#.######
-#...........#########..........#
-##.#.....#..#########.E.....E..#
-##.###..G.G.#########..........#
-##...........#######E.#.......##
-#.............#####..........###
-#....#.....E................####
-##.............##.E...........##
-#....G.G.................###..##
-#..............#.....E...###..##
-#..##.##.G.....##E.......###.###
-###G..##.......###.###...##...##
-#####.E##.E.G..######...E.#..###
-####...###..#..#######.......###
-####...###############.#########
-#####..#########################
-################################
-",
-        );
 
-        let mut round = 0;
+    pub fn part2() {
+        for elf_attack_points in 3..4 {
 
-        while !world.is_complete() {
-            round += 1;
-            println!("World:\n{:?}", world);
-            world.next_round(round);
+            let mut world = World::from_str("
+#######
+#.E..G#
+#.#####
+#G#####
+#######
+");
+
+
+//             let mut world = World::from_str("
+// ################################
+// #########.######################
+// #########..#####################
+// #########..G####################
+// ########....#GG#################
+// ########G......#################
+// ########........################
+// ###.####...#....################
+// #....###.###...G.###############
+// ##......####.....#.#G..#.#######
+// ###G.G...###.........#...#######
+// ###......##...........##########
+// #............G#####...##########
+// #..G##G......#######..##########
+// #.G.#.......#########..#########
+// ####..G.....#########...#.######
+// #...........#########..........#
+// ##.#.....#..#########.E.....E..#
+// ##.###..G.G.#########..........#
+// ##...........#######E.#.......##
+// #.............#####..........###
+// #....#.....E................####
+// ##.............##.E...........##
+// #....G.G.................###..##
+// #..............#.....E...###..##
+// #..##.##.G.....##E.......###.###
+// ###G..##.......###.###...##...##
+// #####.E##.E.G..######...E.#..###
+// ####...###..#..#######.......###
+// ####...###############.#########
+// #####..#########################
+// ################################
+// ");
+
+            // 54680: too low.
+            // 56047: too high
+            let mut round = 1;
+
+            loop {
+                println!("Starting round {} World:\n{:?}", round, world);
+                println!("Hitpoints remaining: {}", world.remaining_hp());
+                let completed = world.next_round(round, elf_attack_points as i64);
+
+                if completed == 0 {
+                    round -= 1;
+                    break;
+                } else {
+                    // println!("Ran {} round", round);
+                    round += 1
+                }
+
+            }
+
+            if true || world.all_elves_survived() {
+                println!("Minimum damage needed: {}", elf_attack_points);
+                println!("Combat complete after {} round(s)", round);
+                println!("Hitpoints remaining: {}", world.remaining_hp());
+
+                println!("Outcome: {}", world.remaining_hp() * round as usize);
+                break;
+            }
         }
-
-        println!("Combat complete after {} round(s)", round - 1);
-        println!("Hitpoints remaining: {}", world.remaining_hp());
     }
+
 }
 
 fn main() {
@@ -2244,7 +2204,9 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        // day15::part1();
     }
 
-    day15::part1();
+    day15::part2();
 }
