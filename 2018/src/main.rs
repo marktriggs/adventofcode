@@ -2006,7 +2006,16 @@ mod day15 {
                                 continue;
                             }
 
-                            // If there's no one left to kill, that's this round (and game) over.
+                            // If there's no one left to kill, that's this round
+                            // (and game) over.
+                            //
+                            // "the number of full rounds that were completed
+                            // (not counting the round in which combat ends)
+                            // multiplied by the sum of the hit points of all
+                            // remaining units at the moment combat ends. (Combat
+                            // only ends when a unit finds no targets during its
+                            // turn.)"
+
                             if self.is_complete(&active_unit) {
                                 self.grid[y][x] = Tile::Occupied(active_unit);
                                 return true;
@@ -2186,6 +2195,287 @@ mod day15 {
     }
 }
 
+mod day16 {
+    use crate::shared::*;
+
+    type Registers = Vec<usize>;
+
+    trait Operation {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize);
+    }
+
+    // Addition
+    struct OpAddr;
+    impl Operation for OpAddr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + regs[b];
+        }
+    }
+
+    struct OpAddi;
+    impl Operation for OpAddi {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + b;
+        }
+    }
+
+    // Multiplication
+    struct OpMulr;
+    impl Operation for OpMulr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * regs[b];
+        }
+    }
+
+    struct OpMuli;
+    impl Operation for OpMuli {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * b;
+        }
+    }
+
+    // Bitwise AND
+    struct OpBanr;
+    impl Operation for OpBanr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & regs[b];
+        }
+    }
+
+    struct OpBani;
+    impl Operation for OpBani {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & b;
+        }
+    }
+
+    // Bitwise OR
+    struct OpBorr;
+    impl Operation for OpBorr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | regs[b];
+        }
+    }
+
+    struct OpBori;
+    impl Operation for OpBori {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | b;
+        }
+    }
+
+    // Assignment
+    struct OpSetr;
+    impl Operation for OpSetr {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = regs[a];
+        }
+    }
+
+    struct OpSeti;
+    impl Operation for OpSeti {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = a
+        }
+    }
+
+    // Greater-than testing
+    struct OpGtir;
+    impl Operation for OpGtir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a > regs[b] { 1 } else { 0 };
+        }
+    }
+
+    struct OpGtri;
+    impl Operation for OpGtri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > b { 1 } else { 0 };
+        }
+    }
+
+    struct OpGtrr;
+    impl Operation for OpGtrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
+        }
+    }
+
+    // Equality testing
+    struct OpEqir;
+    impl Operation for OpEqir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a == regs[b] { 1 } else { 0 };
+        }
+    }
+
+    struct OpEqri;
+    impl Operation for OpEqri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == b { 1 } else { 0 };
+        }
+    }
+
+    struct OpEqrr;
+    impl Operation for OpEqrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == regs[b] { 1 } else { 0 };
+        }
+    }
+
+    fn parse_state(s: &str) -> Registers {
+        let numbers = s.split("[").nth(1).unwrap().split("]").nth(0).unwrap();
+
+        numbers.split(", ").map(|n| n.parse().unwrap()).collect()
+    }
+
+    pub fn part1() {
+        let operations: Vec<&Operation> = vec![
+            &OpAddr, &OpAddi, &OpMulr, &OpMuli, &OpBanr, &OpBani, &OpBorr, &OpBori, &OpSetr,
+            &OpSeti, &OpGtir, &OpGtri, &OpGtrr, &OpEqir, &OpEqri, &OpEqrr,
+        ];
+
+        let input: Vec<String> = input_lines("input_files/day16.txt").collect();
+        let mut result = 0;
+
+        let mut i = 0;
+        while i < input.len() {
+            if !input[i].starts_with("Before:") {
+                break;
+            }
+
+            let test_before = parse_state(&input[i]);
+            let operands: Vec<usize> = input[i + 1]
+                .split(" ")
+                .map(|n| n.parse().unwrap())
+                .collect();
+            let test_after = parse_state(&input[i + 2]);
+
+            let mut hit_count = 0;
+            for operation in &operations {
+                let mut regs = test_before.clone();
+                operation.invoke(&mut regs, operands[1], operands[2], operands[3]);
+                if regs == test_after {
+                    hit_count += 1;
+                }
+            }
+
+            if hit_count >= 3 {
+                result += 1;
+            }
+
+            i += 4
+        }
+
+        println!("Result: {}", result);
+    }
+
+    pub fn part2() {
+        let operations: Vec<&Operation> = vec![
+            &OpAddr, &OpAddi, &OpMulr, &OpMuli, &OpBanr, &OpBani, &OpBorr, &OpBori, &OpSetr,
+            &OpSeti, &OpGtir, &OpGtri, &OpGtrr, &OpEqir, &OpEqri, &OpEqrr,
+        ];
+
+        let mut possible_mappings: Vec<HashSet<usize>> = Vec::new();
+
+        // Initially, everything's on the table
+        for _ in 0..operations.len() {
+            let mut set = HashSet::new();
+
+            for i in 0..operations.len() {
+                set.insert(i);
+            }
+
+            possible_mappings.push(set);
+        }
+
+        let input: Vec<String> = input_lines("input_files/day16.txt").collect();
+
+        let mut i = 0;
+        while i < input.len() {
+            if !input[i].starts_with("Before:") {
+                break;
+            }
+
+            let test_before = parse_state(&input[i]);
+            let operands: Vec<usize> = input[i + 1]
+                .split(" ")
+                .map(|n| n.parse().unwrap())
+                .collect();
+            let test_after = parse_state(&input[i + 2]);
+
+            for op_idx in 0..operations.len() {
+                let operation = operations[op_idx];
+                let mut regs = test_before.clone();
+                operation.invoke(&mut regs, operands[1], operands[2], operands[3]);
+                if regs != test_after {
+                    // This operation can't be operands[0]
+                    possible_mappings[op_idx].remove(&operands[0]);
+                }
+            }
+
+            i += 4
+        }
+
+        // Compact our set of possible mappings as much as possible: where a
+        // given operation only has one possible assignment, that's the
+        // assignment.
+        let mut final_mappings = vec![None; operations.len()];
+        let mut assigned_mappings: HashSet<usize> = HashSet::new();
+
+        loop {
+            let mut progressed = false;
+            for op_idx in 0..operations.len() {
+                if final_mappings[op_idx].is_none() {
+                    if possible_mappings[op_idx]
+                        .difference(&assigned_mappings)
+                        .count()
+                        == 1
+                    {
+                        let mapping = possible_mappings[op_idx]
+                            .difference(&assigned_mappings)
+                            .nth(0)
+                            .unwrap()
+                            .clone();
+                        final_mappings[op_idx] = Some(mapping);
+                        assigned_mappings.insert(mapping);
+                        progressed = true;
+                    }
+                }
+            }
+
+            if !progressed {
+                panic!("Splono");
+            }
+
+            if assigned_mappings.len() == operations.len() {
+                break;
+            }
+        }
+
+        println!("CHICKEN DINNER: {:?}", final_mappings);
+
+        let mut opcode_to_operation = vec![0; final_mappings.len()];
+        for op_idx in 0..final_mappings.len() {
+            let opcode = final_mappings[op_idx].unwrap();
+            opcode_to_operation[opcode] = op_idx;
+        }
+
+        // Finally, execute our test program
+        let mut regs = vec![0, 0, 0, 0];
+        for instruction in input_lines("input_files/day16_test_program.txt") {
+            let args: Vec<usize> = instruction.split(" ").map(|s| s.parse().unwrap()).collect();
+
+            let operation_idx = opcode_to_operation[args[0]];
+            let operation = operations[operation_idx];
+
+            operation.invoke(&mut regs, args[1], args[2], args[3]);
+        }
+
+        println!("Result: {:?}", regs);
+    }
+}
+
 fn main() {
     if false {
         // regex_examples();
@@ -2234,8 +2524,11 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        day15::part1();
+        day15::part2();
     }
 
-    day15::part1();
-    day15::part2();
+    day16::part1();
+    day16::part2();
 }
