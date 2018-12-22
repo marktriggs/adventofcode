@@ -10,13 +10,13 @@ extern crate regex;
 mod shared {
     pub use regex::Regex;
 
+    pub use std::cmp;
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::fmt::{self, Display};
     pub use std::fs::File;
     pub use std::io::{self, BufRead, BufReader, Write};
     pub use std::str;
-    pub use std::cmp;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -72,11 +72,10 @@ mod shared {
         }
     }
 
-
     pub fn format_grid<T>(grid: &Vec<Vec<T>>) -> String
-    where T: Display
+    where
+        T: Display,
     {
-
         let mut result = String::new();
 
         for row in grid {
@@ -2130,43 +2129,43 @@ mod day15 {
 ",
             );
 
-//             // Payten's input
-//             let mut world = World::from_str(
-//                 "
-// ################################
-// ########.#######################
-// #######..#######################
-// ######..########################
-// ###....####...##################
-// ###.#..####G..##################
-// ###G#.G#####..####G#############
-// ##....G..###.......#############
-// #G#####...#..G.....#############
-// #G.###..#..G........############
-// #..G.G..........G.....#.G.######
-// ###......GG..G............######
-// #######....G..#####.G...#.######
-// #######......#######....########
-// #######.....#########..........#
-// #######.....#########.........##
-// #######...#.#########.........##
-// #######.....#########........###
-// #######.....#########.........##
-// #######....E.#######........#..#
-// #######.......#####E........####
-// ###.#.E..#.....G.........#..####
-// ###......#E......E..G...E...####
-// ##...........#.............#####
-// #####.###..............E...#####
-// #############..............#####
-// #############..E.....###...#####
-// ###############..E...###...#####
-// #################.E#.####..#####
-// #################..#.###########
-// #################..#.###########
-// ################################
-// ",
-//             );
+            //             // Payten's input
+            //             let mut world = World::from_str(
+            //                 "
+            // ################################
+            // ########.#######################
+            // #######..#######################
+            // ######..########################
+            // ###....####...##################
+            // ###.#..####G..##################
+            // ###G#.G#####..####G#############
+            // ##....G..###.......#############
+            // #G#####...#..G.....#############
+            // #G.###..#..G........############
+            // #..G.G..........G.....#.G.######
+            // ###......GG..G............######
+            // #######....G..#####.G...#.######
+            // #######......#######....########
+            // #######.....#########..........#
+            // #######.....#########.........##
+            // #######...#.#########.........##
+            // #######.....#########........###
+            // #######.....#########.........##
+            // #######....E.#######........#..#
+            // #######.......#####E........####
+            // ###.#.E..#.....G.........#..####
+            // ###......#E......E..G...E...####
+            // ##...........#.............#####
+            // #####.###..............E...#####
+            // #############..............#####
+            // #############..E.....###...#####
+            // ###############..E...###...#####
+            // #################.E#.####..#####
+            // #################..#.###########
+            // #################..#.###########
+            // ################################
+            // ",
+            //             );
 
             let mut round = 1;
 
@@ -2584,286 +2583,661 @@ mod day17 {
     }
 
     #[derive(Debug)]
-    struct Bounds {
+    struct World {
+        grid: Vec<Vec<Cell>>,
+        width: usize,
+        height: usize,
         x_min: usize,
-        x_max: usize,
         y_min: usize,
-        y_max: usize,
     }
 
-    #[derive(Debug, Eq, PartialEq, Clone)]
-    struct Droplet {
-        position: Point,
-        direction: (i64, i64),
-        stuck: bool,
+    #[derive(PartialEq, Eq, Clone, Debug)]
+    enum Cell {
+        Sand,
+        Clay,
+        Void,
+        Wet,
+        Float,
     }
 
-    impl Droplet {
-        pub fn new(x: u64, y: u64) -> Droplet {
-            Droplet {
-                position: Point { x, y },
-                direction: (0, 1), // down
-                stuck: false,
-            }
-        }
-    }
-
-    impl Bounds {
-        fn new() -> Bounds {
-            Bounds {
-                x_min: std::usize::MAX,
-                x_max: 0,
-                y_min: std::usize::MAX,
-                y_max: 0,
+    impl World {
+        fn xval(&self, world_idx: usize) -> usize {
+            if world_idx >= self.x_min {
+                world_idx - self.x_min
+            } else {
+                panic!("xval too small for min: val: {} min: {}", world_idx, self.x_min);
             }
         }
 
-        fn update_from(&mut self, reading: &ClayReading) {
-            self.x_min = cmp::min(self.x_min, reading.x_start);
-            self.x_max = cmp::max(self.x_max, reading.x_end);
-            self.y_min = cmp::min(self.y_min, reading.y_start);
-            self.y_max = cmp::max(self.y_max, reading.y_end);
+        fn yval(&self, world_idx: usize) -> usize {
+            if world_idx >= self.y_min {
+                world_idx - self.y_min
+            } else {
+                panic!("yval too small for min: val: {} min: {}", world_idx, self.y_min);
+            }
         }
 
-        fn from_readings(readings: &Vec<ClayReading>) -> Bounds {
-            let mut result = Bounds::new();
+        fn from_readings(readings: &Vec<ClayReading>) -> World {
+            let mut x_min = std::usize::MAX;
+            let mut x_max = 0;
+            let mut y_min = std::usize::MAX;
+            let mut y_max = 0;
 
-            for clay in readings {
-                result.update_from(&clay);
+            // Determine the world boundaries
+            for reading in readings {
+                x_min = cmp::min(x_min, reading.x_start);
+                x_max = cmp::max(x_max, reading.x_end);
+                y_min = cmp::min(y_min, reading.y_start);
+                y_max = cmp::max(y_max, reading.y_end);
+            }
+
+            let height = y_max - y_min + 1;
+
+            // ANY X IS VALID.  So add some padding!
+            let width = x_max - x_min + 50;
+
+            let mut world = World {
+                x_min: x_min,
+                y_min: y_min,
+                height: height,
+                width: width,
+                grid: (0..height).map(|_| vec![Cell::Sand; width]).collect(),
+            };
+
+            // Populate our clay areas
+            for reading in readings {
+                for y in reading.y_start..=reading.y_end {
+                    for x in reading.x_start..=reading.x_end {
+                        let x_idx = world.xval(x);
+                        let y_idx = world.yval(y);
+                        world.grid[y_idx][x_idx] = Cell::Clay;
+                    }
+                }
+            }
+
+            world
+        }
+
+        pub fn get(&self, x: usize, y: usize) -> &Cell {
+            if x < self.width && y < self.height {
+                &self.grid[y][x]
+            } else {
+                &Cell::Void
+            }
+        }
+
+        pub fn count_wet_cells(&self) -> usize {
+            self.grid.iter().map(|row| row.iter().filter(|&c| c == &Cell::Wet || c == &Cell::Float).count()).sum()
+        }
+
+        pub fn count_float_cells(&self) -> usize {
+            self.grid.iter().map(|row| row.iter().filter(|&c| c == &Cell::Float).count()).sum()
+        }
+
+        pub fn wet_cell(&mut self, x: usize, y: usize) {
+            self.grid[y][x] = Cell::Wet;
+            // println!("{}", self.to_string());
+        }
+        pub fn float_cell(&mut self, x: usize, y: usize) {
+            self.grid[y][x] = Cell::Float;
+            // println!("{}", self.to_string());
+        }
+
+        pub fn dry_cell(&mut self, x: usize, y: usize) {
+            self.grid[y][x] = Cell::Sand;
+            // println!("{}", self.to_string());
+        }
+
+        pub fn to_string(&self) -> String {
+            let mut result = String::new();
+            let mut idx = self.y_min;
+
+            for row in &self.grid {
+                result.push_str(&format!("{:5}", idx));
+
+                for cell in row {
+                    result.push(match cell {
+                        Cell::Sand => '.',
+                        Cell::Clay => '#',
+                        Cell::Void => 'X',
+                        Cell::Wet => '~',
+                        Cell::Float => 'F',
+                    })
+                }
+                result.push_str("\n");
+
+                idx += 1;
             }
 
             result
         }
-
-        fn width(&self) -> usize { self.x_max - self.x_min + 1 }
-        fn height(&self) -> usize { self.y_max - self.y_min + 1 }
-        fn yval(&self, val: usize) -> usize { val - self.y_min }
-        fn xval(&self, val: usize) -> usize { val - self.x_min + 1 } // + 1 for the LHS void
     }
 
-    #[derive(PartialEq, Eq, Clone)]
-    enum Cell {
-        Sand,
-        Clay,
-        Occupied,
-        TheMagnificentVoid,
-        Wet,
+    #[derive(Clone, Debug)]
+    struct Drip {
+        x: usize,
+        y: usize,
     }
 
-    impl Display for Cell {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let s = match self {
-                Cell::Sand => ".",
-                Cell::Clay => "#",
-                Cell::Occupied => "~",
-                Cell::TheMagnificentVoid => "X",
-                Cell::Wet => "W",
-            };
-
-            write!(f, "{}", s)
-        }
+    fn offset(idx: usize, offset: i64) -> usize {
+        (idx as i64 + offset) as usize
     }
 
-    // FIXME: simulating too much stuff here to be fast.  Need to think about
-    // more efficient fill methods.
-    //
-    // New idea:
-    //
-    //   Start with the drip point
-    //   If we can move down into sand, that's what we do.  Add 1 to our cell count
-    //   When we can't go down anymore:
-    //
-    //     - project left while we have clay underneath us and sand in front of us, counting as we go
-    //
-    //     - project right in the same way
-    //
-    //   If we hit clay on the left and right, we're in an enclosed space.  Move up a square and repeat the process
-    //
-    //   Otherwise, we're in an open space: open either on one side or both.  Add points to explore to the openings and continue from those.
-
-    pub fn part1() {
+    pub fn part1_and_2() {
         let clay_readings: Vec<ClayReading> = input_lines("input_files/day17.txt")
             .map(|line| ClayReading::parse(&line))
             .collect();
 
-        let mut bounds = Bounds::from_readings(&clay_readings);
+        let mut world = World::from_readings(&clay_readings);
 
-        bounds.y_min = 0;
+        let mut drips_to_check = vec![Drip {
+            x: world.xval(500),
+            y: world.yval(world.y_min),
+        }];
 
-        println!("{:?}", bounds);
+        let mut _iteration = 0;
 
-        // Fill the world with sand
-        let mut world: Vec<Vec<Cell>> = (0..bounds.height()).map(|_| {
-            (0..bounds.width()).map (|_| Cell::Sand).collect()
-        }).collect();
+        while !drips_to_check.is_empty() {
+            _iteration += 1;
 
-        // Add an extra VOID row on the bottom and sides
-        world.push((0..bounds.width()).map (|_| Cell::TheMagnificentVoid).collect());
-        for row in world.iter_mut() {
-            row.insert(0, Cell::TheMagnificentVoid);
-            row.push(Cell::TheMagnificentVoid);
-        }
+            let mut drip = drips_to_check.remove(0);
 
-        // Then apply our readings to fill out the clay
-        for reading in &clay_readings {
-            for y in reading.y_start..=reading.y_end {
-                for x in reading.x_start..=reading.x_end {
-                    world[bounds.yval(y)][bounds.xval(x)] = Cell::Clay;
-                }
-            }
-        }
-
-        // Droplets in descending order of age
-        let mut droplets: Vec<Option<Droplet>> = Vec::new();
-
-        let mut all_positions = HashSet::new();
-
-        for frame in 0..std::usize::MAX {
-            let position_count = all_positions.len();
-
-            if frame % 100 == 0 {
-                println!("{}", frame);
-
-                // GC!
-                droplets = droplets.into_iter().filter(|o| o.is_some()).collect();
-                println!("{} droplets in play", droplets.len());
+            while world.get(drip.x, drip.y) == &Cell::Float {
+                drip.y -= 1;
             }
 
-            // if frame % 2000 == 0 || frame % 2000 == 1 {
-            //     println!("{}", frame);
-            //     println!("{} droplets in play", droplets.iter().filter(|d| !d.stuck).count());
-            // 
-            //     let mut f = File::create(format!("frame_{}.txt", frame)).unwrap();
-            //     f.write_all(format!("{}", format_grid(&world)).as_bytes());
-            // }
+            world.wet_cell(drip.x, drip.y);
 
-            // Drip...
-            if world[bounds.yval(0)][bounds.xval(500)] == Cell::Sand {
-                world[bounds.yval(0)][bounds.xval(500)] = Cell::Occupied;
-
-                droplets.push(Some(Droplet::new(bounds.xval(500) as u64,
-                                                bounds.yval(0) as u64)));
+            // The drip moves down while there's sand below.
+            while world.get(drip.x, drip.y + 1) == &Cell::Sand {
+                drip.y += 1;
+                world.wet_cell(drip.x, drip.y);
             }
 
-            // if frame == 0 {
-            //     println!("{:?}", droplets);
-            // 
-            //     println!("\n{}", format_grid(&world));
-            // }
+            let mut edges_hit = 0;
+            let mut xvals = Vec::new();
 
+            // Then we scan left and right until we either hit clay, or fall off something
+            for &off in &[-1, 1] {
+                let mut drip = drip.clone();
 
-
-            let mut i = 0;
-            while i < droplets.len() {
-                if droplets[i].is_none() || droplets[i].as_ref().unwrap().stuck {
-                    i += 1;
-                    continue;
-                }
-
-                droplets.push(None);
-                let mut droplet = droplets.swap_remove(i).unwrap();
-
-                // If we hit the void that's the end of this droplet
-                if world[(droplet.position.y + 1) as usize][droplet.position.x as usize] == Cell::TheMagnificentVoid {
-                    world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                    continue;
-                }
-
-                // If we can move down we always do
-                if world[(droplet.position.y + 1) as usize][droplet.position.x as usize] == Cell::Sand {
-                    world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                    world[(droplet.position.y + 1) as usize][droplet.position.x as usize] = Cell::Occupied;
-                    droplet.position = Point { x: droplet.position.x, y: droplet.position.y + 1 };
-                    droplet.direction = (0, 1);
-                    droplets.push(Some(droplet));
-                    droplets.swap_remove(i);
-                    i += 1;
-                    continue;
-                }
-
-                // Otherwise, keep moving in the direction we were headed
-                let new_x = (droplet.position.x as i64 + droplet.direction.0) as usize;
-                let new_y = (droplet.position.y as i64 + droplet.direction.1) as usize;
-
-                if world[new_y][new_x] == Cell::TheMagnificentVoid {
-                    world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                    continue;
-                }
-
-                if world[new_y][new_x] == Cell::Sand {
-                    // We can move.  Free the old spot and update our position.
-                    world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                    world[new_y][new_x] = Cell::Occupied;
-                    droplet.position = Point { x: new_x as u64, y: new_y as u64 };
-                    droplets.push(Some(droplet));
-                    droplets.swap_remove(i);
-                    i += 1;
-                } else {
-                    if droplet.direction.1 != 1 {
-                        // We were already moving left/right, can't move down, can't move further.  We're stuck.
-                        droplet.stuck = true;
-                        droplets.push(Some(droplet));
-                        droplets.swap_remove(i);
-                        i += 1;
-                        continue;
-                    }
-
-                    let mut leftward = droplet.clone();
-                    let mut rightward = droplet.clone();
-
-                    leftward.position = Point { x: droplet.position.x - 1, y: droplet.position.y };
-                    rightward.position = Point { x: droplet.position.x + 1, y: droplet.position.y };
-
-                    leftward.direction = (-1, 0);
-                    rightward.direction = (1, 0);
-
-                    let mut inserted = 0;
-
-                    if world[leftward.position.y as usize][leftward.position.x as usize] == Cell::Sand {
-                        world[leftward.position.y as usize][leftward.position.x as usize] = Cell::Occupied;
-                        world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                        droplets.insert(i, Some(leftward));
-                        inserted += 1;
-                    }
-
-                    if world[rightward.position.y as usize][rightward.position.x as usize] == Cell::Sand {
-                        // Clear current...
-                        world[rightward.position.y as usize][rightward.position.x as usize] = Cell::Occupied;
-                        world[droplet.position.y as usize][droplet.position.x as usize] = Cell::Sand;
-                        droplets.insert(i, Some(rightward));
-                        inserted += 1;
-                    }
-
-                    if inserted == 0 {
-                        // Couldn't move
-                        droplet.stuck = true;
-                        droplets.push(Some(droplet));
-                        droplets.swap_remove(i);
-                        i += 1;
+                loop {
+                    if (world.get(offset(drip.x, off), drip.y) == &Cell::Sand || world.get(offset(drip.x, off), drip.y) == &Cell::Wet)
+                        && (world.get(offset(drip.x, off), drip.y + 1) == &Cell::Clay || world.get(offset(drip.x, off), drip.y + 1) == &Cell::Float)
+                    {
+                        // Sand to the left and clay below means we're on the bottom
+                        // level and can move.
+                        drip.x = offset(drip.x, off);
+                        world.wet_cell(drip.x, drip.y);
                     } else {
-                        i += inserted;
+                        if world.get(offset(drip.x, off), drip.y) == &Cell::Clay {
+                            // We've hit an edge
+                            xvals.push(drip.x);
+                            edges_hit += 1;
+                        } else if world.get(drip.x, drip.y + 1) == &Cell::Wet {
+                            // Fall straight down.  No need for further checks.
+                        } else if world.get(offset(drip.x, off), drip.y + 1) == &Cell::Sand {
+                            // We've fallen off something!
+                            drips_to_check.push(Drip { x: offset(drip.x, off), y: drip.y });
+                        }
+
+                        break;
                     }
                 }
             }
 
-            let new_positions: HashSet<Point> = droplets.iter().map(|cell| {
-                if let Some(d) = cell {
-                    Some(d.position.clone())
-                } else {
-                    None
+            if edges_hit == 2 {
+                for x in xvals[0]..=xvals[1] {
+                    world.float_cell(x, drip.y);
                 }
-            }).filter(Option::is_some).map(Option::unwrap).collect();
 
-            all_positions = all_positions.union(&new_positions).cloned().collect();
+                // If we hit an edge in each direction, we are in a space that
+                // can fill with water.
+                //
+                // Explore one row up
+                drips_to_check.push(Drip { x: drip.x, y: drip.y - 1 });
+            }
+        }
 
-            if all_positions.len() == position_count {
-                // Done!
-                println!("Finished in {} frames", frame);
+        // Our original drip is really the spring, so subtract one to adjust.
+        println!("{}", world.to_string());
+        println!("Explored {} cells", world.count_wet_cells());
+        println!("Retained {} cells", world.count_float_cells());
+    }
+}
+
+
+mod day18 {
+    use crate::shared::*;
+
+    fn neighbours_of(world: &Vec<Vec<char>>, x: usize, y: usize) -> Vec<char> {
+        vec!(
+            world[y+1][x+1],
+            world[y-1][x+1],
+            world[y][x+1],
+            world[y+1][x-1],
+            world[y-1][x-1],
+            world[y][x-1],
+            world[y+1][x],
+            world[y-1][x]
+        )
+    }
+
+    fn count_of(neighbours: &Vec<char>, square: char) -> usize {
+        neighbours.iter().filter(|&&c| c == square).count()
+    }
+
+
+    pub fn part1() {
+        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt").map(|row| row.chars().collect()).collect();
+        let height = world.len();
+        let width = world[0].len();
+
+        // Add a border so we don't have to think too hard
+        world.insert(0, vec!['!'; width]);
+        world.push(vec!['!'; width]);
+
+        for row in world.iter_mut() {
+            row.insert(0, '!');
+            row.push('!');
+        }
+
+        println!("{}", format_grid(&world));
+
+        for _minute in 1..=10 {
+            let mut new_world = world.clone();
+
+            for y in 1..=height {
+                for x in 1..=width {
+                    let neighbours = neighbours_of(&world, x, y);
+
+                    if world[y][x] == '.' && count_of(&neighbours, '|') >= 3 {
+                        new_world[y][x] = '|';
+                    } else if world[y][x] == '|' && count_of(&neighbours, '#') >= 3 {
+                        new_world[y][x] = '#';
+                    } else if world[y][x] == '#' {
+                        if count_of(&neighbours, '#') >= 1 && count_of(&neighbours, '|') >= 1 {
+                            new_world[y][x] = '#';
+                        } else {
+                            new_world[y][x] = '.';
+                        }
+                    } else {
+                        new_world[y][x] = world[y][x];
+                    }
+                }
+            }
+
+            world = new_world;
+            println!("{}", format_grid(&world));
+        }
+
+        println!("{}", count_of(&world.iter().flatten().cloned().collect(), '|') * count_of(&world.iter().flatten().cloned().collect(), '#'))
+    }
+
+    pub fn part2() {
+        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt").map(|row| row.chars().collect()).collect();
+        let height = world.len();
+        let width = world[0].len();
+
+        // Add a border so we don't have to think too hard
+        world.insert(0, vec!['!'; width]);
+        world.push(vec!['!'; width]);
+
+        for row in world.iter_mut() {
+            row.insert(0, '!');
+            row.push('!');
+        }
+
+        println!("{}", format_grid(&world));
+
+        for minute in 1..=15000 {
+            let mut new_world = world.clone();
+
+            for y in 1..=height {
+                for x in 1..=width {
+                    let neighbours = neighbours_of(&world, x, y);
+
+                    if world[y][x] == '.' && count_of(&neighbours, '|') >= 3 {
+                        new_world[y][x] = '|';
+                    } else if world[y][x] == '|' && count_of(&neighbours, '#') >= 3 {
+                        new_world[y][x] = '#';
+                    } else if world[y][x] == '#' {
+                        if count_of(&neighbours, '#') >= 1 && count_of(&neighbours, '|') >= 1 {
+                            new_world[y][x] = '#';
+                        } else {
+                            new_world[y][x] = '.';
+                        }
+                    } else {
+                        new_world[y][x] = world[y][x];
+                    }
+                }
+            }
+
+            world = new_world;
+ 
+            // Looking for cycles...
+            // Right.  We're cycling every 28 minutes, so 1000000000 will have the same number as 11976 (since (1000000000 - 11976) mod 28.0 == 0)
+            if minute > 10000 {
+                println!("{} {}",
+                         minute,
+                         count_of(&world.iter().flatten().cloned().collect(), '|') * count_of(&world.iter().flatten().cloned().collect(), '#'))
+            }
+        }
+    }
+}
+
+mod day19 {
+    use crate::shared::*;
+
+    type Registers = Vec<usize>;
+
+    trait Operation {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize);
+        fn pretty(&self, a: usize, b: usize, c: usize);
+    }
+
+    // Addition
+    struct OpAddr;
+    impl Operation for OpAddr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] + regs[{}]", c, a, b);
+        }
+
+    }
+
+    struct OpAddi;
+    impl Operation for OpAddi {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] + {}", c, a, b);
+        }
+    }
+
+    // Multiplication
+    struct OpMulr;
+    impl Operation for OpMulr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] * regs[{}]", c, a, b);
+        }
+    }
+
+    struct OpMuli;
+    impl Operation for OpMuli {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] * {}", c, a, b);
+        }
+    }
+
+    // Bitwise AND
+    struct OpBanr;
+    impl Operation for OpBanr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] & regs[{}]", c, a, b);
+        }
+    }
+
+    struct OpBani;
+    impl Operation for OpBani {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] & {}", c, a, b);
+        }
+    }
+
+    // Bitwise OR
+    struct OpBorr;
+    impl Operation for OpBorr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] | regs[{}]", c, a, b);
+        }
+    }
+
+    struct OpBori;
+    impl Operation for OpBori {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] | {}", c, a, b);
+        }
+    }
+
+    // Assignment
+    struct OpSetr;
+    impl Operation for OpSetr {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = regs[a];
+        }
+
+        fn pretty(&self, a: usize, _b: usize, c: usize) {
+            println!("regs[{}] = regs[{}]", c, a);
+        }
+    }
+
+    struct OpSeti;
+    impl Operation for OpSeti {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = a
+        }
+
+        fn pretty(&self, a: usize, _b: usize, c: usize) {
+            println!("regs[{}] = {}", c, a);
+        }
+    }
+
+    // Greater-than testing
+    struct OpGtir;
+    impl Operation for OpGtir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a > regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if {} > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    struct OpGtri;
+    impl Operation for OpGtri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > b { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] > {} {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    struct OpGtrr;
+    impl Operation for OpGtrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    // Equality testing
+    struct OpEqir;
+    impl Operation for OpEqir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a == regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if {} == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    struct OpEqri;
+    impl Operation for OpEqri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == b { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] == {} {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    struct OpEqrr;
+    impl Operation for OpEqrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    fn parse_state(s: &str) -> Registers {
+        let numbers = s.split("[").nth(1).unwrap().split("]").nth(0).unwrap();
+
+        numbers.split(", ").map(|n| n.parse().unwrap()).collect()
+    }
+
+    fn instruction_set() -> HashMap<&'static str, &'static Operation> {
+        let mut map: HashMap<&'static str, &'static Operation> = HashMap::new();
+        map.insert("addr", &OpAddr);
+        map.insert("addi", &OpAddi);
+        map.insert("mulr", &OpMulr);
+        map.insert("muli", &OpMuli);
+        map.insert("banr", &OpBanr);
+        map.insert("bani", &OpBani);
+        map.insert("borr", &OpBorr);
+        map.insert("bori", &OpBori);
+        map.insert("setr", &OpSetr);
+        map.insert("seti", &OpSeti);
+        map.insert("gtir", &OpGtir);
+        map.insert("gtri", &OpGtri);
+        map.insert("gtrr", &OpGtrr);
+        map.insert("eqir", &OpEqir);
+        map.insert("eqri", &OpEqri);
+        map.insert("eqrr", &OpEqrr);
+
+        map
+    }
+
+
+    pub fn part1() {
+        let instructions = instruction_set();
+
+        let input = input_lines("input_files/day19.txt");
+
+        let mut ip_bound_register = 0;
+        let mut program: Vec<(String, usize, usize, usize)> = Vec::new();
+
+        for line in input {
+            let bits: Vec<&str> = line.split(" ").collect();
+            if bits.len() == 1 {
+                // empty
+                continue;
+            } else if bits.len() == 2 {
+                assert_eq!(bits[0], "#ip");
+                ip_bound_register = bits[1].parse().unwrap();
+            } else {
+                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+            }
+        }
+
+        let mut ip: usize = 0;
+        let mut registers: Registers = vec![0; 6];
+
+        loop {
+            if ip >= program.len() {
+                // Invalid.  Halt.
                 break;
             }
+
+            registers[ip_bound_register] = ip;
+
+            let (op, a, b, c) = program[ip].clone();
+
+            instructions.get::<str>(&op).unwrap().invoke(&mut registers, a, b, c);
+
+            ip = registers[ip_bound_register];
+            ip += 1;
         }
 
-        println!("Wet cells: {}", all_positions.len());
+        println!("{:?}", registers);
+    }
+
+    pub fn print_program() {
+        let instructions = instruction_set();
+
+        let input = input_lines("input_files/day19.txt");
+
+        let mut program: Vec<(String, usize, usize, usize)> = Vec::new();
+
+        for line in input {
+            let bits: Vec<&str> = line.split(" ").collect();
+            if bits.len() == 1 {
+                // empty
+                continue;
+            } else if bits.len() == 2 {
+                assert_eq!(bits[0], "#ip");
+            } else {
+                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+            }
+        }
+
+        for (op, a, b, c) in program {
+            instructions.get::<str>(&op).unwrap().pretty(a, b, c);
+        }
+    }
+
+    pub fn part2() {
+        // Strategy here was:
+        //
+        //  Print the program using the above
+        //
+        //  Port the program to basic C using gotos instead of IP manipulations
+        //
+        //  Refactor C code to use structured programming stuff -- ifs, while loops, etc.
+        //
+        // Eventually figured out that it was basically just doing this:
+        //
+        // total = 0
+        // (1..10551347).each do |divisor|
+        //   if 10551347 % divisor == 0
+        //     total += divisor
+        //   end
+        // end
+        //
+        // total # => 10695960
+        //
+        // Full gore in day19_ported.c
+        //
     }
 }
 
@@ -2921,7 +3295,13 @@ fn main() {
 
         day16::part1();
         day16::part2();
-    }
 
-    day17::part1();
+        day17::part1_and_2();
+
+        day18::part1();
+        day18::part2();
+
+        day19::part1();
+        day19::part2();
+    }
 }
