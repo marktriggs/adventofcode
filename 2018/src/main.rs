@@ -91,6 +91,225 @@ mod shared {
 
 }
 
+mod santasm {
+    use crate::shared::*;
+
+    pub type Registers = Vec<usize>;
+
+    pub trait Operation {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize);
+        fn pretty(&self, a: usize, b: usize, c: usize);
+    }
+
+    // Addition
+    pub struct OpAddr;
+    impl Operation for OpAddr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] + regs[{}]", c, a, b);
+        }
+
+    }
+
+    pub struct OpAddi;
+    impl Operation for OpAddi {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] + b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] + {}", c, a, b);
+        }
+    }
+
+    // Multiplication
+    pub struct OpMulr;
+    impl Operation for OpMulr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] * regs[{}]", c, a, b);
+        }
+    }
+
+    pub struct OpMuli;
+    impl Operation for OpMuli {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] * b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] * {}", c, a, b);
+        }
+    }
+
+    // Bitwise AND
+    pub struct OpBanr;
+    impl Operation for OpBanr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] & regs[{}]", c, a, b);
+        }
+    }
+
+    pub struct OpBani;
+    impl Operation for OpBani {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] & b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] & {}", c, a, b);
+        }
+    }
+
+    // Bitwise OR
+    pub struct OpBorr;
+    impl Operation for OpBorr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | regs[b];
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] | regs[{}]", c, a, b);
+        }
+    }
+
+    pub struct OpBori;
+    impl Operation for OpBori {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = regs[a] | b;
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = regs[{}] | {}", c, a, b);
+        }
+    }
+
+    // Assignment
+    pub struct OpSetr;
+    impl Operation for OpSetr {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = regs[a];
+        }
+
+        fn pretty(&self, a: usize, _b: usize, c: usize) {
+            println!("regs[{}] = regs[{}]", c, a);
+        }
+    }
+
+    pub struct OpSeti;
+    impl Operation for OpSeti {
+        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
+            regs[c] = a
+        }
+
+        fn pretty(&self, a: usize, _b: usize, c: usize) {
+            println!("regs[{}] = {}", c, a);
+        }
+    }
+
+    // Greater-than testing
+    pub struct OpGtir;
+    impl Operation for OpGtir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a > regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if {} > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    pub struct OpGtri;
+    impl Operation for OpGtri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > b { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] > {} {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    pub struct OpGtrr;
+    impl Operation for OpGtrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    // Equality testing
+    pub struct OpEqir;
+    impl Operation for OpEqir {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if a == regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if {} == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    pub struct OpEqri;
+    impl Operation for OpEqri {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == b { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] == {} {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    pub struct OpEqrr;
+    impl Operation for OpEqrr {
+        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
+            regs[c] = if regs[a] == regs[b] { 1 } else { 0 };
+        }
+
+        fn pretty(&self, a: usize, b: usize, c: usize) {
+            println!("regs[{}] = if regs[{}] == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+        }
+    }
+
+    pub fn instruction_set() -> HashMap<&'static str, &'static Operation> {
+        let mut map: HashMap<&'static str, &'static Operation> = HashMap::new();
+        map.insert("addr", &OpAddr);
+        map.insert("addi", &OpAddi);
+        map.insert("mulr", &OpMulr);
+        map.insert("muli", &OpMuli);
+        map.insert("banr", &OpBanr);
+        map.insert("bani", &OpBani);
+        map.insert("borr", &OpBorr);
+        map.insert("bori", &OpBori);
+        map.insert("setr", &OpSetr);
+        map.insert("seti", &OpSeti);
+        map.insert("gtir", &OpGtir);
+        map.insert("gtri", &OpGtri);
+        map.insert("gtrr", &OpGtrr);
+        map.insert("eqir", &OpEqir);
+        map.insert("eqri", &OpEqri);
+        map.insert("eqrr", &OpEqrr);
+
+        map
+    }
+
+
+}
+
 mod day1 {
     use crate::shared::*;
 
@@ -2254,131 +2473,7 @@ mod day15 {
 
 mod day16 {
     use crate::shared::*;
-
-    type Registers = Vec<usize>;
-
-    trait Operation {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize);
-    }
-
-    // Addition
-    struct OpAddr;
-    impl Operation for OpAddr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] + regs[b];
-        }
-    }
-
-    struct OpAddi;
-    impl Operation for OpAddi {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] + b;
-        }
-    }
-
-    // Multiplication
-    struct OpMulr;
-    impl Operation for OpMulr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] * regs[b];
-        }
-    }
-
-    struct OpMuli;
-    impl Operation for OpMuli {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] * b;
-        }
-    }
-
-    // Bitwise AND
-    struct OpBanr;
-    impl Operation for OpBanr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] & regs[b];
-        }
-    }
-
-    struct OpBani;
-    impl Operation for OpBani {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] & b;
-        }
-    }
-
-    // Bitwise OR
-    struct OpBorr;
-    impl Operation for OpBorr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] | regs[b];
-        }
-    }
-
-    struct OpBori;
-    impl Operation for OpBori {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] | b;
-        }
-    }
-
-    // Assignment
-    struct OpSetr;
-    impl Operation for OpSetr {
-        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
-            regs[c] = regs[a];
-        }
-    }
-
-    struct OpSeti;
-    impl Operation for OpSeti {
-        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
-            regs[c] = a
-        }
-    }
-
-    // Greater-than testing
-    struct OpGtir;
-    impl Operation for OpGtir {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if a > regs[b] { 1 } else { 0 };
-        }
-    }
-
-    struct OpGtri;
-    impl Operation for OpGtri {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] > b { 1 } else { 0 };
-        }
-    }
-
-    struct OpGtrr;
-    impl Operation for OpGtrr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
-        }
-    }
-
-    // Equality testing
-    struct OpEqir;
-    impl Operation for OpEqir {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if a == regs[b] { 1 } else { 0 };
-        }
-    }
-
-    struct OpEqri;
-    impl Operation for OpEqri {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] == b { 1 } else { 0 };
-        }
-    }
-
-    struct OpEqrr;
-    impl Operation for OpEqrr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] == regs[b] { 1 } else { 0 };
-        }
-    }
+    use crate::santasm::*;
 
     fn parse_state(s: &str) -> Registers {
         let numbers = s.split("[").nth(1).unwrap().split("]").nth(0).unwrap();
@@ -2928,226 +3023,7 @@ mod day18 {
 
 mod day19 {
     use crate::shared::*;
-
-    type Registers = Vec<usize>;
-
-    trait Operation {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize);
-        fn pretty(&self, a: usize, b: usize, c: usize);
-    }
-
-    // Addition
-    struct OpAddr;
-    impl Operation for OpAddr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] + regs[b];
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] + regs[{}]", c, a, b);
-        }
-
-    }
-
-    struct OpAddi;
-    impl Operation for OpAddi {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] + b;
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] + {}", c, a, b);
-        }
-    }
-
-    // Multiplication
-    struct OpMulr;
-    impl Operation for OpMulr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] * regs[b];
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] * regs[{}]", c, a, b);
-        }
-    }
-
-    struct OpMuli;
-    impl Operation for OpMuli {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] * b;
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] * {}", c, a, b);
-        }
-    }
-
-    // Bitwise AND
-    struct OpBanr;
-    impl Operation for OpBanr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] & regs[b];
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] & regs[{}]", c, a, b);
-        }
-    }
-
-    struct OpBani;
-    impl Operation for OpBani {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] & b;
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] & {}", c, a, b);
-        }
-    }
-
-    // Bitwise OR
-    struct OpBorr;
-    impl Operation for OpBorr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] | regs[b];
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] | regs[{}]", c, a, b);
-        }
-    }
-
-    struct OpBori;
-    impl Operation for OpBori {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = regs[a] | b;
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = regs[{}] | {}", c, a, b);
-        }
-    }
-
-    // Assignment
-    struct OpSetr;
-    impl Operation for OpSetr {
-        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
-            regs[c] = regs[a];
-        }
-
-        fn pretty(&self, a: usize, _b: usize, c: usize) {
-            println!("regs[{}] = regs[{}]", c, a);
-        }
-    }
-
-    struct OpSeti;
-    impl Operation for OpSeti {
-        fn invoke(&self, regs: &mut Registers, a: usize, _b: usize, c: usize) {
-            regs[c] = a
-        }
-
-        fn pretty(&self, a: usize, _b: usize, c: usize) {
-            println!("regs[{}] = {}", c, a);
-        }
-    }
-
-    // Greater-than testing
-    struct OpGtir;
-    impl Operation for OpGtir {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if a > regs[b] { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if {} > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    struct OpGtri;
-    impl Operation for OpGtri {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] > b { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] > {} {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    struct OpGtrr;
-    impl Operation for OpGtrr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] > regs[b] { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    // Equality testing
-    struct OpEqir;
-    impl Operation for OpEqir {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if a == regs[b] { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if {} == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    struct OpEqri;
-    impl Operation for OpEqri {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] == b { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] == {} {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    struct OpEqrr;
-    impl Operation for OpEqrr {
-        fn invoke(&self, regs: &mut Registers, a: usize, b: usize, c: usize) {
-            regs[c] = if regs[a] == regs[b] { 1 } else { 0 };
-        }
-
-        fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
-        }
-    }
-
-    fn parse_state(s: &str) -> Registers {
-        let numbers = s.split("[").nth(1).unwrap().split("]").nth(0).unwrap();
-
-        numbers.split(", ").map(|n| n.parse().unwrap()).collect()
-    }
-
-    fn instruction_set() -> HashMap<&'static str, &'static Operation> {
-        let mut map: HashMap<&'static str, &'static Operation> = HashMap::new();
-        map.insert("addr", &OpAddr);
-        map.insert("addi", &OpAddi);
-        map.insert("mulr", &OpMulr);
-        map.insert("muli", &OpMuli);
-        map.insert("banr", &OpBanr);
-        map.insert("bani", &OpBani);
-        map.insert("borr", &OpBorr);
-        map.insert("bori", &OpBori);
-        map.insert("setr", &OpSetr);
-        map.insert("seti", &OpSeti);
-        map.insert("gtir", &OpGtir);
-        map.insert("gtri", &OpGtri);
-        map.insert("gtrr", &OpGtrr);
-        map.insert("eqir", &OpEqir);
-        map.insert("eqri", &OpEqri);
-        map.insert("eqrr", &OpEqrr);
-
-        map
-    }
-
+    use crate::santasm::*;
 
     pub fn part1() {
         let instructions = instruction_set();
@@ -3496,8 +3372,8 @@ fn main() {
 
         day19::part1();
         day19::part2();
-    }
 
-    day20::part1();
-    day20::part2();
+        day20::part1();
+        day20::part2();
+    }
 }
