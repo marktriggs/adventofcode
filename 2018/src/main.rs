@@ -10,7 +10,7 @@ extern crate regex;
 mod shared {
     pub use regex::Regex;
 
-    pub use std::cmp;
+    pub use std::cmp::{self, Ordering};
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::fmt::{self, Display};
@@ -3241,6 +3241,199 @@ mod day19 {
     }
 }
 
+mod day20 {
+    use crate::shared::*;
+    use std::iter::Peekable;
+
+    #[derive(Debug)]
+    enum SimpleRegex {
+        Literal(Vec<char>),
+        Disjunction(Vec<SimpleRegex>),
+        Conjunction(Vec<SimpleRegex>),
+    }
+
+    // Produce a list of matching inputs from a simple regex
+    fn parse_regex(regex: &str) -> SimpleRegex {
+        let mut input = regex.chars().peekable();
+
+        assert_eq!('^', input.next().unwrap());
+
+        let mut result = Vec::new();
+        while *input.peek().unwrap() != '$' {
+            let next_regex = read_next_regex(&mut input);
+            result.push(next_regex);
+        }
+
+        SimpleRegex::Conjunction(result)
+    }
+
+    fn is_literal(ch: char) -> bool {
+        ch == 'N' || ch == 'E' || ch == 'W' || ch == 'S'
+    }
+
+    fn read_next_regex(input: &mut Peekable<impl Iterator<Item=char>>) -> SimpleRegex {
+        let &ch = input.peek().unwrap();
+
+        if ch == '(' {
+            // Eat the opener
+            input.next().unwrap();
+
+            let mut subexpressions = Vec::new();
+
+            let mut conjunctions = Vec::new();
+            loop {
+                let subexpr = read_next_regex(input);
+                conjunctions.push(subexpr);
+
+                let &nextch = input.peek().unwrap();
+
+                if nextch == ')' || nextch == '|' {
+                    input.next().unwrap();
+                    // We've read a full disjunction
+                    if conjunctions.len() == 1 {
+                        // Only one bit, so just add it directly
+                        subexpressions.push(conjunctions.remove(0));
+                    } else {
+                        subexpressions.push(SimpleRegex::Conjunction(conjunctions));
+                        conjunctions = Vec::new();
+                    }
+
+                    if nextch == ')' {
+                        break;
+                    }
+                } else {
+                    // More of the current expression to read...
+                }
+            }
+
+            SimpleRegex::Disjunction(subexpressions)
+        } else {
+            // zero or more literals
+            let mut chars = Vec::new();
+            while is_literal(*input.peek().unwrap()) {
+                chars.push(input.next().unwrap());
+            }
+
+            SimpleRegex::Literal(chars)
+        }
+    }
+
+
+    fn explore(regex: &SimpleRegex,
+               locations_to_explore: Vec<Location>,
+               min_costs: &mut HashMap<(i64, i64), usize>)
+               -> Vec<Location> {
+        let mut new_locations = match regex {
+            SimpleRegex::Conjunction(parts) => {
+                let mut result = locations_to_explore.clone();
+                for part in parts {
+                    result = explore(part, result, min_costs);
+                }
+
+                result
+            },
+            SimpleRegex::Literal(chars) => {
+                let mut result = locations_to_explore.clone();
+                for &ch in chars {
+                    for mut location in result.iter_mut() {
+                        match ch {
+                            'N' => location.y -= 1,
+                            'E' => location.x += 1,
+                            'S' => location.y += 1,
+                            'W' => location.x -= 1,
+                            _ => unreachable!(),
+                        }
+
+                        location.cost += 1;
+
+                        // Gross duplication
+                        let entry = min_costs.entry((location.x, location.y)).or_insert(location.cost);
+                        if location.cost < *entry {
+                            *entry = location.cost;
+                        }
+                    }
+                }
+
+                result
+            },
+            SimpleRegex::Disjunction(parts) => {
+                let mut result = Vec::new();
+                for part in parts {
+                    let mut part_result = explore(part, locations_to_explore.clone(), min_costs);
+                    result.append(&mut part_result);
+                }
+
+                result
+            }
+        };
+
+        for location in new_locations.iter_mut() {
+            let entry = min_costs.entry((location.x, location.y)).or_insert(location.cost);
+
+            // If we've got a better path the this location, record it!
+            if location.cost < *entry {
+                *entry = location.cost;
+            }
+        }
+
+        new_locations.sort();
+        new_locations.dedup();
+
+        new_locations
+    }
+
+   // # #
+   // ###
+   //  X
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct Location {
+        x: i64,
+        y: i64,
+        cost: usize,
+    }
+
+    impl Ord for Location {
+        fn cmp(&self, other: &Location) -> Ordering {
+            (self.x, self.y, self.cost).cmp(&(other.x, other.y, other.cost))
+        }
+    }
+
+    impl PartialOrd for Location {
+        fn partial_cmp(&self, other: &Location) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+
+    pub fn part1() {
+        let input_s = include_str!("../input_files/day20.txt").trim().to_owned();
+        let regex = parse_regex(&input_s);
+
+        let mut min_costs: HashMap<(i64, i64), usize> = HashMap::new();
+
+        explore(&regex,
+                vec!(Location { x: 0, y: 0, cost: 0 }),
+                &mut min_costs);
+
+        println!("{}", min_costs.values().max().unwrap());
+    }
+
+    pub fn part2() {
+        let input_s = include_str!("../input_files/day20.txt").trim().to_owned();
+        let regex = parse_regex(&input_s);
+
+        let mut min_costs: HashMap<(i64, i64), usize> = HashMap::new();
+
+        explore(&regex,
+                vec!(Location { x: 0, y: 0, cost: 0 }),
+                &mut min_costs);
+
+        println!("{}", min_costs.values().filter(|&&v| v >= 1000).count());
+    }
+
+}
+
 fn main() {
     if false {
         // regex_examples();
@@ -3304,4 +3497,7 @@ fn main() {
         day19::part1();
         day19::part2();
     }
+
+    day20::part1();
+    day20::part2();
 }
