@@ -3310,6 +3310,50 @@ mod day20 {
 
 }
 
+mod day21 {
+    use crate::shared::*;
+    use crate::santasm::*;
+
+    // Part 1: Same trick as last time: pretty print the code, rewrite into structured C.
+    // r0 = 212115 got us out of the loop as quickly as possible;
+
+    pub fn part1() {
+        let instructions = instruction_set();
+
+        let input = input_lines("input_files/day21.txt");
+
+        let mut program: Vec<(String, usize, usize, usize)> = Vec::new();
+
+        for line in input {
+            let bits: Vec<&str> = line.split(" ").collect();
+            if bits.len() == 1 {
+                // empty
+                continue;
+            } else if bits.len() == 2 {
+                assert_eq!(bits[0], "#ip");
+            } else {
+                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+            }
+        }
+
+        for (op, a, b, c) in program {
+            instructions.get::<str>(&op).unwrap().pretty(a, b, c);
+        }
+    }
+
+    pub fn part2() {
+        // I figured the value of r3 must cycle at some point, so I used a
+        // binary search and some shell crap to find the cycle length.  The
+        // first cycle: ./day21_ported | head -11546 | cut -d'=' -f2 | sort | uniq -d
+        //
+        // So I guess we want the last number in the cycle to maximise our run...
+        //
+        //
+        // ./day21_ported | head -11545 | cut -d'=' -f2 | tail -1
+        // 9258470
+    }
+}
+
 fn main() {
     if false {
         // regex_examples();
@@ -3376,4 +3420,6 @@ fn main() {
         day20::part1();
         day20::part2();
     }
+
+    day21::part1();
 }
