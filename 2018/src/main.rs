@@ -3354,6 +3354,683 @@ mod day21 {
     }
 }
 
+mod day22 {
+    use crate::shared::*;
+
+    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    enum TerrainType {
+        Rocky,
+        Narrow,
+        Wet,
+    }
+
+    fn calculate_terrain(depth: usize,
+                         target_x: usize, target_y: usize,
+                         width: usize, height: usize) -> Vec<Vec<TerrainType>> {
+
+        let mut terrain: Vec<Vec<TerrainType>> = (0..height).map(|_| {
+            vec![TerrainType::Rocky; width]
+        }).collect();
+
+        let mut erosion_levels: Vec<Vec<usize>> = (0..height).map(|_| { vec![0; width] }).collect();
+        let mut geologic_indexes: Vec<Vec<usize>> = (0..height).map(|_| { vec![0; width] }).collect();
+
+        // Fill out the bits we know
+        for y in 0..height {
+            for x in 0..width {
+                if y == 0 {
+                    geologic_indexes[y][x] = x * 16807;
+                    erosion_levels[y][x] = (geologic_indexes[y][x] + depth) % 20183;
+                }
+
+                if x == 0 {
+                    geologic_indexes[y][x] = y * 48271;
+                    erosion_levels[y][x] = (geologic_indexes[y][x] + depth) % 20183;
+                }
+
+            }
+        }
+
+        // Derive the bits we don't...
+        for y in 1..height {
+            for x in 1..width {
+                let geologic_index = if x == target_x && y == target_y {
+                    0
+                } else {
+                    erosion_levels[y - 1][x] * erosion_levels[y][x - 1]
+                };
+
+                geologic_indexes[y][x] = geologic_index;
+                erosion_levels[y][x] = (geologic_index + depth) % 20183;
+            }
+        }
+
+        // Now we can determine our terrain types
+        for y in 0..height {
+            for x in 0..width {
+                terrain[y][x] = match erosion_levels[y][x] % 3 {
+                    0 => TerrainType::Rocky,
+                    1 => TerrainType::Wet,
+                    2 => TerrainType::Narrow,
+                    _ => unreachable!(),
+                }
+            }
+        }
+
+        terrain
+    }
+
+    pub fn part1() {
+        let depth = 4080;
+        let (target_x, target_y) = (14, 785);
+
+        let terrain = calculate_terrain(depth,
+                                        target_x, target_y,
+                                        target_x + 1, target_y + 1);
+
+        let mut total_risk = 0;
+        for y in 0..terrain.len() {
+            for x in 0..terrain[0].len() {
+                total_risk += match terrain[y][x] {
+                    TerrainType::Rocky => 0,
+                    TerrainType::Wet => 1,
+                    TerrainType::Narrow => 2,
+                };
+            }
+        }
+
+        println!("Total risk: {}", total_risk);
+    }
+
+
+    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    enum Equipment {
+        ClimbingGear,
+        Torch,
+        Fists,
+    }
+
+    impl fmt::Display for TerrainType {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let s = match self {
+                TerrainType::Rocky => ".",
+                TerrainType::Wet => "=",
+                TerrainType::Narrow => "|",
+            };
+
+            write!(f, "{}", s)
+        }
+    }
+
+
+    #[derive(Debug, Hash, Eq, PartialEq, Clone)]
+    struct PathPosition {
+        equipped: Equipment,
+        x: usize,
+        y: usize,
+    }
+
+    #[derive(Debug)]
+    struct Path {
+        pos: PathPosition,
+        cost: usize,
+    }
+
+    struct BorderedTerrain {
+        terrain: Vec<Vec<TerrainType>>,
+        width: usize,
+        height: usize,
+    }
+
+    impl BorderedTerrain {
+        pub fn new(depth: usize,
+                   target_x: usize, target_y: usize,
+                   width: usize, height: usize) -> BorderedTerrain {
+            let terrain = calculate_terrain(depth, target_x, target_y, width, height);
+
+            BorderedTerrain { terrain, width, height}
+        }
+
+        pub fn possible_paths(&self, current: &Path) -> Vec<Path> {
+            let mut result = Vec::new();
+
+            for &yoff in &[-1, 0, 1i64] {
+                for &xoff in &[-1, 0, 1i64] {
+                    if (yoff + xoff).abs() != 1 {
+                        // No diagonals or [0][0]
+                        continue;
+                    }
+
+                    let mut new_x = current.pos.x as i64;
+                    let mut new_y = current.pos.y as i64;
+
+                    new_x += xoff;
+                    new_y += yoff;
+
+                    if (new_x >= 0 && new_x < self.width as i64) && (new_y >= 0 && new_y < self.height as i64) {
+                        // The position is in bounds...
+                        let current_terrain = &self.terrain[current.pos.y as usize][current.pos.x as usize];
+                        let target_terrain = &self.terrain[new_y as usize][new_x as usize];
+
+                        if target_terrain == current_terrain {
+                            // Terrain types are compatible.  An easy move.
+                            // THINKME: Is there any advantage to exploring the "switch equipment" case here?  Seems like not...
+                            result.push(Path {
+                                pos: PathPosition {
+                                    x: new_x as usize,
+                                    y: new_y as usize,
+                                    equipped: current.pos.equipped.clone(),
+                                },
+                                cost: current.cost + 1,
+                            });
+                        } else {
+                            // If the terrain type changed, we may need to switch equipment.
+                            // rocky -> wet
+                            //   if we have the climbing gear -> 1
+                            //   if we have the torch -> switch to climbing gear -> 8
+
+                            // rocky -> narrow
+                            //   if we have the climbing gear -> switch to torch -> 8
+                            //   if we have the torch -> 1
+
+                            // wet -> rocky
+                            //   if we have the climbing gear -> 1
+                            //   if we have nothing -> switch to climbing gear -> 8
+
+                            // wet -> narrow
+                            //   if we have the climbing gear -> neither -> 8
+                            //   if we have nothing -> 1
+
+                            // narrow -> rocky
+                            //   if we have nothing -> switch to torch -> 8
+                            //   if we have torch -> 1
+
+                            // narrow -> wet
+                            //   if we have nothing -> 1
+                            //   if we have torch -> switch to nothing -> 1
+
+
+                            let next_path = match &(current_terrain, target_terrain) {
+                                &(TerrainType::Rocky, TerrainType::Wet) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::ClimbingGear,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::ClimbingGear { 1 } else { 8 },
+                                    }
+                                },
+
+                                &(TerrainType::Rocky, TerrainType::Narrow) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::Torch,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::Torch { 1 } else { 8 },
+                                    }
+                                },
+
+                                &(TerrainType::Wet, TerrainType::Rocky) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::ClimbingGear,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::ClimbingGear { 1 } else { 8 },
+                                    }
+                                },
+
+                                &(TerrainType::Wet, TerrainType::Narrow) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::Fists,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::Fists { 1 } else { 8 },
+                                    }
+                                },
+
+                                &(TerrainType::Narrow, TerrainType::Rocky) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::Torch,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::Torch { 1 } else { 8 },
+                                    }
+                                },
+
+                                &(TerrainType::Narrow, TerrainType::Wet) => {
+                                    Path {
+                                        pos: PathPosition {
+                                            x: new_x as usize,
+                                            y: new_y as usize,
+                                            equipped: Equipment::Fists,
+                                        },
+                                        cost: current.cost + if current.pos.equipped == Equipment::Fists { 1 } else { 8 },
+                                    }
+                                },
+                                _ => unreachable!(),
+                            };
+
+                            result.push(next_path);
+                        }
+                    }
+                }
+            }
+
+
+            result
+        }
+
+        pub fn to_string(&self) -> String {
+            format_grid(&self.terrain)
+        }
+    }
+
+    pub fn part2() {
+        // let depth = 510;
+        // let (target_x, target_y) = (10, 10);
+
+        let depth = 4080;
+        let (target_x, target_y) = (14, 785);
+
+        let terrain = BorderedTerrain::new(depth,
+                                           target_x, target_y,
+                                           target_x + 50, target_y + 50);
+
+
+        println!("{}", terrain.to_string());
+
+        let mut paths = vec!(Path {
+            pos: PathPosition {
+                equipped: Equipment::Torch,
+                x: 0,
+                y: 0,
+            },
+            cost: 0,
+        });
+
+        let mut successful_paths = Vec::new();
+        let mut best_costs: HashMap<PathPosition, usize> = HashMap::new();
+
+        while !paths.is_empty() {
+            // Each iteration will process all active paths, culling where
+            // appropriate, and adding them as new_paths for the next round.
+            //
+            // At the end of a round, if any of our new paths have hit the
+            // target, we'll choose the best one.  NOTE: we will need to add 7
+            // if we hit the target with the wrong type equipped.  Perhaps this
+            // means we need to keep iterating until all of the paths in play
+            // have a cost > than what we found.
+
+            let mut next_paths = Vec::new();
+
+            while !paths.is_empty() {
+                // Generate our set of possible moves.  This will be a move in
+                // an adjacent direction (cost 1) plus switching cost if needed.
+                //
+                // If a move would take us to a square already visited
+                // previously with the same equipped item and higher cost, we
+                // can cull it.  THINKME: This strategy probably isn't as
+                // aggressive as it could be, but we'll see if something
+                // cleverer is needed...
+
+                let path = paths.remove(0);
+
+                for next_path in terrain.possible_paths(&path) {
+                    if next_path.pos.x == target_x && next_path.pos.y == target_y {
+                        // println!("Found the target!");
+
+                        let mut completed = next_path;
+
+                        if completed.pos.equipped != Equipment::Torch {
+                            completed.pos.equipped = Equipment::Torch;
+                            completed.cost += 7;
+                        }
+                        successful_paths.push(completed);
+
+                        continue;
+                    }
+
+                    let entry = best_costs.entry(next_path.pos.clone()).or_insert(std::usize::MAX);
+
+                    if next_path.cost < *entry {
+                        // Worth a look!
+                        *entry = next_path.cost;
+                        next_paths.push(next_path);
+                    } else {
+                        // println!("Culled!");
+                    }
+                }
+            }
+
+            if successful_paths.len() > 0
+                && (next_paths.iter().map(|path| path.cost).min().unwrap() > successful_paths.iter().map(|path| path.cost).min().unwrap()) {
+                    // If the only paths under consideration are more expensive
+                    // than one we've already found, there's no point continuing
+                    // the search
+                    break;
+                }
+
+            // If any of our new paths have found our target, record them.  If
+            // any path in play has a lower cost than the path we just found,
+            // continue.
+            paths = next_paths;
+        }
+
+        println!("Lowest cost was: {}", successful_paths.iter().map(|path| path.cost).min().unwrap());
+    }
+}
+
+
+mod day23 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone)]
+    struct Nanobot {
+        x: i64,
+        y: i64,
+        z: i64,
+
+        radius: i64,
+    }
+
+    impl Nanobot {
+        pub fn from_str(s: &str) -> Nanobot {
+            let pat = Regex::new(r"pos=<(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)>, r=([0-9]+)").unwrap();
+
+            if let Some(cap) = pat.captures(s) {
+                Nanobot {
+                    x: cap[1].parse().unwrap(),
+                    y: cap[2].parse().unwrap(),
+                    z: cap[3].parse().unwrap(),
+                    radius: cap[4].parse().unwrap(),
+                }
+            } else {
+                panic!("Failed to parse line: {}", s);
+            }
+        }
+
+        pub fn in_range(&self, other: &Nanobot) -> bool {
+            ((self.x - other.x).abs() +
+             (self.y - other.y).abs() +
+             (self.z - other.z).abs()) <= self.radius as i64
+        }
+    }
+    pub fn part1() {
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+        let strongest_nanobot = nanobots.iter().max_by_key(|n| n.radius).unwrap();
+        println!("Nanobots in range: {}", nanobots.iter().filter(|&n| strongest_nanobot.in_range(n)).count());
+    }
+
+    #[derive(Debug, Clone)]
+    struct NanobotNorm {
+        x: f64,
+        y: f64,
+        z: f64,
+
+        radius: f64,
+    }
+
+    /************************************************************************
+     * Scratchings...
+    fn manhattan_distance(x1: f64, y1: f64, z1: f64,
+                          x2: f64, y2: f64, z2: f64) -> f64 {
+        ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
+    }
+
+    fn chunked_range(min: i64, max: i64, chunks: usize) -> impl Iterator<Item=(i64, i64)> {
+        let mut chunk_size = (max - min) / chunks as i64;
+
+        if chunk_size == 0 {
+            chunk_size = 1;
+        }
+
+        ((min - chunk_size)..=(max + chunk_size)).step_by(chunk_size as usize).map(move |xmin| (xmin, xmin + chunk_size))
+    }
+
+    struct SearchRegion {
+        min_x: i64,
+        min_y: i64,
+        min_z: i64,
+        max_x: i64,
+        max_y: i64,
+        max_z: i64,
+    }
+
+    // THINKME: Is this solvable in 2d?  First look for significant overlaps in
+    // XY, then in XZ?  If something overlaps in both, it'll overlap in 3d
+    // space?
+    //
+    // Oh... actually this is all in manhattan distance, so they're not really spheres?
+    //
+    // New plan: calculate the edges of all circles.  I think we can do this like:
+
+    //      #
+    //     ###
+    //    #####
+    //   #######
+    //  #########
+    // #####o#####
+    //  #########
+    //   #######
+    //    #####
+    //     ###
+    //      #
+    // That's a 2d radius = 5 as manhattan distance.  It seems like we don't
+    // need to fill out an entire array to figure out overlaps: just walk the
+    // edges of this shape (which should have predictable coordinates) and load
+    // them into a hashmap or something?  Keep track of how many overlaps we see
+    // in a given grid square?
+    //
+    // Maybe the key to all of this is just to exploit the fact that the circles
+    // are heavily overlapping and use a sparse data structure?  maybe I've been
+    // overthinking this...
+    //
+    // Is there any level we can quantize things to without losing precision I
+    // wonder?  What's the smallest pixel distance between two grids?
+
+
+
+    // Hypothesis: since we're using Manhattan distance, the radius of each nanobot makes a kind of star shape like this:
+    //
+    //      #
+    //     ###
+    //    #####
+    //   #######
+    //  #########
+    // #####o#####
+    //  #########
+    //   #######
+    //    #####
+    //     ###
+    //      #
+    //
+    // Whenever you intersect two of these shapes, one of the N/E/S/W points
+    // necessarily overlaps, so those are the only places you need to check to
+    // find the maximum number of overlaps.
+
+    impl Nanobot {
+
+        pub fn extremes(&self) -> Vec<(i64, i64, i64)> {
+            let mut result = Vec::new();
+
+            result.push((self.x + self.radius, 0, 0));
+            result.push((self.x - self.radius, 0, 0));
+
+            result.push((0, self.y + self.radius, 0));
+            result.push((0, self.y - self.radius, 0));
+
+            result.push((0, 0, self.z + self.radius));
+            result.push((0, 0, self.z - self.radius));
+
+            result
+        }
+    }
+
+    // Maybe it's time to return to the original strategy:
+
+    //   * divide the world into large squares
+    //
+    //   * A given square overlaps the large square if... any of its edge coordinates is in range
+    //
+    //   * Count which large square got the most matches and drill down.  If there's multiple, try them all.
+
+    // pub fn part2() {
+    //     let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+    //
+    //     let centroid_x: i64 = nanobots.iter().map(|n| n.x).sum::<i64>() / nanobots.len() as i64;
+    //     let centroid_y: i64 = nanobots.iter().map(|n| n.y).sum::<i64>() / nanobots.len() as i64;
+    //     let centroid_z: i64 = nanobots.iter().map(|n| n.z).sum::<i64>() / nanobots.len() as i64;
+    //
+    //     let mut best = 0;
+    //
+    //     // Can we scale worldspace?
+    //     let point = Nanobot { x: centroid_x, y: centroid_y, z: centroid_z, radius: 1 };
+    //     // Search out from centroid...
+    //     for xoff in (-2000000..2000000i64).step_by(10000) {
+    //         for yoff in (-2000000..2000000i64).step_by(10000) {
+    //             for zoff in (-2000000..2000000i64).step_by(10000) {
+    //                 let mut test = point.clone();
+    //                 test.x += xoff;
+    //                 test.y += yoff;
+    //                 test.z += zoff;
+    //
+    //                 let count = nanobots.iter().filter(|&n| n.in_range(&test)).count();
+    //
+    //                 if count > best {
+    //                     best = count;
+    //                     println!("New best: {}", best);
+    //                 }
+    //             }
+    //         }
+    //     }
+    //
+    //
+    //     println!("Best was: {}", best);
+    // }
+
+    pub fn part2() {
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+
+        let mut vals: Vec<_> = nanobots.iter().map(|n| ((n.x as f64 / 300_000_000.0) * 200_000_000.0) as i64).collect();
+        vals.sort();
+        vals.dedup();
+        println!("vals: {}", vals.len());
+    }
+    ************************************************************************/
+
+
+    struct SearchRegion {
+        min_x: i64,
+        min_y: i64,
+        min_z: i64,
+        max_x: i64,
+        max_y: i64,
+        max_z: i64,
+    }
+
+    pub fn part2() {
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+
+        // Represent the world from -300m to +300m in every dimension
+        let world_dim = 300_000_000;
+
+        let normalised: Vec<NanobotNorm> = nanobots.iter().map(|n| {
+            NanobotNorm {
+                x: (n.x + world_dim) as f64 / (2 * world_dim) as f64,
+                y: (n.y + world_dim) as f64 / (2 * world_dim) as f64,
+                z: (n.z + world_dim) as f64 / (2 * world_dim) as f64,
+
+                radius: n.radius as f64 / (2 * world_dim) as f64,
+            }
+        }).collect();
+
+
+        let grid_size = 1000;
+
+        let mut world: Vec<Vec<Vec<u16>>> = (0..grid_size).map(|_| {
+            (0..grid_size).map(|_| { vec![0; grid_size] }).collect()
+        }).collect();
+
+        for nanobot in &normalised {
+            let x = (nanobot.x * grid_size as f64) as usize;
+            let y = (nanobot.y * grid_size as f64) as usize;
+            let z = (nanobot.z * grid_size as f64) as usize;
+
+            for zoff in 0..grid_size {
+                if zoff as f64 > (nanobot.radius * grid_size as f64) {
+                    break;
+                }
+                for yoff in 0..grid_size {
+                    if (zoff + yoff) as f64 > (nanobot.radius * grid_size as f64) {
+                        break;
+                    }
+
+                    for xoff in 0..grid_size {
+                        if (zoff + yoff + xoff) as f64 > (nanobot.radius * grid_size as f64) {
+                            break;
+                        }
+
+                        world[z + zoff][y + yoff][x + xoff] += 1;
+                        world[z + zoff][y + yoff][x - xoff] += 1;
+                        world[z + zoff][y - yoff][x + xoff] += 1;
+                        world[z + zoff][y - yoff][x - xoff] += 1;
+                        world[z - zoff][y + yoff][x + xoff] += 1;
+                        world[z - zoff][y + yoff][x - xoff] += 1;
+                        world[z - zoff][y - yoff][x + xoff] += 1;
+                        world[z - zoff][y - yoff][x - xoff] += 1;
+                    }
+
+                }
+            }
+        }
+
+        // let mut overlaps = HashSet::new();
+
+        let mut max = 0;
+        let mut max_xyz: (usize, usize, usize) = (0, 0, 0);
+
+        for z in 0..grid_size {
+            for y in 0..grid_size {
+                for x in 0..grid_size {
+                    // overlaps.insert(world[z][y][x]);
+                    if world[z][y][x] > max {
+                        max = world[z][y][x];
+                        max_xyz = (x, y, z);
+                    }
+                }
+            }
+        }
+
+        // let mut overlaps_v: Vec<u16> = overlaps.iter().cloned().collect();
+        // overlaps_v.sort();
+        //
+        // println!("Distinct overlaps: {:?}", overlaps_v);
+
+        println!("Max overlap: {} at {:?}", max, max_xyz);
+
+        // Our fake grid is 0..grid_size but the real one is -300m .. 300m
+        let real_x = ((max_xyz.0 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
+        let real_y = ((max_xyz.1 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
+        let real_z = ((max_xyz.2 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
+
+        println!("In real world coordinates that's around {},{},{}", real_x, real_y, real_z);
+
+        // FIXME: Next, need to generalise this into searching a region of world
+        // coordinates, dividing up into cubes and searching them.
+    }
+
+
+}
+
 fn main() {
     if false {
         // regex_examples();
@@ -3419,7 +4096,15 @@ fn main() {
 
         day20::part1();
         day20::part2();
+
+        day21::part1();
+        day21::part2();
+
+        day22::part1();
+        day22::part2();
+
+        day23::part1();
     }
 
-    day21::part1();
+    day23::part2();
 }
