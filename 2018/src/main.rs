@@ -13,6 +13,7 @@ mod shared {
     pub use std::cmp::{self, Ordering};
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
+    pub use std::collections::LinkedList;
     pub use std::fmt::{self, Display};
     pub use std::fs::File;
     pub use std::io::{self, BufRead, BufReader, Write};
@@ -3782,28 +3783,28 @@ mod day23 {
     /************************************************************************
      * Scratchings...
     fn manhattan_distance(x1: f64, y1: f64, z1: f64,
-                          x2: f64, y2: f64, z2: f64) -> f64 {
-        ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
-    }
+    x2: f64, y2: f64, z2: f64) -> f64 {
+    ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
+}
 
     fn chunked_range(min: i64, max: i64, chunks: usize) -> impl Iterator<Item=(i64, i64)> {
-        let mut chunk_size = (max - min) / chunks as i64;
+    let mut chunk_size = (max - min) / chunks as i64;
 
-        if chunk_size == 0 {
-            chunk_size = 1;
-        }
+    if chunk_size == 0 {
+    chunk_size = 1;
+}
 
-        ((min - chunk_size)..=(max + chunk_size)).step_by(chunk_size as usize).map(move |xmin| (xmin, xmin + chunk_size))
-    }
+    ((min - chunk_size)..=(max + chunk_size)).step_by(chunk_size as usize).map(move |xmin| (xmin, xmin + chunk_size))
+}
 
     struct SearchRegion {
-        min_x: i64,
-        min_y: i64,
-        min_z: i64,
-        max_x: i64,
-        max_y: i64,
-        max_z: i64,
-    }
+    min_x: i64,
+    min_y: i64,
+    min_z: i64,
+    max_x: i64,
+    max_y: i64,
+    max_z: i64,
+}
 
     // THINKME: Is this solvable in 2d?  First look for significant overlaps in
     // XY, then in XZ?  If something overlaps in both, it'll overlap in 3d
@@ -3859,21 +3860,21 @@ mod day23 {
 
     impl Nanobot {
 
-        pub fn extremes(&self) -> Vec<(i64, i64, i64)> {
-            let mut result = Vec::new();
+    pub fn extremes(&self) -> Vec<(i64, i64, i64)> {
+    let mut result = Vec::new();
 
-            result.push((self.x + self.radius, 0, 0));
-            result.push((self.x - self.radius, 0, 0));
+    result.push((self.x + self.radius, 0, 0));
+    result.push((self.x - self.radius, 0, 0));
 
-            result.push((0, self.y + self.radius, 0));
-            result.push((0, self.y - self.radius, 0));
+    result.push((0, self.y + self.radius, 0));
+    result.push((0, self.y - self.radius, 0));
 
-            result.push((0, 0, self.z + self.radius));
-            result.push((0, 0, self.z - self.radius));
+    result.push((0, 0, self.z + self.radius));
+    result.push((0, 0, self.z - self.radius));
 
-            result
-        }
-    }
+    result
+}
+}
 
     // Maybe it's time to return to the original strategy:
 
@@ -3918,117 +3919,367 @@ mod day23 {
     // }
 
     pub fn part2() {
-        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+    let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
 
-        let mut vals: Vec<_> = nanobots.iter().map(|n| ((n.x as f64 / 300_000_000.0) * 200_000_000.0) as i64).collect();
-        vals.sort();
-        vals.dedup();
-        println!("vals: {}", vals.len());
+    let mut vals: Vec<_> = nanobots.iter().map(|n| ((n.x as f64 / 300_000_000.0) * 200_000_000.0) as i64).collect();
+    vals.sort();
+    vals.dedup();
+    println!("vals: {}", vals.len());
+}
+     ************************************************************************/
+
+    #[derive(Debug, Clone)]
+    struct Point3D {
+        x: i64,
+        y: i64,
+        z: i64,
+        r: i64,
     }
-    ************************************************************************/
 
-
-    struct SearchRegion {
-        min_x: i64,
-        min_y: i64,
-        min_z: i64,
-        max_x: i64,
-        max_y: i64,
-        max_z: i64,
+    impl Point3D {
+        pub fn distance(&self, other: &Point3D) -> i64 {
+            (self.x - other.x).abs() + (self.y - other.y).abs() + (self.z - other.z).abs()
+        }
     }
+
+    #[derive(Debug)]
+    struct Cube {
+        x1: i64,
+        y1: i64,
+        z1: i64,
+        x2: i64,
+        y2: i64,
+        z2: i64,
+    }
+
+    #[derive(Debug)]
+    enum PlaneDirection {
+        XY,
+        XZ,
+        YZ,
+    }
+
+    #[derive(Debug)]
+    struct Plane {
+        p1: Point3D,
+        p2: Point3D,
+        direction: PlaneDirection,
+    }
+
+    impl Cube {
+
+        pub fn len(&self) -> i64 {
+            ((self.x2 - self.x1) + 1) * ((self.y2 - self.y1) + 1) * ((self.z2 - self.z1) + 1)
+        }
+
+        pub fn is_single_position(&self) -> bool {
+            self.x1 == self.x2 && self.y1 == self.y2 && self.z1 == self.z2
+        }
+
+        pub fn overlaps(&self, p: &Point3D) -> bool {
+            if p.x >= self.x1 && p.y >= self.y1 && p.z >= self.z1 && p.x <= self.x2 && p.y <= self.y2 && p.z <= self.z2 {
+                return true
+            }
+
+            let planes = self.planes();
+            let closest_plane = planes.iter().min_by_key(|plane| plane.p1.distance(p).abs() + plane.p2.distance(p).abs()).unwrap();
+
+            closest_plane.overlaps(p)
+        }
+
+        fn planes(&self) -> Vec<Plane> {
+            vec!(
+                // front
+                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z1, r: 1}, direction: PlaneDirection::XY },
+
+                // top
+                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y1, z: self.z2, r: 1}, direction: PlaneDirection::XZ },
+
+                // left
+                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x1, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::YZ },
+
+                // back
+                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z2, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::XY },
+
+                // right
+                Plane { p1: Point3D { x: self.x2, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::YZ },
+
+                // bottom
+                Plane { p1: Point3D { x: self.x1, y: self.y2, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::XZ },
+            )
+        }
+    }
+
+    fn falls_on_plane(p: &Point3D, p1: &Point3D, p2: &Point3D) -> bool {
+        assert!(p1.x <= p2.x);
+        assert!(p1.y <= p2.y);
+        assert!(p1.z <= p2.z);
+
+        between(p.x, p1.x, p2.x) && between(p.y, p1.y, p2.y) && between(p.z, p1.z, p2.z)
+    }
+
+    fn between(n: i64, a: i64, b: i64) -> bool {
+        if a > b {
+            between(n, b, a)
+        } else {
+            a <= n && n <= b
+        }
+    }
+
+    impl Plane {
+
+        fn all_points(&self) -> Vec<Point3D> {
+            match self.direction {
+                PlaneDirection::XY => {
+                    vec!(self.p1.clone(), Point3D { x: self.p2.x, y: self.p1.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p2.y, z: self.p1.z, r: 1 }, self.p2.clone())
+                }
+                PlaneDirection::YZ => {
+                    vec!(self.p1.clone(), Point3D { x: self.p1.x, y: self.p2.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p1.y, z: self.p2.z, r: 1 }, self.p2.clone())
+                }
+                PlaneDirection::XZ => {
+                    vec!(self.p1.clone(), Point3D { x: self.p2.x, y: self.p1.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p1.y, z: self.p2.z, r: 1 }, self.p2.clone())
+                }
+            }
+        }
+
+
+        pub fn overlaps(&self, p: &Point3D) -> bool {
+            let all_points = self.all_points();
+            let closest_point = all_points.iter().min_by_key (|point| point.distance(p)).unwrap();
+
+            if closest_point.distance(p) <= p.r {
+                return true;
+            }
+
+            match self.direction {
+                PlaneDirection::XY => {
+                    let x_diff = (p.x - closest_point.x);
+                    let y_diff = (p.y - closest_point.y);
+
+                    [
+                        Point3D { x: closest_point.x + x_diff, y: closest_point.y + y_diff, z: closest_point.z, r: 1 },
+                        Point3D { x: closest_point.x + x_diff, y: closest_point.y - y_diff, z: closest_point.z, r: 1 },
+                        Point3D { x: closest_point.x - x_diff, y: closest_point.y + y_diff, z: closest_point.z, r: 1 },
+                        Point3D { x: closest_point.x - x_diff, y: closest_point.y - y_diff, z: closest_point.z, r: 1 },
+                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
+                },
+                PlaneDirection::YZ => {
+                    let y_diff = (p.y - closest_point.y);
+                    let z_diff = (p.z - closest_point.z);
+
+                    [
+                        Point3D { x: closest_point.x, y: closest_point.y + y_diff, z: closest_point.z + z_diff, r: 1 },
+                        Point3D { x: closest_point.x, y: closest_point.y + y_diff, z: closest_point.z - z_diff, r: 1 },
+                        Point3D { x: closest_point.x, y: closest_point.y - y_diff, z: closest_point.z + z_diff, r: 1 },
+                        Point3D { x: closest_point.x, y: closest_point.y - y_diff, z: closest_point.z - z_diff, r: 1 },
+                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
+                },
+                PlaneDirection::XZ => {
+                    let x_diff = (p.x - closest_point.x);
+                    let z_diff = (p.z - closest_point.z);
+
+                    [
+                        Point3D { x: closest_point.x + x_diff, y: closest_point.y, z: closest_point.z + z_diff, r: 1 },
+                        Point3D { x: closest_point.x + x_diff, y: closest_point.y, z: closest_point.z - z_diff, r: 1 },
+                        Point3D { x: closest_point.x - x_diff, y: closest_point.y, z: closest_point.z + z_diff, r: 1 },
+                        Point3D { x: closest_point.x - x_diff, y: closest_point.y, z: closest_point.z - z_diff, r: 1 },
+                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
+                }
+            }
+        }
+
+    }
+
+
+
+    // FIXME: we need cubes to be non-overlapping!  Need to fix the offsets up
+    // Test that this is the case.  Also check whether the actual division is right here...
+    fn split_cubes(cube: &Cube) -> Vec<Cube> {
+        let x_step = (cube.x2 - cube.x1 + 1) / 2 - 1;
+        let y_step = (cube.y2 - cube.y1 + 1) / 2 - 1;
+        let z_step = (cube.z2 - cube.z1 + 1) / 2 - 1;
+
+        // if x_step == 1 && y_step == 1 && z_step == 1 {
+        //     panic!("Hit single position");
+        // }
+
+        if x_step < 0 || y_step < 0 || z_step < 0 {
+            // panic!("Didn't expect a negative here");
+            return Vec::new();
+        }
+
+
+        vec!(
+            // front top left
+            Cube {
+                x1: cube.x1,
+                y1: cube.y1,
+                z1: cube.z1,
+                x2: cube.x1 + x_step,
+                y2: cube.y1 + y_step,
+                z2: cube.z1 + z_step,
+            },
+
+            // back top left
+            Cube {
+                x1: cube.x1,
+                y1: cube.y1,
+                z1: cube.z1 + z_step + 1,
+                x2: cube.x1 + x_step,
+                y2: cube.y1 + y_step,
+                z2: cube.z2,
+            },
+
+            // front top right
+            Cube {
+                x1: cube.x1 + x_step + 1,
+                y1: cube.y1,
+                z1: cube.z1,
+                x2: cube.x2,
+                y2: cube.y1 + y_step,
+                z2: cube.z1 + z_step,
+            },
+
+            // back top right
+            Cube {
+                x1: cube.x1 + x_step + 1,
+                y1: cube.y1,
+                z1: cube.z1 + z_step + 1,
+                x2: cube.x2,
+                y2: cube.y1 + y_step,
+                z2: cube.z2,
+            },
+
+            // front bottom left
+            Cube {
+                x1: cube.x1,
+                y1: cube.y1 + y_step + 1,
+                z1: cube.z1,
+                x2: cube.x1 + x_step,
+                y2: cube.y2,
+                z2: cube.z1 + z_step,
+            },
+
+            // back bottom left
+            Cube {
+                x1: cube.x1,
+                y1: cube.y1 + y_step + 1,
+                z1: cube.z1 + z_step + 1,
+                x2: cube.x1 + x_step,
+                y2: cube.y2,
+                z2: cube.z2,
+            },
+
+            // front bottom right
+            Cube {
+                x1: cube.x1 + x_step + 1,
+                y1: cube.y1 + y_step + 1,
+                z1: cube.z1,
+                x2: cube.x2,
+                y2: cube.y2,
+                z2: cube.z1 + z_step,
+            },
+
+            // back bottom right
+            Cube {
+                x1: cube.x1 + x_step + 1,
+                y1: cube.y1 + y_step + 1,
+                z1: cube.z1 + z_step + 1,
+                x2: cube.x2,
+                y2: cube.y2,
+                z2: cube.z2,
+            },
+        )
+    }
+
+    fn manhattan_distance(x1: i64, y1: i64, z1: i64, x2: i64, y2: i64, z2: i64) -> i64 {
+        ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
+    }
+
+
+    // This is still getting skipped over:
+    // 906: 17125603,40740992,33461246
+    // even better:
+    // Best single: Cube { x1: 18374828, y1: 41219173, z1: 34232290, x2: 18374828, y2: 41219173, z2: 34232290 } with 969
 
     pub fn part2() {
-        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
 
-        // Represent the world from -300m to +300m in every dimension
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
         let world_dim = 300_000_000;
 
-        let normalised: Vec<NanobotNorm> = nanobots.iter().map(|n| {
-            NanobotNorm {
-                x: (n.x + world_dim) as f64 / (2 * world_dim) as f64,
-                y: (n.y + world_dim) as f64 / (2 * world_dim) as f64,
-                z: (n.z + world_dim) as f64 / (2 * world_dim) as f64,
+        println!("Test point: {}", nanobots.iter().filter(|n| manhattan_distance(17125603, 40740992, 33461246, n.x, n.y, n.z) <= n.radius).count());
 
-                radius: n.radius as f64 / (2 * world_dim) as f64,
-            }
-        }).collect();
+        let mut search_queue = LinkedList::new();
+
+        // Best single: Cube { x1: 18374828, y1: 41219173, z1: 34232290, x2: 18374828, y2: 41219173, z2: 34232290 } with 969
+        search_queue.push_front(Cube {
+            // x1: -world_dim, y1: -world_dim, z1: -world_dim,
+            // x2: world_dim, y2: world_dim, z2: world_dim
+            x1: 18000000, y1: 41000000, z1: 34000000,
+            x2: 19000000, y2: 42000000, z2: 35000000
+        }
+        );
 
 
-        let grid_size = 1000;
+        let mut iterations = 0;
+        while !search_queue.is_empty() {
+            iterations += 1;
+            let mut new_searches = LinkedList::new();
+            let mut best = 0;
 
-        let mut world: Vec<Vec<Vec<u16>>> = (0..grid_size).map(|_| {
-            (0..grid_size).map(|_| { vec![0; grid_size] }).collect()
-        }).collect();
+            while !search_queue.is_empty() {
+                let area = search_queue.pop_front().unwrap();
 
-        for nanobot in &normalised {
-            let x = (nanobot.x * grid_size as f64) as usize;
-            let y = (nanobot.y * grid_size as f64) as usize;
-            let z = (nanobot.z * grid_size as f64) as usize;
+                let subareas = split_cubes(&area);
+                // let subareas = vec!(area);
 
-            for zoff in 0..grid_size {
-                if zoff as f64 > (nanobot.radius * grid_size as f64) {
-                    break;
-                }
-                for yoff in 0..grid_size {
-                    if (zoff + yoff) as f64 > (nanobot.radius * grid_size as f64) {
-                        break;
-                    }
+                for c in subareas {
+                    let mut count = 0;
 
-                    for xoff in 0..grid_size {
-                        if (zoff + yoff + xoff) as f64 > (nanobot.radius * grid_size as f64) {
-                            break;
+                    for n in &nanobots {
+                        let p = Point3D { x: n.x, y: n.y, z: n.z, r: n.radius };
+
+                        if c.overlaps(&p) {
+                            count += 1;
+                        } else {
+                            if (manhattan_distance(c.x1, c.y1, c.z1, p.x, p.y, p.z) <= p.r) {
+                                panic!("Eh?");
+                            }
                         }
-
-                        world[z + zoff][y + yoff][x + xoff] += 1;
-                        world[z + zoff][y + yoff][x - xoff] += 1;
-                        world[z + zoff][y - yoff][x + xoff] += 1;
-                        world[z + zoff][y - yoff][x - xoff] += 1;
-                        world[z - zoff][y + yoff][x + xoff] += 1;
-                        world[z - zoff][y + yoff][x - xoff] += 1;
-                        world[z - zoff][y - yoff][x + xoff] += 1;
-                        world[z - zoff][y - yoff][x - xoff] += 1;
                     }
 
-                }
-            }
-        }
+                    if iterations < 5 {
+                        // In the first few iterations we'll just take whatever.
+                        new_searches.push_front(c);
+                    } else if count > best {
+                        best = count;
 
-        // let mut overlaps = HashSet::new();
-
-        let mut max = 0;
-        let mut max_xyz: (usize, usize, usize) = (0, 0, 0);
-
-        for z in 0..grid_size {
-            for y in 0..grid_size {
-                for x in 0..grid_size {
-                    // overlaps.insert(world[z][y][x]);
-                    if world[z][y][x] > max {
-                        max = world[z][y][x];
-                        max_xyz = (x, y, z);
+                        if c.is_single_position() {
+                            println!("Best single: {:?} with {}", c, best);
+                        } else {
+                            new_searches.clear();
+                            new_searches.push_front(c);
+                        }
+                    } else if count == best && best > 0 {
+                        if c.is_single_position() {
+                            println!("Best single: {:?} with {}", c, best);
+                        } else {
+                            new_searches.push_front(c);
+                        }
+                    } else {
+                        if c.overlaps(&Point3D { x: 18374828, y: 41219173, z: 34232290, r: 1 }) {
+                            println!("Ignored: {:?} with {}", c, count);
+                            println!("THE MONEY ONE ^^^^^^ in iteration {}", iterations);
+                        }
                     }
                 }
             }
+
+            search_queue = new_searches;
+            println!("Best was: {}", best);
+            println!("Queue size: {}", search_queue.len());
         }
-
-        // let mut overlaps_v: Vec<u16> = overlaps.iter().cloned().collect();
-        // overlaps_v.sort();
-        //
-        // println!("Distinct overlaps: {:?}", overlaps_v);
-
-        println!("Max overlap: {} at {:?}", max, max_xyz);
-
-        // Our fake grid is 0..grid_size but the real one is -300m .. 300m
-        let real_x = ((max_xyz.0 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
-        let real_y = ((max_xyz.1 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
-        let real_z = ((max_xyz.2 as f64 / grid_size as f64) * (2.0 * world_dim as f64)) - world_dim as f64;
-
-        println!("In real world coordinates that's around {},{},{}", real_x, real_y, real_z);
-
-        // FIXME: Next, need to generalise this into searching a region of world
-        // coordinates, dividing up into cubes and searching them.
     }
-
-
 }
 
 fn main() {
