@@ -112,7 +112,6 @@ mod santasm {
         fn pretty(&self, a: usize, b: usize, c: usize) {
             println!("regs[{}] = regs[{}] + regs[{}]", c, a, b);
         }
-
     }
 
     pub struct OpAddi;
@@ -248,7 +247,10 @@ mod santasm {
         }
 
         fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] > regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+            println!(
+                "regs[{}] = if regs[{}] > regs[{}] {{ 1 }} else {{ 0 }}",
+                c, a, b
+            );
         }
     }
 
@@ -282,7 +284,10 @@ mod santasm {
         }
 
         fn pretty(&self, a: usize, b: usize, c: usize) {
-            println!("regs[{}] = if regs[{}] == regs[{}] {{ 1 }} else {{ 0 }}", c, a, b);
+            println!(
+                "regs[{}] = if regs[{}] == regs[{}] {{ 1 }} else {{ 0 }}",
+                c, a, b
+            );
         }
     }
 
@@ -307,7 +312,6 @@ mod santasm {
 
         map
     }
-
 
 }
 
@@ -2473,8 +2477,8 @@ mod day15 {
 }
 
 mod day16 {
-    use crate::shared::*;
     use crate::santasm::*;
+    use crate::shared::*;
 
     fn parse_state(s: &str) -> Registers {
         let numbers = s.split("[").nth(1).unwrap().split("]").nth(0).unwrap();
@@ -2701,7 +2705,10 @@ mod day17 {
             if world_idx >= self.x_min {
                 world_idx - self.x_min
             } else {
-                panic!("xval too small for min: val: {} min: {}", world_idx, self.x_min);
+                panic!(
+                    "xval too small for min: val: {} min: {}",
+                    world_idx, self.x_min
+                );
             }
         }
 
@@ -2709,7 +2716,10 @@ mod day17 {
             if world_idx >= self.y_min {
                 world_idx - self.y_min
             } else {
-                panic!("yval too small for min: val: {} min: {}", world_idx, self.y_min);
+                panic!(
+                    "yval too small for min: val: {} min: {}",
+                    world_idx, self.y_min
+                );
             }
         }
 
@@ -2763,11 +2773,21 @@ mod day17 {
         }
 
         pub fn count_wet_cells(&self) -> usize {
-            self.grid.iter().map(|row| row.iter().filter(|&c| c == &Cell::Wet || c == &Cell::Float).count()).sum()
+            self.grid
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .filter(|&c| c == &Cell::Wet || c == &Cell::Float)
+                        .count()
+                })
+                .sum()
         }
 
         pub fn count_float_cells(&self) -> usize {
-            self.grid.iter().map(|row| row.iter().filter(|&c| c == &Cell::Float).count()).sum()
+            self.grid
+                .iter()
+                .map(|row| row.iter().filter(|&c| c == &Cell::Float).count())
+                .sum()
         }
 
         pub fn wet_cell(&mut self, x: usize, y: usize) {
@@ -2858,8 +2878,10 @@ mod day17 {
                 let mut drip = drip.clone();
 
                 loop {
-                    if (world.get(offset(drip.x, off), drip.y) == &Cell::Sand || world.get(offset(drip.x, off), drip.y) == &Cell::Wet)
-                        && (world.get(offset(drip.x, off), drip.y + 1) == &Cell::Clay || world.get(offset(drip.x, off), drip.y + 1) == &Cell::Float)
+                    if (world.get(offset(drip.x, off), drip.y) == &Cell::Sand
+                        || world.get(offset(drip.x, off), drip.y) == &Cell::Wet)
+                        && (world.get(offset(drip.x, off), drip.y + 1) == &Cell::Clay
+                            || world.get(offset(drip.x, off), drip.y + 1) == &Cell::Float)
                     {
                         // Sand to the left and clay below means we're on the bottom
                         // level and can move.
@@ -2874,7 +2896,10 @@ mod day17 {
                             // Fall straight down.  No need for further checks.
                         } else if world.get(offset(drip.x, off), drip.y + 1) == &Cell::Sand {
                             // We've fallen off something!
-                            drips_to_check.push(Drip { x: offset(drip.x, off), y: drip.y });
+                            drips_to_check.push(Drip {
+                                x: offset(drip.x, off),
+                                y: drip.y,
+                            });
                         }
 
                         break;
@@ -2891,7 +2916,10 @@ mod day17 {
                 // can fill with water.
                 //
                 // Explore one row up
-                drips_to_check.push(Drip { x: drip.x, y: drip.y - 1 });
+                drips_to_check.push(Drip {
+                    x: drip.x,
+                    y: drip.y - 1,
+                });
             }
         }
 
@@ -2902,30 +2930,30 @@ mod day17 {
     }
 }
 
-
 mod day18 {
     use crate::shared::*;
 
     fn neighbours_of(world: &Vec<Vec<char>>, x: usize, y: usize) -> Vec<char> {
-        vec!(
-            world[y+1][x+1],
-            world[y-1][x+1],
-            world[y][x+1],
-            world[y+1][x-1],
-            world[y-1][x-1],
-            world[y][x-1],
-            world[y+1][x],
-            world[y-1][x]
-        )
+        vec![
+            world[y + 1][x + 1],
+            world[y - 1][x + 1],
+            world[y][x + 1],
+            world[y + 1][x - 1],
+            world[y - 1][x - 1],
+            world[y][x - 1],
+            world[y + 1][x],
+            world[y - 1][x],
+        ]
     }
 
     fn count_of(neighbours: &Vec<char>, square: char) -> usize {
         neighbours.iter().filter(|&&c| c == square).count()
     }
 
-
     pub fn part1() {
-        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt").map(|row| row.chars().collect()).collect();
+        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt")
+            .map(|row| row.chars().collect())
+            .collect();
         let height = world.len();
         let width = world[0].len();
 
@@ -2967,11 +2995,17 @@ mod day18 {
             println!("{}", format_grid(&world));
         }
 
-        println!("{}", count_of(&world.iter().flatten().cloned().collect(), '|') * count_of(&world.iter().flatten().cloned().collect(), '#'))
+        println!(
+            "{}",
+            count_of(&world.iter().flatten().cloned().collect(), '|')
+                * count_of(&world.iter().flatten().cloned().collect(), '#')
+        )
     }
 
     pub fn part2() {
-        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt").map(|row| row.chars().collect()).collect();
+        let mut world: Vec<Vec<char>> = input_lines("input_files/day18.txt")
+            .map(|row| row.chars().collect())
+            .collect();
         let height = world.len();
         let width = world[0].len();
 
@@ -3010,21 +3044,24 @@ mod day18 {
             }
 
             world = new_world;
- 
+
             // Looking for cycles...
             // Right.  We're cycling every 28 minutes, so 1000000000 will have the same number as 11976 (since (1000000000 - 11976) mod 28.0 == 0)
             if minute > 10000 {
-                println!("{} {}",
-                         minute,
-                         count_of(&world.iter().flatten().cloned().collect(), '|') * count_of(&world.iter().flatten().cloned().collect(), '#'))
+                println!(
+                    "{} {}",
+                    minute,
+                    count_of(&world.iter().flatten().cloned().collect(), '|')
+                        * count_of(&world.iter().flatten().cloned().collect(), '#')
+                )
             }
         }
     }
 }
 
 mod day19 {
-    use crate::shared::*;
     use crate::santasm::*;
+    use crate::shared::*;
 
     pub fn part1() {
         let instructions = instruction_set();
@@ -3043,7 +3080,12 @@ mod day19 {
                 assert_eq!(bits[0], "#ip");
                 ip_bound_register = bits[1].parse().unwrap();
             } else {
-                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+                program.push((
+                    bits[0].to_owned(),
+                    bits[1].parse().unwrap(),
+                    bits[2].parse().unwrap(),
+                    bits[3].parse().unwrap(),
+                ));
             }
         }
 
@@ -3060,7 +3102,10 @@ mod day19 {
 
             let (op, a, b, c) = program[ip].clone();
 
-            instructions.get::<str>(&op).unwrap().invoke(&mut registers, a, b, c);
+            instructions
+                .get::<str>(&op)
+                .unwrap()
+                .invoke(&mut registers, a, b, c);
 
             ip = registers[ip_bound_register];
             ip += 1;
@@ -3084,7 +3129,12 @@ mod day19 {
             } else if bits.len() == 2 {
                 assert_eq!(bits[0], "#ip");
             } else {
-                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+                program.push((
+                    bits[0].to_owned(),
+                    bits[1].parse().unwrap(),
+                    bits[2].parse().unwrap(),
+                    bits[3].parse().unwrap(),
+                ));
             }
         }
 
@@ -3148,7 +3198,7 @@ mod day20 {
         ch == 'N' || ch == 'E' || ch == 'W' || ch == 'S'
     }
 
-    fn read_next_regex(input: &mut Peekable<impl Iterator<Item=char>>) -> SimpleRegex {
+    fn read_next_regex(input: &mut Peekable<impl Iterator<Item = char>>) -> SimpleRegex {
         let &ch = input.peek().unwrap();
 
         if ch == '(' {
@@ -3195,11 +3245,11 @@ mod day20 {
         }
     }
 
-
-    fn explore(regex: &SimpleRegex,
-               locations_to_explore: Vec<Location>,
-               min_costs: &mut HashMap<(i64, i64), usize>)
-               -> Vec<Location> {
+    fn explore(
+        regex: &SimpleRegex,
+        locations_to_explore: Vec<Location>,
+        min_costs: &mut HashMap<(i64, i64), usize>,
+    ) -> Vec<Location> {
         let mut new_locations = match regex {
             SimpleRegex::Conjunction(parts) => {
                 let mut result = locations_to_explore.clone();
@@ -3208,7 +3258,7 @@ mod day20 {
                 }
 
                 result
-            },
+            }
             SimpleRegex::Literal(chars) => {
                 let mut result = locations_to_explore.clone();
                 for &ch in chars {
@@ -3224,7 +3274,9 @@ mod day20 {
                         location.cost += 1;
 
                         // Gross duplication
-                        let entry = min_costs.entry((location.x, location.y)).or_insert(location.cost);
+                        let entry = min_costs
+                            .entry((location.x, location.y))
+                            .or_insert(location.cost);
                         if location.cost < *entry {
                             *entry = location.cost;
                         }
@@ -3232,7 +3284,7 @@ mod day20 {
                 }
 
                 result
-            },
+            }
             SimpleRegex::Disjunction(parts) => {
                 let mut result = Vec::new();
                 for part in parts {
@@ -3245,7 +3297,9 @@ mod day20 {
         };
 
         for location in new_locations.iter_mut() {
-            let entry = min_costs.entry((location.x, location.y)).or_insert(location.cost);
+            let entry = min_costs
+                .entry((location.x, location.y))
+                .or_insert(location.cost);
 
             // If we've got a better path the this location, record it!
             if location.cost < *entry {
@@ -3259,9 +3313,9 @@ mod day20 {
         new_locations
     }
 
-   // # #
-   // ###
-   //  X
+    // # #
+    // ###
+    //  X
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct Location {
@@ -3282,16 +3336,21 @@ mod day20 {
         }
     }
 
-
     pub fn part1() {
         let input_s = include_str!("../input_files/day20.txt").trim().to_owned();
         let regex = parse_regex(&input_s);
 
         let mut min_costs: HashMap<(i64, i64), usize> = HashMap::new();
 
-        explore(&regex,
-                vec!(Location { x: 0, y: 0, cost: 0 }),
-                &mut min_costs);
+        explore(
+            &regex,
+            vec![Location {
+                x: 0,
+                y: 0,
+                cost: 0,
+            }],
+            &mut min_costs,
+        );
 
         println!("{}", min_costs.values().max().unwrap());
     }
@@ -3302,9 +3361,15 @@ mod day20 {
 
         let mut min_costs: HashMap<(i64, i64), usize> = HashMap::new();
 
-        explore(&regex,
-                vec!(Location { x: 0, y: 0, cost: 0 }),
-                &mut min_costs);
+        explore(
+            &regex,
+            vec![Location {
+                x: 0,
+                y: 0,
+                cost: 0,
+            }],
+            &mut min_costs,
+        );
 
         println!("{}", min_costs.values().filter(|&&v| v >= 1000).count());
     }
@@ -3312,8 +3377,8 @@ mod day20 {
 }
 
 mod day21 {
-    use crate::shared::*;
     use crate::santasm::*;
+    use crate::shared::*;
 
     // Part 1: Same trick as last time: pretty print the code, rewrite into structured C.
     // r0 = 212115 got us out of the loop as quickly as possible;
@@ -3333,7 +3398,12 @@ mod day21 {
             } else if bits.len() == 2 {
                 assert_eq!(bits[0], "#ip");
             } else {
-                program.push((bits[0].to_owned(), bits[1].parse().unwrap(), bits[2].parse().unwrap(), bits[3].parse().unwrap()));
+                program.push((
+                    bits[0].to_owned(),
+                    bits[1].parse().unwrap(),
+                    bits[2].parse().unwrap(),
+                    bits[3].parse().unwrap(),
+                ));
             }
         }
 
@@ -3365,16 +3435,19 @@ mod day22 {
         Wet,
     }
 
-    fn calculate_terrain(depth: usize,
-                         target_x: usize, target_y: usize,
-                         width: usize, height: usize) -> Vec<Vec<TerrainType>> {
+    fn calculate_terrain(
+        depth: usize,
+        target_x: usize,
+        target_y: usize,
+        width: usize,
+        height: usize,
+    ) -> Vec<Vec<TerrainType>> {
+        let mut terrain: Vec<Vec<TerrainType>> = (0..height)
+            .map(|_| vec![TerrainType::Rocky; width])
+            .collect();
 
-        let mut terrain: Vec<Vec<TerrainType>> = (0..height).map(|_| {
-            vec![TerrainType::Rocky; width]
-        }).collect();
-
-        let mut erosion_levels: Vec<Vec<usize>> = (0..height).map(|_| { vec![0; width] }).collect();
-        let mut geologic_indexes: Vec<Vec<usize>> = (0..height).map(|_| { vec![0; width] }).collect();
+        let mut erosion_levels: Vec<Vec<usize>> = (0..height).map(|_| vec![0; width]).collect();
+        let mut geologic_indexes: Vec<Vec<usize>> = (0..height).map(|_| vec![0; width]).collect();
 
         // Fill out the bits we know
         for y in 0..height {
@@ -3388,7 +3461,6 @@ mod day22 {
                     geologic_indexes[y][x] = y * 48271;
                     erosion_levels[y][x] = (geologic_indexes[y][x] + depth) % 20183;
                 }
-
             }
         }
 
@@ -3425,9 +3497,7 @@ mod day22 {
         let depth = 4080;
         let (target_x, target_y) = (14, 785);
 
-        let terrain = calculate_terrain(depth,
-                                        target_x, target_y,
-                                        target_x + 1, target_y + 1);
+        let terrain = calculate_terrain(depth, target_x, target_y, target_x + 1, target_y + 1);
 
         let mut total_risk = 0;
         for y in 0..terrain.len() {
@@ -3442,7 +3512,6 @@ mod day22 {
 
         println!("Total risk: {}", total_risk);
     }
-
 
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
     enum Equipment {
@@ -3462,7 +3531,6 @@ mod day22 {
             write!(f, "{}", s)
         }
     }
-
 
     #[derive(Debug, Hash, Eq, PartialEq, Clone)]
     struct PathPosition {
@@ -3484,12 +3552,20 @@ mod day22 {
     }
 
     impl BorderedTerrain {
-        pub fn new(depth: usize,
-                   target_x: usize, target_y: usize,
-                   width: usize, height: usize) -> BorderedTerrain {
+        pub fn new(
+            depth: usize,
+            target_x: usize,
+            target_y: usize,
+            width: usize,
+            height: usize,
+        ) -> BorderedTerrain {
             let terrain = calculate_terrain(depth, target_x, target_y, width, height);
 
-            BorderedTerrain { terrain, width, height}
+            BorderedTerrain {
+                terrain,
+                width,
+                height,
+            }
         }
 
         pub fn possible_paths(&self, current: &Path) -> Vec<Path> {
@@ -3508,9 +3584,12 @@ mod day22 {
                     new_x += xoff;
                     new_y += yoff;
 
-                    if (new_x >= 0 && new_x < self.width as i64) && (new_y >= 0 && new_y < self.height as i64) {
+                    if (new_x >= 0 && new_x < self.width as i64)
+                        && (new_y >= 0 && new_y < self.height as i64)
+                    {
                         // The position is in bounds...
-                        let current_terrain = &self.terrain[current.pos.y as usize][current.pos.x as usize];
+                        let current_terrain =
+                            &self.terrain[current.pos.y as usize][current.pos.x as usize];
                         let target_terrain = &self.terrain[new_y as usize][new_x as usize];
 
                         if target_terrain == current_terrain {
@@ -3550,72 +3629,89 @@ mod day22 {
                             //   if we have nothing -> 1
                             //   if we have torch -> switch to nothing -> 1
 
-
                             let next_path = match &(current_terrain, target_terrain) {
-                                &(TerrainType::Rocky, TerrainType::Wet) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::ClimbingGear,
+                                &(TerrainType::Rocky, TerrainType::Wet) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::ClimbingGear,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::ClimbingGear {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::ClimbingGear { 1 } else { 8 },
-                                    }
                                 },
 
-                                &(TerrainType::Rocky, TerrainType::Narrow) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::Torch,
+                                &(TerrainType::Rocky, TerrainType::Narrow) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::Torch,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::Torch {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::Torch { 1 } else { 8 },
-                                    }
                                 },
 
-                                &(TerrainType::Wet, TerrainType::Rocky) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::ClimbingGear,
+                                &(TerrainType::Wet, TerrainType::Rocky) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::ClimbingGear,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::ClimbingGear {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::ClimbingGear { 1 } else { 8 },
-                                    }
                                 },
 
-                                &(TerrainType::Wet, TerrainType::Narrow) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::Fists,
+                                &(TerrainType::Wet, TerrainType::Narrow) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::Fists,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::Fists {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::Fists { 1 } else { 8 },
-                                    }
                                 },
 
-                                &(TerrainType::Narrow, TerrainType::Rocky) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::Torch,
+                                &(TerrainType::Narrow, TerrainType::Rocky) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::Torch,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::Torch {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::Torch { 1 } else { 8 },
-                                    }
                                 },
 
-                                &(TerrainType::Narrow, TerrainType::Wet) => {
-                                    Path {
-                                        pos: PathPosition {
-                                            x: new_x as usize,
-                                            y: new_y as usize,
-                                            equipped: Equipment::Fists,
+                                &(TerrainType::Narrow, TerrainType::Wet) => Path {
+                                    pos: PathPosition {
+                                        x: new_x as usize,
+                                        y: new_y as usize,
+                                        equipped: Equipment::Fists,
+                                    },
+                                    cost: current.cost
+                                        + if current.pos.equipped == Equipment::Fists {
+                                            1
+                                        } else {
+                                            8
                                         },
-                                        cost: current.cost + if current.pos.equipped == Equipment::Fists { 1 } else { 8 },
-                                    }
                                 },
                                 _ => unreachable!(),
                             };
@@ -3625,7 +3721,6 @@ mod day22 {
                     }
                 }
             }
-
 
             result
         }
@@ -3642,21 +3737,18 @@ mod day22 {
         let depth = 4080;
         let (target_x, target_y) = (14, 785);
 
-        let terrain = BorderedTerrain::new(depth,
-                                           target_x, target_y,
-                                           target_x + 50, target_y + 50);
-
+        let terrain = BorderedTerrain::new(depth, target_x, target_y, target_x + 50, target_y + 50);
 
         println!("{}", terrain.to_string());
 
-        let mut paths = vec!(Path {
+        let mut paths = vec![Path {
             pos: PathPosition {
                 equipped: Equipment::Torch,
                 x: 0,
                 y: 0,
             },
             cost: 0,
-        });
+        }];
 
         let mut successful_paths = Vec::new();
         let mut best_costs: HashMap<PathPosition, usize> = HashMap::new();
@@ -3700,7 +3792,9 @@ mod day22 {
                         continue;
                     }
 
-                    let entry = best_costs.entry(next_path.pos.clone()).or_insert(std::usize::MAX);
+                    let entry = best_costs
+                        .entry(next_path.pos.clone())
+                        .or_insert(std::usize::MAX);
 
                     if next_path.cost < *entry {
                         // Worth a look!
@@ -3713,12 +3807,14 @@ mod day22 {
             }
 
             if successful_paths.len() > 0
-                && (next_paths.iter().map(|path| path.cost).min().unwrap() > successful_paths.iter().map(|path| path.cost).min().unwrap()) {
-                    // If the only paths under consideration are more expensive
-                    // than one we've already found, there's no point continuing
-                    // the search
-                    break;
-                }
+                && (next_paths.iter().map(|path| path.cost).min().unwrap()
+                    > successful_paths.iter().map(|path| path.cost).min().unwrap())
+            {
+                // If the only paths under consideration are more expensive
+                // than one we've already found, there's no point continuing
+                // the search
+                break;
+            }
 
             // If any of our new paths have found our target, record them.  If
             // any path in play has a lower cost than the path we just found,
@@ -3726,10 +3822,12 @@ mod day22 {
             paths = next_paths;
         }
 
-        println!("Lowest cost was: {}", successful_paths.iter().map(|path| path.cost).min().unwrap());
+        println!(
+            "Lowest cost was: {}",
+            successful_paths.iter().map(|path| path.cost).min().unwrap()
+        );
     }
 }
-
 
 mod day23 {
     use crate::shared::*;
@@ -3760,15 +3858,22 @@ mod day23 {
         }
 
         pub fn in_range(&self, other: &Nanobot) -> bool {
-            ((self.x - other.x).abs() +
-             (self.y - other.y).abs() +
-             (self.z - other.z).abs()) <= self.radius as i64
+            ((self.x - other.x).abs() + (self.y - other.y).abs() + (self.z - other.z).abs())
+                <= self.radius as i64
         }
     }
     pub fn part1() {
-        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt")
+            .map(|s| Nanobot::from_str(&s))
+            .collect();
         let strongest_nanobot = nanobots.iter().max_by_key(|n| n.radius).unwrap();
-        println!("Nanobots in range: {}", nanobots.iter().filter(|&n| strongest_nanobot.in_range(n)).count());
+        println!(
+            "Nanobots in range: {}",
+            nanobots
+                .iter()
+                .filter(|&n| strongest_nanobot.in_range(n))
+                .count()
+        );
     }
 
     #[derive(Debug, Clone)]
@@ -3781,152 +3886,152 @@ mod day23 {
     }
 
     /************************************************************************
-     * Scratchings...
-    fn manhattan_distance(x1: f64, y1: f64, z1: f64,
-    x2: f64, y2: f64, z2: f64) -> f64 {
-    ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
-}
+         * Scratchings...
+        fn manhattan_distance(x1: f64, y1: f64, z1: f64,
+        x2: f64, y2: f64, z2: f64) -> f64 {
+        ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
+    }
 
-    fn chunked_range(min: i64, max: i64, chunks: usize) -> impl Iterator<Item=(i64, i64)> {
-    let mut chunk_size = (max - min) / chunks as i64;
+        fn chunked_range(min: i64, max: i64, chunks: usize) -> impl Iterator<Item=(i64, i64)> {
+        let mut chunk_size = (max - min) / chunks as i64;
 
-    if chunk_size == 0 {
-    chunk_size = 1;
-}
+        if chunk_size == 0 {
+        chunk_size = 1;
+    }
 
-    ((min - chunk_size)..=(max + chunk_size)).step_by(chunk_size as usize).map(move |xmin| (xmin, xmin + chunk_size))
-}
+        ((min - chunk_size)..=(max + chunk_size)).step_by(chunk_size as usize).map(move |xmin| (xmin, xmin + chunk_size))
+    }
 
-    struct SearchRegion {
-    min_x: i64,
-    min_y: i64,
-    min_z: i64,
-    max_x: i64,
-    max_y: i64,
-    max_z: i64,
-}
+        struct SearchRegion {
+        min_x: i64,
+        min_y: i64,
+        min_z: i64,
+        max_x: i64,
+        max_y: i64,
+        max_z: i64,
+    }
 
-    // THINKME: Is this solvable in 2d?  First look for significant overlaps in
-    // XY, then in XZ?  If something overlaps in both, it'll overlap in 3d
-    // space?
-    //
-    // Oh... actually this is all in manhattan distance, so they're not really spheres?
-    //
-    // New plan: calculate the edges of all circles.  I think we can do this like:
+        // THINKME: Is this solvable in 2d?  First look for significant overlaps in
+        // XY, then in XZ?  If something overlaps in both, it'll overlap in 3d
+        // space?
+        //
+        // Oh... actually this is all in manhattan distance, so they're not really spheres?
+        //
+        // New plan: calculate the edges of all circles.  I think we can do this like:
 
-    //      #
-    //     ###
-    //    #####
-    //   #######
-    //  #########
-    // #####o#####
-    //  #########
-    //   #######
-    //    #####
-    //     ###
-    //      #
-    // That's a 2d radius = 5 as manhattan distance.  It seems like we don't
-    // need to fill out an entire array to figure out overlaps: just walk the
-    // edges of this shape (which should have predictable coordinates) and load
-    // them into a hashmap or something?  Keep track of how many overlaps we see
-    // in a given grid square?
-    //
-    // Maybe the key to all of this is just to exploit the fact that the circles
-    // are heavily overlapping and use a sparse data structure?  maybe I've been
-    // overthinking this...
-    //
-    // Is there any level we can quantize things to without losing precision I
-    // wonder?  What's the smallest pixel distance between two grids?
+        //      #
+        //     ###
+        //    #####
+        //   #######
+        //  #########
+        // #####o#####
+        //  #########
+        //   #######
+        //    #####
+        //     ###
+        //      #
+        // That's a 2d radius = 5 as manhattan distance.  It seems like we don't
+        // need to fill out an entire array to figure out overlaps: just walk the
+        // edges of this shape (which should have predictable coordinates) and load
+        // them into a hashmap or something?  Keep track of how many overlaps we see
+        // in a given grid square?
+        //
+        // Maybe the key to all of this is just to exploit the fact that the circles
+        // are heavily overlapping and use a sparse data structure?  maybe I've been
+        // overthinking this...
+        //
+        // Is there any level we can quantize things to without losing precision I
+        // wonder?  What's the smallest pixel distance between two grids?
 
 
 
-    // Hypothesis: since we're using Manhattan distance, the radius of each nanobot makes a kind of star shape like this:
-    //
-    //      #
-    //     ###
-    //    #####
-    //   #######
-    //  #########
-    // #####o#####
-    //  #########
-    //   #######
-    //    #####
-    //     ###
-    //      #
-    //
-    // Whenever you intersect two of these shapes, one of the N/E/S/W points
-    // necessarily overlaps, so those are the only places you need to check to
-    // find the maximum number of overlaps.
+        // Hypothesis: since we're using Manhattan distance, the radius of each nanobot makes a kind of star shape like this:
+        //
+        //      #
+        //     ###
+        //    #####
+        //   #######
+        //  #########
+        // #####o#####
+        //  #########
+        //   #######
+        //    #####
+        //     ###
+        //      #
+        //
+        // Whenever you intersect two of these shapes, one of the N/E/S/W points
+        // necessarily overlaps, so those are the only places you need to check to
+        // find the maximum number of overlaps.
 
-    impl Nanobot {
+        impl Nanobot {
 
-    pub fn extremes(&self) -> Vec<(i64, i64, i64)> {
-    let mut result = Vec::new();
+        pub fn extremes(&self) -> Vec<(i64, i64, i64)> {
+        let mut result = Vec::new();
 
-    result.push((self.x + self.radius, 0, 0));
-    result.push((self.x - self.radius, 0, 0));
+        result.push((self.x + self.radius, 0, 0));
+        result.push((self.x - self.radius, 0, 0));
 
-    result.push((0, self.y + self.radius, 0));
-    result.push((0, self.y - self.radius, 0));
+        result.push((0, self.y + self.radius, 0));
+        result.push((0, self.y - self.radius, 0));
 
-    result.push((0, 0, self.z + self.radius));
-    result.push((0, 0, self.z - self.radius));
+        result.push((0, 0, self.z + self.radius));
+        result.push((0, 0, self.z - self.radius));
 
-    result
-}
-}
+        result
+    }
+    }
 
-    // Maybe it's time to return to the original strategy:
+        // Maybe it's time to return to the original strategy:
 
-    //   * divide the world into large squares
-    //
-    //   * A given square overlaps the large square if... any of its edge coordinates is in range
-    //
-    //   * Count which large square got the most matches and drill down.  If there's multiple, try them all.
+        //   * divide the world into large squares
+        //
+        //   * A given square overlaps the large square if... any of its edge coordinates is in range
+        //
+        //   * Count which large square got the most matches and drill down.  If there's multiple, try them all.
 
-    // pub fn part2() {
-    //     let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
-    //
-    //     let centroid_x: i64 = nanobots.iter().map(|n| n.x).sum::<i64>() / nanobots.len() as i64;
-    //     let centroid_y: i64 = nanobots.iter().map(|n| n.y).sum::<i64>() / nanobots.len() as i64;
-    //     let centroid_z: i64 = nanobots.iter().map(|n| n.z).sum::<i64>() / nanobots.len() as i64;
-    //
-    //     let mut best = 0;
-    //
-    //     // Can we scale worldspace?
-    //     let point = Nanobot { x: centroid_x, y: centroid_y, z: centroid_z, radius: 1 };
-    //     // Search out from centroid...
-    //     for xoff in (-2000000..2000000i64).step_by(10000) {
-    //         for yoff in (-2000000..2000000i64).step_by(10000) {
-    //             for zoff in (-2000000..2000000i64).step_by(10000) {
-    //                 let mut test = point.clone();
-    //                 test.x += xoff;
-    //                 test.y += yoff;
-    //                 test.z += zoff;
-    //
-    //                 let count = nanobots.iter().filter(|&n| n.in_range(&test)).count();
-    //
-    //                 if count > best {
-    //                     best = count;
-    //                     println!("New best: {}", best);
-    //                 }
-    //             }
-    //         }
-    //     }
-    //
-    //
-    //     println!("Best was: {}", best);
-    // }
+        // pub fn part2() {
+        //     let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+        //
+        //     let centroid_x: i64 = nanobots.iter().map(|n| n.x).sum::<i64>() / nanobots.len() as i64;
+        //     let centroid_y: i64 = nanobots.iter().map(|n| n.y).sum::<i64>() / nanobots.len() as i64;
+        //     let centroid_z: i64 = nanobots.iter().map(|n| n.z).sum::<i64>() / nanobots.len() as i64;
+        //
+        //     let mut best = 0;
+        //
+        //     // Can we scale worldspace?
+        //     let point = Nanobot { x: centroid_x, y: centroid_y, z: centroid_z, radius: 1 };
+        //     // Search out from centroid...
+        //     for xoff in (-2000000..2000000i64).step_by(10000) {
+        //         for yoff in (-2000000..2000000i64).step_by(10000) {
+        //             for zoff in (-2000000..2000000i64).step_by(10000) {
+        //                 let mut test = point.clone();
+        //                 test.x += xoff;
+        //                 test.y += yoff;
+        //                 test.z += zoff;
+        //
+        //                 let count = nanobots.iter().filter(|&n| n.in_range(&test)).count();
+        //
+        //                 if count > best {
+        //                     best = count;
+        //                     println!("New best: {}", best);
+        //                 }
+        //             }
+        //         }
+        //     }
+        //
+        //
+        //     println!("Best was: {}", best);
+        // }
 
-    pub fn part2() {
-    let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
+        pub fn part2() {
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
 
-    let mut vals: Vec<_> = nanobots.iter().map(|n| ((n.x as f64 / 300_000_000.0) * 200_000_000.0) as i64).collect();
-    vals.sort();
-    vals.dedup();
-    println!("vals: {}", vals.len());
-}
-     ************************************************************************/
+        let mut vals: Vec<_> = nanobots.iter().map(|n| ((n.x as f64 / 300_000_000.0) * 200_000_000.0) as i64).collect();
+        vals.sort();
+        vals.dedup();
+        println!("vals: {}", vals.len());
+    }
+         ************************************************************************/
 
     #[derive(Debug, Clone)]
     struct Point3D {
@@ -3967,7 +4072,6 @@ mod day23 {
     }
 
     impl Cube {
-
         pub fn len(&self) -> i64 {
             ((self.x2 - self.x1) + 1) * ((self.y2 - self.y1) + 1) * ((self.z2 - self.z1) + 1)
         }
@@ -3977,36 +4081,124 @@ mod day23 {
         }
 
         pub fn overlaps(&self, p: &Point3D) -> bool {
-            if p.x >= self.x1 && p.y >= self.y1 && p.z >= self.z1 && p.x <= self.x2 && p.y <= self.y2 && p.z <= self.z2 {
-                return true
+            if p.x >= self.x1
+                && p.y >= self.y1
+                && p.z >= self.z1
+                && p.x <= self.x2
+                && p.y <= self.y2
+                && p.z <= self.z2
+            {
+                return true;
             }
 
             let planes = self.planes();
-            let closest_plane = planes.iter().min_by_key(|plane| plane.p1.distance(p).abs() + plane.p2.distance(p).abs()).unwrap();
+            let closest_plane = planes
+                .iter()
+                .min_by_key(|plane| plane.p1.distance(p).abs() + plane.p2.distance(p).abs())
+                .unwrap();
 
             closest_plane.overlaps(p)
         }
 
         fn planes(&self) -> Vec<Plane> {
-            vec!(
+            vec![
                 // front
-                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z1, r: 1}, direction: PlaneDirection::XY },
-
+                Plane {
+                    p1: Point3D {
+                        x: self.x1,
+                        y: self.y1,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x2,
+                        y: self.y2,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::XY,
+                },
                 // top
-                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y1, z: self.z2, r: 1}, direction: PlaneDirection::XZ },
-
+                Plane {
+                    p1: Point3D {
+                        x: self.x1,
+                        y: self.y1,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x2,
+                        y: self.y1,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::XZ,
+                },
                 // left
-                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x1, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::YZ },
-
+                Plane {
+                    p1: Point3D {
+                        x: self.x1,
+                        y: self.y1,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x1,
+                        y: self.y2,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::YZ,
+                },
                 // back
-                Plane { p1: Point3D { x: self.x1, y: self.y1, z: self.z2, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::XY },
-
+                Plane {
+                    p1: Point3D {
+                        x: self.x1,
+                        y: self.y1,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x2,
+                        y: self.y2,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::XY,
+                },
                 // right
-                Plane { p1: Point3D { x: self.x2, y: self.y1, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::YZ },
-
+                Plane {
+                    p1: Point3D {
+                        x: self.x2,
+                        y: self.y1,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x2,
+                        y: self.y2,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::YZ,
+                },
                 // bottom
-                Plane { p1: Point3D { x: self.x1, y: self.y2, z: self.z1, r: 1}, p2: Point3D { x: self.x2, y: self.y2, z: self.z2, r: 1}, direction: PlaneDirection::XZ },
-            )
+                Plane {
+                    p1: Point3D {
+                        x: self.x1,
+                        y: self.y2,
+                        z: self.z1,
+                        r: 1,
+                    },
+                    p2: Point3D {
+                        x: self.x2,
+                        y: self.y2,
+                        z: self.z2,
+                        r: 1,
+                    },
+                    direction: PlaneDirection::XZ,
+                },
+            ]
         }
     }
 
@@ -4027,25 +4219,65 @@ mod day23 {
     }
 
     impl Plane {
-
         fn all_points(&self) -> Vec<Point3D> {
             match self.direction {
-                PlaneDirection::XY => {
-                    vec!(self.p1.clone(), Point3D { x: self.p2.x, y: self.p1.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p2.y, z: self.p1.z, r: 1 }, self.p2.clone())
-                }
-                PlaneDirection::YZ => {
-                    vec!(self.p1.clone(), Point3D { x: self.p1.x, y: self.p2.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p1.y, z: self.p2.z, r: 1 }, self.p2.clone())
-                }
-                PlaneDirection::XZ => {
-                    vec!(self.p1.clone(), Point3D { x: self.p2.x, y: self.p1.y, z: self.p1.z, r: 1 }, Point3D { x: self.p1.x, y: self.p1.y, z: self.p2.z, r: 1 }, self.p2.clone())
-                }
+                PlaneDirection::XY => vec![
+                    self.p1.clone(),
+                    Point3D {
+                        x: self.p2.x,
+                        y: self.p1.y,
+                        z: self.p1.z,
+                        r: 1,
+                    },
+                    Point3D {
+                        x: self.p1.x,
+                        y: self.p2.y,
+                        z: self.p1.z,
+                        r: 1,
+                    },
+                    self.p2.clone(),
+                ],
+                PlaneDirection::YZ => vec![
+                    self.p1.clone(),
+                    Point3D {
+                        x: self.p1.x,
+                        y: self.p2.y,
+                        z: self.p1.z,
+                        r: 1,
+                    },
+                    Point3D {
+                        x: self.p1.x,
+                        y: self.p1.y,
+                        z: self.p2.z,
+                        r: 1,
+                    },
+                    self.p2.clone(),
+                ],
+                PlaneDirection::XZ => vec![
+                    self.p1.clone(),
+                    Point3D {
+                        x: self.p2.x,
+                        y: self.p1.y,
+                        z: self.p1.z,
+                        r: 1,
+                    },
+                    Point3D {
+                        x: self.p1.x,
+                        y: self.p1.y,
+                        z: self.p2.z,
+                        r: 1,
+                    },
+                    self.p2.clone(),
+                ],
             }
         }
 
-
         pub fn overlaps(&self, p: &Point3D) -> bool {
             let all_points = self.all_points();
-            let closest_point = all_points.iter().min_by_key (|point| point.distance(p)).unwrap();
+            let closest_point = all_points
+                .iter()
+                .min_by_key(|point| point.distance(p))
+                .unwrap();
 
             if closest_point.distance(p) <= p.r {
                 return true;
@@ -4057,40 +4289,112 @@ mod day23 {
                     let y_diff = (p.y - closest_point.y);
 
                     [
-                        Point3D { x: closest_point.x + x_diff, y: closest_point.y + y_diff, z: closest_point.z, r: 1 },
-                        Point3D { x: closest_point.x + x_diff, y: closest_point.y - y_diff, z: closest_point.z, r: 1 },
-                        Point3D { x: closest_point.x - x_diff, y: closest_point.y + y_diff, z: closest_point.z, r: 1 },
-                        Point3D { x: closest_point.x - x_diff, y: closest_point.y - y_diff, z: closest_point.z, r: 1 },
-                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
-                },
+                        Point3D {
+                            x: closest_point.x + x_diff,
+                            y: closest_point.y + y_diff,
+                            z: closest_point.z,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x + x_diff,
+                            y: closest_point.y - y_diff,
+                            z: closest_point.z,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x - x_diff,
+                            y: closest_point.y + y_diff,
+                            z: closest_point.z,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x - x_diff,
+                            y: closest_point.y - y_diff,
+                            z: closest_point.z,
+                            r: 1,
+                        },
+                    ]
+                    .iter()
+                    .any(|candidate_point| {
+                        falls_on_plane(candidate_point, &self.p1, &self.p2)
+                            && candidate_point.distance(p) <= p.r
+                    })
+                }
                 PlaneDirection::YZ => {
                     let y_diff = (p.y - closest_point.y);
                     let z_diff = (p.z - closest_point.z);
 
                     [
-                        Point3D { x: closest_point.x, y: closest_point.y + y_diff, z: closest_point.z + z_diff, r: 1 },
-                        Point3D { x: closest_point.x, y: closest_point.y + y_diff, z: closest_point.z - z_diff, r: 1 },
-                        Point3D { x: closest_point.x, y: closest_point.y - y_diff, z: closest_point.z + z_diff, r: 1 },
-                        Point3D { x: closest_point.x, y: closest_point.y - y_diff, z: closest_point.z - z_diff, r: 1 },
-                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
-                },
+                        Point3D {
+                            x: closest_point.x,
+                            y: closest_point.y + y_diff,
+                            z: closest_point.z + z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x,
+                            y: closest_point.y + y_diff,
+                            z: closest_point.z - z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x,
+                            y: closest_point.y - y_diff,
+                            z: closest_point.z + z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x,
+                            y: closest_point.y - y_diff,
+                            z: closest_point.z - z_diff,
+                            r: 1,
+                        },
+                    ]
+                    .iter()
+                    .any(|candidate_point| {
+                        falls_on_plane(candidate_point, &self.p1, &self.p2)
+                            && candidate_point.distance(p) <= p.r
+                    })
+                }
                 PlaneDirection::XZ => {
                     let x_diff = (p.x - closest_point.x);
                     let z_diff = (p.z - closest_point.z);
 
                     [
-                        Point3D { x: closest_point.x + x_diff, y: closest_point.y, z: closest_point.z + z_diff, r: 1 },
-                        Point3D { x: closest_point.x + x_diff, y: closest_point.y, z: closest_point.z - z_diff, r: 1 },
-                        Point3D { x: closest_point.x - x_diff, y: closest_point.y, z: closest_point.z + z_diff, r: 1 },
-                        Point3D { x: closest_point.x - x_diff, y: closest_point.y, z: closest_point.z - z_diff, r: 1 },
-                    ].iter().any(|candidate_point| falls_on_plane(candidate_point, &self.p1, &self.p2) && candidate_point.distance(p) <= p.r)
+                        Point3D {
+                            x: closest_point.x + x_diff,
+                            y: closest_point.y,
+                            z: closest_point.z + z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x + x_diff,
+                            y: closest_point.y,
+                            z: closest_point.z - z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x - x_diff,
+                            y: closest_point.y,
+                            z: closest_point.z + z_diff,
+                            r: 1,
+                        },
+                        Point3D {
+                            x: closest_point.x - x_diff,
+                            y: closest_point.y,
+                            z: closest_point.z - z_diff,
+                            r: 1,
+                        },
+                    ]
+                    .iter()
+                    .any(|candidate_point| {
+                        falls_on_plane(candidate_point, &self.p1, &self.p2)
+                            && candidate_point.distance(p) <= p.r
+                    })
                 }
             }
         }
-
     }
-
-
 
     // FIXME: we need cubes to be non-overlapping!  Need to fix the offsets up
     // Test that this is the case.  Also check whether the actual division is right here...
@@ -4108,8 +4412,7 @@ mod day23 {
             return Vec::new();
         }
 
-
-        vec!(
+        vec![
             // front top left
             Cube {
                 x1: cube.x1,
@@ -4119,7 +4422,6 @@ mod day23 {
                 y2: cube.y1 + y_step,
                 z2: cube.z1 + z_step,
             },
-
             // back top left
             Cube {
                 x1: cube.x1,
@@ -4129,7 +4431,6 @@ mod day23 {
                 y2: cube.y1 + y_step,
                 z2: cube.z2,
             },
-
             // front top right
             Cube {
                 x1: cube.x1 + x_step + 1,
@@ -4139,7 +4440,6 @@ mod day23 {
                 y2: cube.y1 + y_step,
                 z2: cube.z1 + z_step,
             },
-
             // back top right
             Cube {
                 x1: cube.x1 + x_step + 1,
@@ -4149,7 +4449,6 @@ mod day23 {
                 y2: cube.y1 + y_step,
                 z2: cube.z2,
             },
-
             // front bottom left
             Cube {
                 x1: cube.x1,
@@ -4159,7 +4458,6 @@ mod day23 {
                 y2: cube.y2,
                 z2: cube.z1 + z_step,
             },
-
             // back bottom left
             Cube {
                 x1: cube.x1,
@@ -4169,7 +4467,6 @@ mod day23 {
                 y2: cube.y2,
                 z2: cube.z2,
             },
-
             // front bottom right
             Cube {
                 x1: cube.x1 + x_step + 1,
@@ -4179,7 +4476,6 @@ mod day23 {
                 y2: cube.y2,
                 z2: cube.z1 + z_step,
             },
-
             // back bottom right
             Cube {
                 x1: cube.x1 + x_step + 1,
@@ -4189,13 +4485,12 @@ mod day23 {
                 y2: cube.y2,
                 z2: cube.z2,
             },
-        )
+        ]
     }
 
     fn manhattan_distance(x1: i64, y1: i64, z1: i64, x2: i64, y2: i64, z2: i64) -> i64 {
         ((x1 - x2).abs() + (y1 - y2).abs() + (z1 - z2).abs())
     }
-
 
     // This is still getting skipped over:
     // 906: 17125603,40740992,33461246
@@ -4203,11 +4498,20 @@ mod day23 {
     // Best single: Cube { x1: 18374828, y1: 41219173, z1: 34232290, x2: 18374828, y2: 41219173, z2: 34232290 } with 969
 
     pub fn part2() {
+        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt")
+            .map(|s| Nanobot::from_str(&s))
+            .collect();
+        let _world_dim = 300_000_000;
 
-        let nanobots: Vec<Nanobot> = input_lines("input_files/day23.txt").map(|s| Nanobot::from_str(&s)).collect();
-        let world_dim = 300_000_000;
-
-        println!("Test point: {}", nanobots.iter().filter(|n| manhattan_distance(17125603, 40740992, 33461246, n.x, n.y, n.z) <= n.radius).count());
+        println!(
+            "Test point: {}",
+            nanobots
+                .iter()
+                .filter(
+                    |n| manhattan_distance(17125603, 40740992, 33461246, n.x, n.y, n.z) <= n.radius
+                )
+                .count()
+        );
 
         let mut search_queue = LinkedList::new();
 
@@ -4215,11 +4519,13 @@ mod day23 {
         search_queue.push_front(Cube {
             // x1: -world_dim, y1: -world_dim, z1: -world_dim,
             // x2: world_dim, y2: world_dim, z2: world_dim
-            x1: 18000000, y1: 41000000, z1: 34000000,
-            x2: 19000000, y2: 42000000, z2: 35000000
-        }
-        );
-
+            x1: 18000000,
+            y1: 41000000,
+            z1: 34000000,
+            x2: 19000000,
+            y2: 42000000,
+            z2: 35000000,
+        });
 
         let mut iterations = 0;
         while !search_queue.is_empty() {
@@ -4237,7 +4543,12 @@ mod day23 {
                     let mut count = 0;
 
                     for n in &nanobots {
-                        let p = Point3D { x: n.x, y: n.y, z: n.z, r: n.radius };
+                        let p = Point3D {
+                            x: n.x,
+                            y: n.y,
+                            z: n.z,
+                            r: n.radius,
+                        };
 
                         if c.overlaps(&p) {
                             count += 1;
@@ -4267,7 +4578,12 @@ mod day23 {
                             new_searches.push_front(c);
                         }
                     } else {
-                        if c.overlaps(&Point3D { x: 18374828, y: 41219173, z: 34232290, r: 1 }) {
+                        if c.overlaps(&Point3D {
+                            x: 18374828,
+                            y: 41219173,
+                            z: 34232290,
+                            r: 1,
+                        }) {
                             println!("Ignored: {:?} with {}", c, count);
                             println!("THE MONEY ONE ^^^^^^ in iteration {}", iterations);
                         }
@@ -4278,6 +4594,322 @@ mod day23 {
             search_queue = new_searches;
             println!("Best was: {}", best);
             println!("Queue size: {}", search_queue.len());
+        }
+    }
+}
+
+mod day24 {
+    use crate::shared::*;
+
+    #[derive(Eq, PartialEq, Hash, Debug)]
+    enum Team {
+        ImmuneSystem,
+        Infection,
+    }
+
+    #[derive(Eq, PartialEq, Hash, Debug)]
+    enum Attr {
+        Fire,
+        Cold,
+        Slashing,
+        Bludgeoning,
+        Radiation,
+    }
+
+    #[derive(Eq, PartialEq, Hash, Debug)]
+    struct Group {
+        team_type: Team,
+        hp: i64,
+        attack_damage: i64,
+        attack_type: Attr,
+        living_units: i64,
+        initiative: i64,
+        weaknesses: Vec<Attr>,
+        immunities: Vec<Attr>,
+    }
+
+    fn load_groups() -> Vec<Group> {
+        vec![
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 1117,
+                hp: 5042,
+                weaknesses: vec![Attr::Slashing],
+                immunities: vec![Attr::Fire, Attr::Radiation, Attr::Bludgeoning],
+                attack_damage: 44,
+                attack_type: Attr::Fire,
+                initiative: 15,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 292,
+                hp: 2584,
+                attack_damage: 81,
+                attack_type: Attr::Bludgeoning,
+                immunities: vec![],
+                weaknesses: vec![],
+                initiative: 18,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 2299,
+                hp: 8194,
+                attack_damage: 35,
+                attack_type: Attr::Radiation,
+                immunities: vec![],
+                weaknesses: vec![],
+                initiative: 7,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 1646,
+                hp: 6315,
+                weaknesses: vec![Attr::Slashing],
+                immunities: vec![],
+                attack_damage: 37,
+                attack_type: Attr::Slashing,
+                initiative: 14,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 2313,
+                hp: 6792,
+                weaknesses: vec![Attr::Fire, Attr::Radiation],
+                immunities: vec![Attr::Cold],
+                attack_damage: 29,
+                attack_type: Attr::Bludgeoning,
+                initiative: 9,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 2045,
+                hp: 8634,
+                immunities: vec![],
+                weaknesses: vec![Attr::Radiation],
+                attack_damage: 36,
+                attack_type: Attr::Fire,
+                initiative: 13,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 34,
+                hp: 1019,
+                immunities: vec![],
+                weaknesses: vec![Attr::Bludgeoning],
+                attack_damage: 295,
+                attack_type: Attr::Cold,
+                initiative: 6,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 157,
+                hp: 6487,
+                immunities: vec![],
+                weaknesses: vec![Attr::Slashing, Attr::Cold],
+                attack_damage: 362,
+                attack_type: Attr::Radiation,
+                initiative: 3,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 1106,
+                hp: 4504,
+                immunities: vec![],
+                weaknesses: vec![Attr::Cold],
+                attack_damage: 39,
+                attack_type: Attr::Slashing,
+                initiative: 12,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 5092,
+                hp: 8859,
+                immunities: vec![Attr::Cold, Attr::Slashing],
+                weaknesses: vec![],
+                attack_damage: 12,
+                attack_type: Attr::Radiation,
+                initiative: 16,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 3490,
+                hp: 20941,
+                immunities: vec![Attr::Fire],
+                weaknesses: vec![],
+                attack_damage: 9,
+                attack_type: Attr::Bludgeoning,
+                initiative: 5,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 566,
+                hp: 11571,
+                immunities: vec![],
+                weaknesses: vec![Attr::Cold, Attr::Bludgeoning],
+                attack_damage: 40,
+                attack_type: Attr::Bludgeoning,
+                initiative: 10,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 356,
+                hp: 30745,
+                immunities: vec![],
+                weaknesses: vec![Attr::Radiation],
+                attack_damage: 147,
+                attack_type: Attr::Slashing,
+                initiative: 8,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 899,
+                hp: 49131,
+                weaknesses: vec![Attr::Slashing],
+                immunities: vec![Attr::Radiation, Attr::Bludgeoning, Attr::Fire],
+                attack_damage: 93,
+                attack_type: Attr::Cold,
+                initiative: 19,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 1203,
+                hp: 27730,
+                immunities: vec![],
+                weaknesses: vec![Attr::Cold],
+                attack_damage: 43,
+                attack_type: Attr::Slashing,
+                initiative: 4,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 22,
+                hp: 45002,
+                immunities: vec![],
+                weaknesses: vec![Attr::Bludgeoning],
+                attack_damage: 3748,
+                attack_type: Attr::Bludgeoning,
+                initiative: 17,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 3028,
+                hp: 35744,
+                immunities: vec![],
+                weaknesses: vec![Attr::Bludgeoning],
+                attack_damage: 18,
+                attack_type: Attr::Fire,
+                initiative: 11,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 778,
+                hp: 17656,
+                immunities: vec![],
+                weaknesses: vec![Attr::Fire],
+                attack_damage: 35,
+                attack_type: Attr::Bludgeoning,
+                initiative: 2,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 47,
+                hp: 16006,
+                immunities: vec![Attr::Bludgeoning],
+                weaknesses: vec![Attr::Cold, Attr::Radiation],
+                attack_damage: 645,
+                attack_type: Attr::Cold,
+                initiative: 20,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 4431,
+                hp: 13632,
+                weaknesses: vec![Attr::Fire],
+                immunities: vec![Attr::Bludgeoning],
+                attack_damage: 6,
+                attack_type: Attr::Bludgeoning,
+                initiative: 1,
+            },
+        ]
+    }
+
+    impl Group {
+        pub fn effective_power(&self) -> i64 {
+            self.living_units * self.attack_damage
+        }
+
+        pub fn is_alive(&self) -> bool {
+            self.living_units >= 0
+        }
+
+        pub fn damage_to(&self, other_group: &Group) -> i64 {
+            if other_group.immunities.contains(&self.attack_type) {
+                // Can't hurt them
+                return 0;
+            }
+
+            let mut damage = self.effective_power();
+
+            if other_group.weaknesses.contains(&self.attack_type) {
+                // Boom!  Double damage.
+                damage *= 2;
+            }
+
+            damage
+        }
+
+        pub fn record_attack_by(&mut self, other_group: &Group) {
+        }
+    }
+
+    pub fn part1() {
+        let mut groups = load_groups();
+
+        for _fight in (0..100) {
+            // Bring out your dead!
+            groups = groups.into_iter().filter(|g| g.is_alive()).collect();
+            groups.sort_by_key(|g| (-g.effective_power(), -g.initiative));
+
+            // Target selection
+            let mut attacker_to_target: HashMap<&Group, &Group> = HashMap::new();
+            let mut target_to_attacker: HashMap<&Group, &Group> = HashMap::new();
+
+            for group in &groups {
+                let candidate_targets = groups
+                    .iter()
+                    .filter(|other_group| {
+                        other_group.team_type != group.team_type
+                            && !target_to_attacker.contains_key(other_group)
+                    });
+
+                if candidate_targets.clone().count() == 0 {
+                    // Can't attack
+                    println!("No possible targets!");
+                    continue;
+                }
+
+                let best_target = candidate_targets.max_by_key(|target| (group.damage_to(target), target.effective_power(), target.initiative)).unwrap();
+
+                if group.damage_to(best_target) > 0 {
+                    // Attack it!
+                    attacker_to_target.insert(group, best_target);
+                    target_to_attacker.insert(best_target, group);
+                }
+            }
+
+            // Attacking phase
+            let mut attackers: Vec<&Group> = attacker_to_target.keys().map(|&k| k).collect();
+            attackers.sort_by_key(|g| - g.initiative);
+
+            for attacker in attackers {
+                let target = attacker_to_target.get(attacker).unwrap();
+
+                for mut group in groups.iter_mut() {
+                    if *group == **target {
+                        group.record_attack_by(attacker);
+                    }
+                }
+            }
         }
     }
 }
@@ -4355,7 +4987,8 @@ fn main() {
         day22::part2();
 
         day23::part1();
+        day23::part2();
     }
 
-    day23::part2();
+    day24::part1();
 }
