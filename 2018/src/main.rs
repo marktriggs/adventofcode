@@ -11,6 +11,7 @@ mod shared {
     pub use regex::Regex;
 
     pub use std::cmp::{self, Ordering};
+    pub use std::collections::BTreeMap;
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
@@ -4600,14 +4601,15 @@ mod day23 {
 
 mod day24 {
     use crate::shared::*;
+    use std::cell::RefCell;
 
-    #[derive(Eq, PartialEq, Hash, Debug)]
+    #[derive(Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
     enum Team {
         ImmuneSystem,
         Infection,
     }
 
-    #[derive(Eq, PartialEq, Hash, Debug)]
+    #[derive(Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
     enum Attr {
         Fire,
         Cold,
@@ -4616,7 +4618,7 @@ mod day24 {
         Radiation,
     }
 
-    #[derive(Eq, PartialEq, Hash, Debug)]
+    #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
     struct Group {
         team_type: Team,
         hp: i64,
@@ -4626,6 +4628,51 @@ mod day24 {
         initiative: i64,
         weaknesses: Vec<Attr>,
         immunities: Vec<Attr>,
+    }
+
+    fn load_sample_groups() -> Vec<Group> {
+        vec![
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 17,
+                hp: 5390,
+                immunities: vec![],
+                weaknesses: vec![Attr::Radiation, Attr::Bludgeoning],
+                attack_type: Attr::Fire,
+                attack_damage: 4507,
+                initiative: 2,
+            },
+            Group {
+                team_type: Team::ImmuneSystem,
+                living_units: 989,
+                hp: 1274,
+                immunities: vec![Attr::Fire],
+                weaknesses: vec![Attr::Slashing, Attr::Bludgeoning],
+                attack_type: Attr::Slashing,
+                attack_damage: 25,
+                initiative: 3,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 801,
+                hp: 4706,
+                immunities: vec![],
+                weaknesses: vec![Attr::Radiation],
+                attack_type: Attr::Bludgeoning,
+                attack_damage: 116,
+                initiative: 1,
+            },
+            Group {
+                team_type: Team::Infection,
+                living_units: 4485,
+                hp: 2961,
+                immunities: vec![Attr::Radiation],
+                weaknesses: vec![Attr::Fire, Attr::Cold],
+                attack_type: Attr::Slashing,
+                attack_damage: 12,
+                initiative: 4,
+            },
+        ]
     }
 
     fn load_groups() -> Vec<Group> {
@@ -4839,7 +4886,7 @@ mod day24 {
         }
 
         pub fn is_alive(&self) -> bool {
-            self.living_units >= 0
+            self.living_units > 0
         }
 
         pub fn damage_to(&self, other_group: &Group) -> i64 {
@@ -4857,40 +4904,68 @@ mod day24 {
 
             damage
         }
-
-        pub fn record_attack_by(&mut self, other_group: &Group) {
-        }
     }
 
+    // Well, this got out of hand quickly.  Maybe I should just switch back to using indexes...
     pub fn part1() {
-        let mut groups = load_groups();
+        let mut groups: Vec<RefCell<Group>> =
+            load_groups().into_iter().map(|g| RefCell::new(g)).collect();
 
-        for _fight in (0..100) {
+        loop {
             // Bring out your dead!
-            groups = groups.into_iter().filter(|g| g.is_alive()).collect();
-            groups.sort_by_key(|g| (-g.effective_power(), -g.initiative));
+            groups = groups
+                .into_iter()
+                .filter(|g| g.borrow().is_alive())
+                .collect();
+            groups.sort_by_key(|g| (-g.borrow().effective_power(), -g.borrow().initiative));
+
+            if !groups
+                .iter()
+                .map(RefCell::borrow)
+                .any(|g| g.team_type == Team::Infection)
+                || !groups
+                    .iter()
+                    .map(RefCell::borrow)
+                    .any(|g| g.team_type == Team::ImmuneSystem)
+            {
+                // Game over
+                println!(
+                    "Winning team {:?} has {} units",
+                    groups[0].borrow().team_type,
+                    groups.iter().map(|g| g.borrow().living_units).sum::<i64>()
+                );
+
+                break;
+            }
 
             // Target selection
-            let mut attacker_to_target: HashMap<&Group, &Group> = HashMap::new();
-            let mut target_to_attacker: HashMap<&Group, &Group> = HashMap::new();
+            let mut attacker_to_target: BTreeMap<&RefCell<Group>, &RefCell<Group>> =
+                BTreeMap::new();
+            let mut target_to_attacker: BTreeMap<&RefCell<Group>, &RefCell<Group>> =
+                BTreeMap::new();
 
             for group in &groups {
-                let candidate_targets = groups
-                    .iter()
-                    .filter(|other_group| {
-                        other_group.team_type != group.team_type
-                            && !target_to_attacker.contains_key(other_group)
-                    });
+                let candidate_targets = groups.iter().filter(|other_group| {
+                    other_group.borrow().team_type != group.borrow().team_type
+                        && !target_to_attacker.contains_key(other_group)
+                });
 
                 if candidate_targets.clone().count() == 0 {
                     // Can't attack
-                    println!("No possible targets!");
                     continue;
                 }
 
-                let best_target = candidate_targets.max_by_key(|target| (group.damage_to(target), target.effective_power(), target.initiative)).unwrap();
+                let best_target = candidate_targets
+                    .max_by_key(|target| {
+                        (
+                            group.borrow().damage_to(&target.borrow()),
+                            target.borrow().effective_power(),
+                            target.borrow().initiative,
+                        )
+                    })
+                    .unwrap();
 
-                if group.damage_to(best_target) > 0 {
+                if group.borrow().damage_to(&best_target.borrow()) > 0 {
                     // Attack it!
                     attacker_to_target.insert(group, best_target);
                     target_to_attacker.insert(best_target, group);
@@ -4898,19 +4973,183 @@ mod day24 {
             }
 
             // Attacking phase
-            let mut attackers: Vec<&Group> = attacker_to_target.keys().map(|&k| k).collect();
-            attackers.sort_by_key(|g| - g.initiative);
+            let mut attackers: Vec<&RefCell<Group>> =
+                attacker_to_target.keys().map(|&k| k).collect();
+            attackers.sort_by_key(|g| -g.borrow().initiative);
 
             for attacker in attackers {
-                let target = attacker_to_target.get(attacker).unwrap();
+                if !attacker.borrow().is_alive() {
+                    continue;
+                }
 
-                for mut group in groups.iter_mut() {
-                    if *group == **target {
-                        group.record_attack_by(attacker);
+                let target = attacker_to_target.get(&attacker).unwrap();
+
+                if !target.borrow().is_alive() {
+                    continue;
+                }
+
+                let damage = attacker.borrow().damage_to(&target.borrow());
+
+                let mut target = target.borrow_mut();
+                target.living_units -= (damage / target.hp);
+            }
+        }
+    }
+
+    pub fn part2() {
+        for boost in 0..100 {
+            let mut groups: Vec<RefCell<Group>> =
+                load_groups().into_iter().map(|g| RefCell::new(g)).collect();
+
+            // Apply part 2 boost
+            for g in &groups {
+                if g.borrow().team_type == Team::ImmuneSystem {
+                    g.borrow_mut().attack_damage += boost;
+                }
+            }
+
+            loop {
+                // Bring out your dead!
+                groups = groups
+                    .into_iter()
+                    .filter(|g| g.borrow().is_alive())
+                    .collect();
+                groups.sort_by_key(|g| (-g.borrow().effective_power(), -g.borrow().initiative));
+
+                if !groups
+                    .iter()
+                    .map(RefCell::borrow)
+                    .any(|g| g.team_type == Team::Infection)
+                    || !groups
+                        .iter()
+                        .map(RefCell::borrow)
+                        .any(|g| g.team_type == Team::ImmuneSystem)
+                {
+                    // Game over
+                    println!(
+                        "Winning team {:?} has {} units with boost {}",
+                        groups[0].borrow().team_type,
+                        groups.iter().map(|g| g.borrow().living_units).sum::<i64>(),
+                        boost
+                    );
+
+                    break;
+                }
+
+                // Target selection
+                let mut attacker_to_target: BTreeMap<&RefCell<Group>, &RefCell<Group>> =
+                    BTreeMap::new();
+                let mut target_to_attacker: BTreeMap<&RefCell<Group>, &RefCell<Group>> =
+                    BTreeMap::new();
+
+                for group in &groups {
+                    let candidate_targets = groups.iter().filter(|other_group| {
+                        other_group.borrow().team_type != group.borrow().team_type
+                            && !target_to_attacker.contains_key(other_group)
+                    });
+
+                    if candidate_targets.clone().count() == 0 {
+                        // Can't attack
+                        continue;
+                    }
+
+                    let best_target = candidate_targets
+                        .max_by_key(|target| {
+                            (
+                                group.borrow().damage_to(&target.borrow()),
+                                target.borrow().effective_power(),
+                                target.borrow().initiative,
+                            )
+                        })
+                        .unwrap();
+
+                    if group.borrow().damage_to(&best_target.borrow()) > 0 {
+                        // Attack it!
+                        attacker_to_target.insert(group, best_target);
+                        target_to_attacker.insert(best_target, group);
+                    }
+                }
+
+                if attacker_to_target.len() == 0 {
+                    println!("Nobody could attack!");
+                    break;
+                }
+
+
+                // Attacking phase
+                let mut attackers: Vec<&RefCell<Group>> =
+                    attacker_to_target.keys().map(|&k| k).collect();
+                attackers.sort_by_key(|g| -g.borrow().initiative);
+
+                for attacker in attackers {
+                    if !attacker.borrow().is_alive() {
+                        continue;
+                    }
+
+                    let target = attacker_to_target.get(&attacker).unwrap();
+
+                    if !target.borrow().is_alive() {
+                        continue;
+                    }
+
+                    let damage = attacker.borrow().damage_to(&target.borrow());
+
+                    let mut target = target.borrow_mut();
+                    target.living_units -= (damage / target.hp);
+                }
+            }
+        }
+    }
+
+}
+
+mod day25 {
+    use crate::shared::*;
+
+    struct Point4D (i64, i64, i64, i64);
+
+    impl Point4D {
+        pub fn from_str(s: &str) -> Point4D {
+            let dims: Vec<i64> = s.split(",").map(|c| c.parse::<i64>().unwrap()).collect();
+            Point4D(dims[0], dims[1], dims[2], dims[3])
+        }
+    }
+
+    fn manhattan_distance(p1: &Point4D, p2: &Point4D) -> i64 {
+        (p1.0 - p2.0).abs() + (p1.1 - p2.1).abs() + (p1.2 - p2.2).abs() + (p1.3 - p2.3).abs()
+    }
+
+
+    pub fn part1() {
+        let points: Vec<Point4D> = input_lines("input_files/day25.txt").map(|s| Point4D::from_str(&s)).collect();
+
+        let mut groups = vec![0; points.len()];
+
+        // All points in their own constellation initially
+        for i in 0..points.len() {
+            groups[i] = i;
+        }
+
+        for i in 0..points.len() {
+            for j in (i+1)..points.len() {
+                if manhattan_distance(&points[i], &points[j]) <= 3 {
+                    // Merge the groups
+                    let old_group = groups[i];
+                    let new_group = groups[j];
+
+                    for i in 0..groups.len() {
+                        if groups[i] == old_group {
+                            groups[i] = new_group;
+                        }
                     }
                 }
             }
         }
+
+        groups.sort();
+        groups.dedup();
+
+        println!("Unique constellations: {}", groups.len());
     }
 }
 
@@ -4988,7 +5227,10 @@ fn main() {
 
         day23::part1();
         day23::part2();
+
+        day24::part1();
+        day24::part2();
     }
 
-    day24::part1();
+    day25::part1();
 }
