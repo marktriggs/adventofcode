@@ -74,7 +74,7 @@ mod day1 {
             let fuel = (remainder / 3) - 2;
 
             if fuel <= 0 {
-                break
+                break;
             }
 
             total_fuel += fuel;
@@ -94,7 +94,6 @@ mod day1 {
     }
 }
 
-
 mod day2 {
     use crate::shared::*;
 
@@ -111,8 +110,12 @@ mod day2 {
             let target_addr = state[pc + 3] as usize;
 
             match state[pc] {
-                1 => { state[target_addr] = state[op1_addr] + state[op2_addr]; },
-                2 => { state[target_addr] = state[op1_addr] * state[op2_addr]; },
+                1 => {
+                    state[target_addr] = state[op1_addr] + state[op2_addr];
+                }
+                2 => {
+                    state[target_addr] = state[op1_addr] * state[op2_addr];
+                }
                 _ => panic!("invalid input"),
             };
 
@@ -123,25 +126,34 @@ mod day2 {
     }
 
     pub fn part1() {
-        println!("{}", intcode_eval("1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,6,1,19,1,5,19,23,1,13,23,27,1,6,27,31,2,31,\
-                                     13,35,1,9,35,39,2,39,13,43,1,43,10,47,1,47,13,51,2,13,51,55,1,55,9,59,1,59,5,\
-                                     63,1,6,63,67,1,13,67,71,2,71,10,75,1,6,75,79,1,79,10,83,1,5,83,87,2,10,87,91,\
-                                     1,6,91,95,1,9,95,99,1,99,9,103,2,103,10,107,1,5,107,111,1,9,111,115,2,13,115,\
-                                     119,1,119,10,123,1,123,10,127,2,127,10,131,1,5,131,135,1,10,135,139,1,139,2,\
-                                     143,1,6,143,0,99,2,14,0,0",
-                                    12, 2));
+        println!(
+            "{}",
+            intcode_eval(
+                "1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,6,1,19,1,5,19,23,1,13,23,27,1,6,27,31,2,31,\
+                 13,35,1,9,35,39,2,39,13,43,1,43,10,47,1,47,13,51,2,13,51,55,1,55,9,59,1,59,5,\
+                 63,1,6,63,67,1,13,67,71,2,71,10,75,1,6,75,79,1,79,10,83,1,5,83,87,2,10,87,91,\
+                 1,6,91,95,1,9,95,99,1,99,9,103,2,103,10,107,1,5,107,111,1,9,111,115,2,13,115,\
+                 119,1,119,10,123,1,123,10,127,2,127,10,131,1,5,131,135,1,10,135,139,1,139,2,\
+                 143,1,6,143,0,99,2,14,0,0",
+                12,
+                2
+            )
+        );
     }
 
     pub fn part2() {
         for noun in 0..100 {
             for verb in 0..100 {
-                let result = intcode_eval("1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,6,1,19,1,5,19,23,1,13,23,27,1,6,27,31,2,31,\
-                                           13,35,1,9,35,39,2,39,13,43,1,43,10,47,1,47,13,51,2,13,51,55,1,55,9,59,1,59,5,\
-                                           63,1,6,63,67,1,13,67,71,2,71,10,75,1,6,75,79,1,79,10,83,1,5,83,87,2,10,87,91,\
-                                           1,6,91,95,1,9,95,99,1,99,9,103,2,103,10,107,1,5,107,111,1,9,111,115,2,13,115,\
-                                           119,1,119,10,123,1,123,10,127,2,127,10,131,1,5,131,135,1,10,135,139,1,139,2,\
-                                           143,1,6,143,0,99,2,14,0,0",
-                                          noun, verb);
+                let result = intcode_eval(
+                    "1,0,0,3,1,1,2,3,1,3,4,3,1,5,0,3,2,6,1,19,1,5,19,23,1,13,23,27,1,6,27,31,2,31,\
+                     13,35,1,9,35,39,2,39,13,43,1,43,10,47,1,47,13,51,2,13,51,55,1,55,9,59,1,59,5,\
+                     63,1,6,63,67,1,13,67,71,2,71,10,75,1,6,75,79,1,79,10,83,1,5,83,87,2,10,87,91,\
+                     1,6,91,95,1,9,95,99,1,99,9,103,2,103,10,107,1,5,107,111,1,9,111,115,2,13,115,\
+                     119,1,119,10,123,1,123,10,127,2,127,10,131,1,5,131,135,1,10,135,139,1,139,2,\
+                     143,1,6,143,0,99,2,14,0,0",
+                    noun,
+                    verb,
+                );
 
                 if result == 19690720 {
                     dbg!(100 * noun + verb);
@@ -151,7 +163,6 @@ mod day2 {
         }
     }
 }
-
 
 mod day3 {
     use crate::shared::*;
@@ -170,32 +181,39 @@ mod day3 {
 
     impl Point {
         fn calculate_offsets(pos: i64, offset: i64) -> Vec<i64> {
-            (0..(offset.abs() + 1)).map(|n| pos + (n * if offset < 0 { -1 } else { 1 })).collect()
+            (0..(offset.abs() + 1))
+                .map(|n| pos + (n * if offset < 0 { -1 } else { 1 }))
+                .collect()
         }
 
         fn trace_path(&self, m: &Move) -> Vec<Point> {
             match m {
-                Move::X(magnitude) => {
-                    Point::calculate_offsets(self.x, *magnitude).iter().map(|o| Point { x: *o, y: self.y }).collect()
-                },
-                Move::Y(magnitude) => {
-                    Point::calculate_offsets(self.y, *magnitude).iter().map(|o| Point { x: self.x, y: *o }).collect()
-                }
+                Move::X(magnitude) => Point::calculate_offsets(self.x, *magnitude)
+                    .iter()
+                    .map(|o| Point { x: *o, y: self.y })
+                    .collect(),
+                Move::Y(magnitude) => Point::calculate_offsets(self.y, *magnitude)
+                    .iter()
+                    .map(|o| Point { x: self.x, y: *o })
+                    .collect(),
             }
         }
     }
 
     fn parse_wire(input: &str) -> Vec<Move> {
-        input.split(",").map(|move_desc| {
-            let magnitude: i64 = move_desc[1..move_desc.len()].parse().unwrap();
-            match &move_desc[0..1] {
-                "U" => {Move::Y(magnitude)},
-                "D" => {Move::Y(-magnitude)},
-                "L" => {Move::X(-magnitude)},
-                "R" => {Move::X(magnitude)},
-                _ => panic!("Parse error: {}", move_desc),
-            }
-        }).collect()
+        input
+            .split(",")
+            .map(|move_desc| {
+                let magnitude: i64 = move_desc[1..move_desc.len()].parse().unwrap();
+                match &move_desc[0..1] {
+                    "U" => Move::Y(magnitude),
+                    "D" => Move::Y(-magnitude),
+                    "L" => Move::X(-magnitude),
+                    "R" => Move::X(magnitude),
+                    _ => panic!("Parse error: {}", move_desc),
+                }
+            })
+            .collect()
     }
 
     fn position_costs(moves: &Vec<Move>) -> HashMap<Point, usize> {
@@ -232,7 +250,11 @@ mod day3 {
 
         let intersections = wire1_points.intersection(&wire2_points);
 
-        dbg!(&intersections.filter(|p| p.x != 0 && p.y != 0).map(|point| point.x.abs() + point.y.abs()).min().unwrap());
+        dbg!(&intersections
+            .filter(|p| p.x != 0 && p.y != 0)
+            .map(|point| point.x.abs() + point.y.abs())
+            .min()
+            .unwrap());
     }
 
     pub fn part2() {
@@ -247,12 +269,16 @@ mod day3 {
         let wire1_points = wire1_costs.keys().cloned().collect::<HashSet<Point>>();
         let wire2_points = wire2_costs.keys().cloned().collect::<HashSet<Point>>();
 
-        let intersections = wire1_points.intersection(&wire2_points).filter(|p| p.x != 0 && p.y != 0);
+        let intersections = wire1_points
+            .intersection(&wire2_points)
+            .filter(|p| p.x != 0 && p.y != 0);
 
-        dbg!(intersections.map(|point| wire1_costs.get(&point).unwrap() + wire2_costs.get(&point).unwrap()).min().unwrap());
+        dbg!(intersections
+            .map(|point| wire1_costs.get(&point).unwrap() + wire2_costs.get(&point).unwrap())
+            .min()
+            .unwrap());
     }
 }
-
 
 mod day_n {
     use crate::shared::*;
@@ -273,4 +299,3 @@ fn main() {
     day3::part1();
     day3::part2();
 }
-
