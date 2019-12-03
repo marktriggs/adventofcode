@@ -153,6 +153,106 @@ mod day2 {
 }
 
 
+mod day3 {
+    use crate::shared::*;
+
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+    struct Point {
+        x: i64,
+        y: i64,
+    }
+
+    #[derive(Debug)]
+    enum Move {
+        X(i64),
+        Y(i64),
+    }
+
+    impl Point {
+        fn calculate_offsets(pos: i64, offset: i64) -> Vec<i64> {
+            (0..(offset.abs() + 1)).map(|n| pos + (n * if offset < 0 { -1 } else { 1 })).collect()
+        }
+
+        fn trace_path(&self, m: &Move) -> Vec<Point> {
+            match m {
+                Move::X(magnitude) => {
+                    Point::calculate_offsets(self.x, *magnitude).iter().map(|o| Point { x: *o, y: self.y }).collect()
+                },
+                Move::Y(magnitude) => {
+                    Point::calculate_offsets(self.y, *magnitude).iter().map(|o| Point { x: self.x, y: *o }).collect()
+                }
+            }
+        }
+    }
+
+    fn parse_wire(input: &str) -> Vec<Move> {
+        input.split(",").map(|move_desc| {
+            let magnitude: i64 = move_desc[1..move_desc.len()].parse().unwrap();
+            match &move_desc[0..1] {
+                "U" => {Move::Y(magnitude)},
+                "D" => {Move::Y(-magnitude)},
+                "L" => {Move::X(-magnitude)},
+                "R" => {Move::X(magnitude)},
+                _ => panic!("Parse error: {}", move_desc),
+            }
+        }).collect()
+    }
+
+    fn position_costs(moves: &Vec<Move>) -> HashMap<Point, usize> {
+        let mut pos = Point { x: 0, y: 0 };
+        let mut cost: usize = 0;
+        let mut result = HashMap::new();
+
+        for next_move in moves {
+            let path = pos.trace_path(next_move);
+
+            for p in &path {
+                result.entry(p.clone()).or_insert(cost);
+                cost += 1;
+            }
+
+            cost -= 1;
+            pos = path.last().unwrap().clone();
+        }
+
+        result
+    }
+
+    pub fn part1() {
+        let input: Vec<String> = input_lines("input_files/day3.txt").collect();
+
+        let wire1 = parse_wire(&input[0]);
+        let wire2 = parse_wire(&input[1]);
+
+        let wire1_positions = position_costs(&wire1);
+        let wire2_positions = position_costs(&wire2);
+
+        let wire1_points = wire1_positions.keys().cloned().collect::<HashSet<Point>>();
+        let wire2_points = wire2_positions.keys().cloned().collect::<HashSet<Point>>();
+
+        let intersections = wire1_points.intersection(&wire2_points);
+
+        dbg!(&intersections.filter(|p| p.x != 0 && p.y != 0).map(|point| point.x.abs() + point.y.abs()).min().unwrap());
+    }
+
+    pub fn part2() {
+        let input: Vec<String> = input_lines("input_files/day3.txt").collect();
+
+        let wire1 = parse_wire(&input[0]);
+        let wire2 = parse_wire(&input[1]);
+
+        let wire1_costs = position_costs(&wire1);
+        let wire2_costs = position_costs(&wire2);
+
+        let wire1_points = wire1_costs.keys().cloned().collect::<HashSet<Point>>();
+        let wire2_points = wire2_costs.keys().cloned().collect::<HashSet<Point>>();
+
+        let intersections = wire1_points.intersection(&wire2_points).filter(|p| p.x != 0 && p.y != 0);
+
+        dbg!(intersections.map(|point| wire1_costs.get(&point).unwrap() + wire2_costs.get(&point).unwrap()).min().unwrap());
+    }
+}
+
 
 mod day_n {
     use crate::shared::*;
@@ -169,5 +269,8 @@ fn main() {
         day2::part1();
         day2::part2();
     }
+
+    day3::part1();
+    day3::part2();
 }
 
