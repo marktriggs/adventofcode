@@ -16,7 +16,7 @@ mod shared {
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
     pub use std::fmt::{self, Display};
-    pub use std::fs::File;
+    pub use std::fs::{self, File};
     pub use std::io::{self, BufRead, BufReader, Write};
     pub use std::str;
 
@@ -42,6 +42,10 @@ mod shared {
             "{}",
             replace_regex.replace_all("hello hello hello", "goodbye")
         );
+    }
+
+    pub fn read_file(file: &str) -> String {
+        fs::read_to_string(file).unwrap().trim().to_owned()
     }
 
     pub fn input_lines(file: &str) -> impl Iterator<Item = String> {
@@ -280,6 +284,229 @@ mod day3 {
     }
 }
 
+mod day4 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let range_start = 128392;
+        let range_end = 643281;
+        let mut count = 0;
+
+        for candidate in range_start..=range_end {
+            let chars: Vec<char> = candidate.to_string().chars().collect();
+
+            let mut ok = false;
+
+            for i in 0..chars.len() - 1 {
+                if chars[i] > chars[i + 1] {
+                    ok = false;
+                    break;
+                }
+
+                if chars[i] == chars[i + 1] {
+                    ok = true;
+                }
+            }
+
+            if ok {
+                count += 1;
+            }
+        }
+
+        dbg!(count);
+    }
+
+    pub fn part2() {
+        let range_start = 128392;
+        let range_end = 643281;
+        let mut count = 0;
+
+        for candidate in range_start..=range_end {
+            let mut chars: Vec<char> = candidate.to_string().chars().collect();
+
+            // padding so we don't have to think about boundary cases
+            chars.insert(0, ' ');
+            chars.push(' ');
+
+            let mut got_two = false;
+            let mut order_ok = true;
+
+            for i in 1..chars.len() - 2 {
+                // instant disqualify
+                if chars[i] > chars[i + 1] {
+                    order_ok = false;
+                    break;
+                }
+
+                // Run of exactly two
+                if chars[i] == chars[i + 1]
+                    && chars[i - 1] != chars[i]
+                    && chars[i + 1] != chars[i + 2]
+                {
+                    got_two = true;
+                }
+            }
+
+            if order_ok && got_two {
+                count += 1;
+            }
+        }
+
+        dbg!(count);
+    }
+}
+
+
+mod day5 {
+    use crate::shared::*;
+
+    struct IntCode {
+        pc: usize,
+        memory: Vec<i64>,
+        terminated: bool,
+
+        input: Vec<i64>,
+        output: Vec<i64>,
+    }
+
+    impl IntCode {
+        pub fn set_memory(&mut self, addr: usize, value: i64) {
+            self.memory[addr] = value;
+        }
+
+        pub fn read_relative(&self, offset: usize) -> i64 {
+            self.read_absolute((self.pc + offset) as i64, ParameterMode::Position)
+        }
+
+        pub fn read_absolute(&self, addr: i64, mode: ParameterMode) -> i64 {
+            match mode {
+                ParameterMode::Position => {
+                    assert!(addr >= 0);
+                    self.memory[addr as usize]
+                },
+                ParameterMode::Immediate => {
+                    addr
+                }
+            }
+        }
+
+        fn next_instruction(&self) -> Box<dyn Instruction> {
+            let instruction = self.memory[self.pc];
+
+            // Right two digits
+            let opcode = instruction % 100;
+
+            let parameter_modes = vec!(
+                (instruction / 100) % 10,
+                (instruction / 1000) % 10,
+                (instruction / 10000) % 10,
+            );
+
+            let parameter_modes = parameter_modes.iter().map(|&n| if n == 0 { ParameterMode::Position } else { ParameterMode::Immediate }).collect();
+
+            match opcode {
+                1 => Box::new(Addition { parameter_modes }),
+                2 => Box::new(Multiplication { parameter_modes }),
+                3 => Box::new(Input {}),
+                4 => Box::new(Output { parameter_modes }),
+                99 => Box::new(Terminate {}),
+                _ => panic!("Invalid instruction: {}", &self.memory[self.pc]),
+            }
+        }
+
+        pub fn evaluate(&mut self) {
+            while !self.terminated {
+                let instruction = self.next_instruction();
+                instruction.apply(self);
+            }
+        }
+    }
+
+    trait Instruction {
+        fn apply(&self, intcode: &mut IntCode);
+    }
+
+    #[derive(Copy, Clone)]
+    enum ParameterMode {
+        Position,
+        Immediate,
+    }
+
+    struct Addition { parameter_modes: Vec<ParameterMode> }
+    struct Multiplication { parameter_modes: Vec<ParameterMode> }
+    struct Terminate {}
+    struct Input {}
+    struct Output { parameter_modes: Vec<ParameterMode> }
+
+    impl Instruction for Addition {
+        fn apply(&self, intcode: &mut IntCode) {
+            let op1_addr = intcode.read_relative(1);
+            let op2_addr = intcode.read_relative(2);
+            let target_addr = intcode.read_relative(3);
+
+            intcode.set_memory(target_addr as usize,
+                               intcode.read_absolute(op1_addr, self.parameter_modes[0]) +
+                               intcode.read_absolute(op2_addr, self.parameter_modes[1]));
+            intcode.pc += 4;
+        }
+    }
+
+    impl Instruction for Multiplication {
+        fn apply(&self, intcode: &mut IntCode) {
+            let op1_addr = intcode.read_relative(1);
+            let op2_addr = intcode.read_relative(2);
+            let target_addr = intcode.read_relative(3);
+
+            intcode.set_memory(target_addr as usize,
+                               intcode.read_absolute(op1_addr, self.parameter_modes[0]) *
+                               intcode.read_absolute(op2_addr, self.parameter_modes[1]));
+            intcode.pc += 4;
+        }
+    }
+
+    impl Instruction for Terminate {
+        fn apply(&self, intcode: &mut IntCode) {
+            intcode.terminated = true;
+            intcode.pc += 1;
+        }
+    }
+
+    impl Instruction for Input {
+        fn apply(&self, intcode: &mut IntCode) {
+            let value = intcode.input.pop().unwrap();
+            let target_addr = intcode.read_relative(1);
+            intcode.set_memory(target_addr as usize, value);
+            intcode.pc += 2;
+        }
+    }
+
+    impl Instruction for Output {
+        fn apply(&self, intcode: &mut IntCode) {
+            let source_addr = intcode.read_relative(1);
+            intcode.output.push(intcode.read_absolute(source_addr, self.parameter_modes[0]));
+            intcode.pc += 2;
+        }
+    }
+
+
+    pub fn part1() {
+        let code = read_file("input_files/day5.txt");
+
+        let mut intcode = IntCode {
+            memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
+            pc: 0,
+            terminated: false,
+            input: vec!(1),
+            output: Vec::new(),
+        };
+
+        intcode.evaluate();
+        dbg!(intcode.output);
+    }
+
+    pub fn part2() {}
+}
+
 mod day_n {
     use crate::shared::*;
 
@@ -294,8 +521,13 @@ fn main() {
 
         day2::part1();
         day2::part2();
+
+        day3::part1();
+        day3::part2();
+
+        day4::part1();
+        day4::part2();
     }
 
-    day3::part1();
-    day3::part2();
+    day5::part1();
 }
