@@ -374,10 +374,13 @@ mod day5 {
             self.memory[addr] = value;
         }
 
+        // Read a value relative to the program counter
         pub fn read_relative(&self, offset: usize) -> i64 {
             self.read_absolute((self.pc + offset) as i64, ParameterMode::Position)
         }
 
+        // Read a value from an address (Position mode) or just return addr
+        // (Immediate mode)
         pub fn read_absolute(&self, addr: i64, mode: ParameterMode) -> i64 {
             match mode {
                 ParameterMode::Position => {
@@ -409,6 +412,10 @@ mod day5 {
                 2 => Box::new(Multiplication { parameter_modes }),
                 3 => Box::new(Input {}),
                 4 => Box::new(Output { parameter_modes }),
+                5 => Box::new(JumpIfTrue { parameter_modes }),
+                6 => Box::new(JumpIfFalse { parameter_modes }),
+                7 => Box::new(LessThan { parameter_modes }),
+                8 => Box::new(Equals { parameter_modes }),
                 99 => Box::new(Terminate {}),
                 _ => panic!("Invalid instruction: {}", &self.memory[self.pc]),
             }
@@ -437,6 +444,12 @@ mod day5 {
     struct Terminate {}
     struct Input {}
     struct Output { parameter_modes: Vec<ParameterMode> }
+
+    // Part 2 extras
+    struct JumpIfTrue { parameter_modes: Vec<ParameterMode> }
+    struct JumpIfFalse { parameter_modes: Vec<ParameterMode> }
+    struct LessThan { parameter_modes: Vec<ParameterMode> }
+    struct Equals { parameter_modes: Vec<ParameterMode> }
 
     impl Instruction for Addition {
         fn apply(&self, intcode: &mut IntCode) {
@@ -488,6 +501,62 @@ mod day5 {
         }
     }
 
+    impl Instruction for JumpIfTrue {
+        fn apply(&self, intcode: &mut IntCode) {
+            let test = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
+            let jump_target = intcode.read_relative(2);
+
+            if test != 0 {
+                intcode.pc = intcode.read_absolute(jump_target, self.parameter_modes[1]) as usize;
+            } else {
+                intcode.pc += 3;
+            }
+        }
+    }
+
+    impl Instruction for JumpIfFalse {
+        fn apply(&self, intcode: &mut IntCode) {
+            let test = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
+            let jump_target = intcode.read_relative(2);
+
+            if test == 0 {
+                intcode.pc = intcode.read_absolute(jump_target, self.parameter_modes[1]) as usize;
+            } else {
+                intcode.pc += 3;
+            }
+        }
+    }
+
+    impl Instruction for LessThan {
+        fn apply(&self, intcode: &mut IntCode) {
+            let a = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
+            let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
+
+            if a < b {
+                intcode.set_memory(intcode.read_relative(3) as usize, 1);
+            } else {
+                intcode.set_memory(intcode.read_relative(3) as usize, 0);
+            }
+
+            intcode.pc += 4;
+        }
+    }
+
+    impl Instruction for Equals {
+        fn apply(&self, intcode: &mut IntCode) {
+            let a = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
+            let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
+
+            if a == b {
+                intcode.set_memory(intcode.read_relative(3) as usize, 1);
+            } else {
+                intcode.set_memory(intcode.read_relative(3) as usize, 0);
+            }
+
+            intcode.pc += 4;
+        }
+    }
+
 
     pub fn part1() {
         let code = read_file("input_files/day5.txt");
@@ -504,7 +573,20 @@ mod day5 {
         dbg!(intcode.output);
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let code = read_file("input_files/day5.txt");
+
+        let mut intcode = IntCode {
+            memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
+            pc: 0,
+            terminated: false,
+            input: vec!(5),
+            output: Vec::new(),
+        };
+
+        intcode.evaluate();
+        dbg!(intcode.output);
+    }
 }
 
 mod day_n {
@@ -530,4 +612,5 @@ fn main() {
     }
 
     day5::part1();
+    day5::part2();
 }
