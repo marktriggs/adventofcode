@@ -54,7 +54,7 @@ mod shared {
     }
 
     fn sample_input(input: &str) -> Vec<String> {
-        input.trim().split("\n").map(str::to_owned).collect()
+        input.trim().split('\n').map(str::to_owned).collect()
     }
 }
 
@@ -91,7 +91,7 @@ mod day1 {
     pub fn part2() {
         let result: i64 = input_lines("input_files/day1.txt")
             .map(|line| line.parse::<i64>().unwrap())
-            .map(|mass| cumulative_mass(mass))
+            .map(cumulative_mass)
             .sum();
 
         dbg!(result);
@@ -102,7 +102,7 @@ mod day2 {
     use crate::shared::*;
 
     fn intcode_eval(code: &str, noun: i64, verb: i64) -> i64 {
-        let mut state: Vec<i64> = code.split(",").map(|s| s.parse().unwrap()).collect();
+        let mut state: Vec<i64> = code.split(',').map(|s| s.parse().unwrap()).collect();
         let mut pc = 0;
 
         state[1] = noun;
@@ -185,7 +185,7 @@ mod day3 {
 
     impl Point {
         fn calculate_offsets(pos: i64, offset: i64) -> Vec<i64> {
-            (0..(offset.abs() + 1))
+            (0..=offset.abs())
                 .map(|n| pos + (n * if offset < 0 { -1 } else { 1 }))
                 .collect()
         }
@@ -206,7 +206,7 @@ mod day3 {
 
     fn parse_wire(input: &str) -> Vec<Move> {
         input
-            .split(",")
+            .split(',')
             .map(|move_desc| {
                 let magnitude: i64 = move_desc[1..move_desc.len()].parse().unwrap();
                 match &move_desc[0..1] {
@@ -220,7 +220,7 @@ mod day3 {
             .collect()
     }
 
-    fn position_costs(moves: &Vec<Move>) -> HashMap<Point, usize> {
+    fn position_costs(moves: &[Move]) -> HashMap<Point, usize> {
         let mut pos = Point { x: 0, y: 0 };
         let mut cost: usize = 0;
         let mut result = HashMap::new();
@@ -587,7 +587,7 @@ mod day5 {
         let code = read_file("input_files/day5.txt");
 
         let mut intcode = IntCode {
-            memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
+            memory: code.split(',').map(|s| s.parse().unwrap()).collect(),
             pc: 0,
             terminated: false,
             input: vec![1],
@@ -602,7 +602,7 @@ mod day5 {
         let code = read_file("input_files/day5.txt");
 
         let mut intcode = IntCode {
-            memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
+            memory: code.split(',').map(|s| s.parse().unwrap()).collect(),
             pc: 0,
             terminated: false,
             input: vec![5],
@@ -618,17 +618,17 @@ mod day6 {
     use crate::shared::*;
 
     pub fn part1() {
-        let mut orbiter_to_orbitee_map: HashMap<String, String> = HashMap::new();
+        let mut orbiter_to_orbitee_map: HashMap<String, String> = 
+            input_lines("input_files/day6.txt").map(|line| {
+                let bits: Vec<&str> = line.split(')').collect();
+                (bits[1].to_owned(), bits[0].to_owned())
+            }).collect();
+
+        orbiter_to_orbitee_map.insert("COM".to_owned(), "COM".to_owned());
+
         let mut orbit_counts: HashMap<String, usize> = HashMap::new();
 
-        for line in input_lines("input_files/day6.txt") {
-            let bits: Vec<&str> = line.split(")").collect();
-
-            orbiter_to_orbitee_map.insert(bits[1].to_owned(), bits[0].to_owned());
-        }
-
         // COM orbits nothing
-        orbiter_to_orbitee_map.insert("COM".to_owned(), "COM".to_owned());
         orbit_counts.insert("COM".to_owned(), 0);
 
         while orbit_counts.len() < orbiter_to_orbitee_map.len() {
@@ -668,13 +668,11 @@ mod day6 {
     }
 
     pub fn part2() {
-        let mut orbiter_to_orbitee_map: HashMap<String, String> = HashMap::new();
-
-        for line in input_lines("input_files/day6.txt") {
-            let bits: Vec<&str> = line.split(")").collect();
-
-            orbiter_to_orbitee_map.insert(bits[1].to_owned(), bits[0].to_owned());
-        }
+        let orbiter_to_orbitee_map: HashMap<String, String> =
+            input_lines("input_files/day6.txt").map(|line| {
+                let bits: Vec<&str> = line.split(')').collect();
+                (bits[1].to_owned(), bits[0].to_owned())
+            }).collect();
 
         let me_path = path_to_com("YOU", &orbiter_to_orbitee_map);
         let santa_path = path_to_com("SAN", &orbiter_to_orbitee_map);
@@ -686,7 +684,6 @@ mod day6 {
         for (node, cost) in santa_path {
             if me_nodes.contains_key(&node) {
                 dbg!("Shortest path:", cost + me_nodes.get(&node).unwrap());
-
                 break;
             }
         }
@@ -717,8 +714,8 @@ fn main() {
         day5::part1();
         day5::part2();
 
-        day6::part1();
     }
 
+    day6::part1();
     day6::part2();
 }
