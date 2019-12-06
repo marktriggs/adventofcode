@@ -679,19 +679,13 @@ mod day6 {
         let me_path = path_to_com("YOU", &orbiter_to_orbitee_map);
         let santa_path = path_to_com("SAN", &orbiter_to_orbitee_map);
 
-        let me_nodes: HashMap<String, usize> = {
-            let mut result = HashMap::new();
+        let me_nodes: HashMap<String, usize> = me_path.into_iter().collect();
 
-            for p in me_path {
-                result.insert(p.0.clone(), p.1);
-            }
-
-            result
-        };
-
-        for n in santa_path {
-            if me_nodes.contains_key(&n.0) {
-                dbg!("Shortest path:", n.1 + me_nodes.get(&n.0).unwrap());
+        // The first node that both our paths meet defines the shortest path
+        // between us.
+        for (node, cost) in santa_path {
+            if me_nodes.contains_key(&node) {
+                dbg!("Shortest path:", cost + me_nodes.get(&node).unwrap());
 
                 break;
             }
