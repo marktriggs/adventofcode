@@ -356,7 +356,6 @@ mod day4 {
     }
 }
 
-
 mod day5 {
     use crate::shared::*;
 
@@ -386,10 +385,8 @@ mod day5 {
                 ParameterMode::Position => {
                     assert!(addr >= 0);
                     self.memory[addr as usize]
-                },
-                ParameterMode::Immediate => {
-                    addr
                 }
+                ParameterMode::Immediate => addr,
             }
         }
 
@@ -399,13 +396,22 @@ mod day5 {
             // Right two digits
             let opcode = instruction % 100;
 
-            let parameter_modes = vec!(
+            let parameter_modes = vec![
                 (instruction / 100) % 10,
                 (instruction / 1000) % 10,
                 (instruction / 10000) % 10,
-            );
+            ];
 
-            let parameter_modes = parameter_modes.iter().map(|&n| if n == 0 { ParameterMode::Position } else { ParameterMode::Immediate }).collect();
+            let parameter_modes = parameter_modes
+                .iter()
+                .map(|&n| {
+                    if n == 0 {
+                        ParameterMode::Position
+                    } else {
+                        ParameterMode::Immediate
+                    }
+                })
+                .collect();
 
             match opcode {
                 1 => Box::new(Addition { parameter_modes }),
@@ -439,17 +445,31 @@ mod day5 {
         Immediate,
     }
 
-    struct Addition { parameter_modes: Vec<ParameterMode> }
-    struct Multiplication { parameter_modes: Vec<ParameterMode> }
+    struct Addition {
+        parameter_modes: Vec<ParameterMode>,
+    }
+    struct Multiplication {
+        parameter_modes: Vec<ParameterMode>,
+    }
     struct Terminate {}
     struct Input {}
-    struct Output { parameter_modes: Vec<ParameterMode> }
+    struct Output {
+        parameter_modes: Vec<ParameterMode>,
+    }
 
     // Part 2 extras
-    struct JumpIfTrue { parameter_modes: Vec<ParameterMode> }
-    struct JumpIfFalse { parameter_modes: Vec<ParameterMode> }
-    struct LessThan { parameter_modes: Vec<ParameterMode> }
-    struct Equals { parameter_modes: Vec<ParameterMode> }
+    struct JumpIfTrue {
+        parameter_modes: Vec<ParameterMode>,
+    }
+    struct JumpIfFalse {
+        parameter_modes: Vec<ParameterMode>,
+    }
+    struct LessThan {
+        parameter_modes: Vec<ParameterMode>,
+    }
+    struct Equals {
+        parameter_modes: Vec<ParameterMode>,
+    }
 
     impl Instruction for Addition {
         fn apply(&self, intcode: &mut IntCode) {
@@ -457,9 +477,11 @@ mod day5 {
             let op2_addr = intcode.read_relative(2);
             let target_addr = intcode.read_relative(3);
 
-            intcode.set_memory(target_addr as usize,
-                               intcode.read_absolute(op1_addr, self.parameter_modes[0]) +
-                               intcode.read_absolute(op2_addr, self.parameter_modes[1]));
+            intcode.set_memory(
+                target_addr as usize,
+                intcode.read_absolute(op1_addr, self.parameter_modes[0])
+                    + intcode.read_absolute(op2_addr, self.parameter_modes[1]),
+            );
             intcode.pc += 4;
         }
     }
@@ -470,9 +492,11 @@ mod day5 {
             let op2_addr = intcode.read_relative(2);
             let target_addr = intcode.read_relative(3);
 
-            intcode.set_memory(target_addr as usize,
-                               intcode.read_absolute(op1_addr, self.parameter_modes[0]) *
-                               intcode.read_absolute(op2_addr, self.parameter_modes[1]));
+            intcode.set_memory(
+                target_addr as usize,
+                intcode.read_absolute(op1_addr, self.parameter_modes[0])
+                    * intcode.read_absolute(op2_addr, self.parameter_modes[1]),
+            );
             intcode.pc += 4;
         }
     }
@@ -496,7 +520,9 @@ mod day5 {
     impl Instruction for Output {
         fn apply(&self, intcode: &mut IntCode) {
             let source_addr = intcode.read_relative(1);
-            intcode.output.push(intcode.read_absolute(source_addr, self.parameter_modes[0]));
+            intcode
+                .output
+                .push(intcode.read_absolute(source_addr, self.parameter_modes[0]));
             intcode.pc += 2;
         }
     }
@@ -557,7 +583,6 @@ mod day5 {
         }
     }
 
-
     pub fn part1() {
         let code = read_file("input_files/day5.txt");
 
@@ -565,7 +590,7 @@ mod day5 {
             memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
             pc: 0,
             terminated: false,
-            input: vec!(1),
+            input: vec![1],
             output: Vec::new(),
         };
 
@@ -580,12 +605,97 @@ mod day5 {
             memory: code.split(",").map(|s| s.parse().unwrap()).collect(),
             pc: 0,
             terminated: false,
-            input: vec!(5),
+            input: vec![5],
             output: Vec::new(),
         };
 
         intcode.evaluate();
         dbg!(intcode.output);
+    }
+}
+
+mod day6 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let mut orbiter_to_orbitee_map: HashMap<String, String> = HashMap::new();
+        let mut orbit_counts: HashMap<String, usize> = HashMap::new();
+
+        for line in input_lines("input_files/day6.txt") {
+            let bits: Vec<&str> = line.split(")").collect();
+
+            orbiter_to_orbitee_map.insert(bits[1].to_owned(), bits[0].to_owned());
+        }
+
+        // COM orbits nothing
+        orbiter_to_orbitee_map.insert("COM".to_owned(), "COM".to_owned());
+        orbit_counts.insert("COM".to_owned(), 0);
+
+        while orbit_counts.len() < orbiter_to_orbitee_map.len() {
+            // Find entries whose orbitee has been fully calculated
+            for orbiter in orbiter_to_orbitee_map.keys() {
+                if orbit_counts.contains_key(orbiter) {
+                    continue;
+                }
+
+                let orbitee = orbiter_to_orbitee_map.get(orbiter).unwrap();
+                if orbit_counts.contains_key(orbitee) {
+                    orbit_counts
+                        .insert(orbiter.to_string(), orbit_counts.get(orbitee).unwrap() + 1);
+                }
+            }
+        }
+
+        dbg!(orbit_counts.values().sum::<usize>());
+    }
+
+    // Return a path back to root with a number of steps required to get to each point
+    pub fn path_to_com(
+        who: &str,
+        orbiter_to_orbitee_map: &HashMap<String, String>,
+    ) -> Vec<(String, usize)> {
+        let mut orbiting = orbiter_to_orbitee_map.get(who).unwrap();
+        let mut cost = 0;
+        let mut result = Vec::new();
+
+        while orbiting != "COM" {
+            orbiting = orbiter_to_orbitee_map.get(orbiting).unwrap();
+            cost += 1;
+            result.push((orbiting.clone(), cost));
+        }
+
+        result
+    }
+
+    pub fn part2() {
+        let mut orbiter_to_orbitee_map: HashMap<String, String> = HashMap::new();
+
+        for line in input_lines("input_files/day6.txt") {
+            let bits: Vec<&str> = line.split(")").collect();
+
+            orbiter_to_orbitee_map.insert(bits[1].to_owned(), bits[0].to_owned());
+        }
+
+        let me_path = path_to_com("YOU", &orbiter_to_orbitee_map);
+        let santa_path = path_to_com("SAN", &orbiter_to_orbitee_map);
+
+        let me_nodes: HashMap<String, usize> = {
+            let mut result = HashMap::new();
+
+            for p in me_path {
+                result.insert(p.0.clone(), p.1);
+            }
+
+            result
+        };
+
+        for n in santa_path {
+            if me_nodes.contains_key(&n.0) {
+                dbg!("Shortest path:", n.1 + me_nodes.get(&n.0).unwrap());
+
+                break;
+            }
+        }
     }
 }
 
@@ -609,8 +719,12 @@ fn main() {
 
         day4::part1();
         day4::part2();
+
+        day5::part1();
+        day5::part2();
+
+        day6::part1();
     }
 
-    day5::part1();
-    day5::part2();
+    day6::part2();
 }
