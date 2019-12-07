@@ -314,7 +314,7 @@ mod shared {
 
     pub fn permutations<T>(inputs: Vec<T>) -> Vec<Vec<T>>
     where
-        T: Clone + std::fmt::Debug,
+        T: Clone + Copy + std::fmt::Debug,
     {
         if inputs.is_empty() {
             vec![Vec::new()]
@@ -325,13 +325,11 @@ mod shared {
             subperms
                 .iter()
                 .flat_map(|subperm: &Vec<T>| {
-                    (0..=subperm.len())
-                        .map(|idx| {
-                            let mut r = subperm.clone();
-                            r.insert(idx, elt.clone());
-                            r
-                        })
-                        .collect::<Vec<Vec<T>>>()
+                    (0..=subperm.len()).map(move |idx| {
+                        let mut r = subperm.clone();
+                        r.insert(idx, elt);
+                        r
+                    })
                 })
                 .collect()
         }
