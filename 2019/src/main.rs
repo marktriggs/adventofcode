@@ -324,7 +324,7 @@ mod shared {
 
             subperms
                 .iter()
-                .map(|subperm: &Vec<T>| {
+                .flat_map(|subperm: &Vec<T>| {
                     (0..=subperm.len())
                         .map(|idx| {
                             let mut r = subperm.clone();
@@ -333,7 +333,6 @@ mod shared {
                         })
                         .collect::<Vec<Vec<T>>>()
                 })
-                .flatten()
                 .collect()
         }
     }
