@@ -829,6 +829,57 @@ mod day7 {
     }
 }
 
+mod day8 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let image: Vec<char> = read_file("input_files/day8.txt").chars().collect();
+        let width = 25;
+        let height = 6;
+
+        let min_zeroes = image.chunks(width * height).min_by_key(|layer| layer.iter().filter(|&&pixel| pixel == '0').count()).unwrap();
+
+        dbg!(min_zeroes.iter().filter(|&&pixel| pixel == '1').count() * min_zeroes.iter().filter(|&&pixel| pixel == '2').count());
+    }
+
+    pub fn part2() {
+        let image: Vec<char> = read_file("input_files/day8.txt").chars().collect();
+        let width = 25;
+        let height = 6;
+
+        let mut result: Vec<char> = vec!['T'; width * height];
+
+        for layer in image.chunks(width * height).rev() {
+            for y in 0..height {
+                for x in 0..width {
+                    let idx = (y * width) + x;
+                    let source_pixel = layer[idx];
+
+                    match source_pixel {
+                        '0' => {
+                            // black
+                            result[idx] = ' ';
+                        },
+                        '1' => {
+                            // white
+                            result[idx] = '#';
+                        },
+                        '2' => {
+                            // transparent
+                        },
+                        _ => panic!("bad pixels, man"),
+                    }
+                }
+            }
+        }
+
+        for line in result.chunks(width) {
+            println!("{}", line.iter().collect::<String>());
+        }
+    }
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -855,8 +906,11 @@ fn main() {
 
         day6::part1();
         day6::part2();
+
+        day7::part1();
+        day7::part2();
     }
 
-    // day7::part1();
-    day7::part2();
+    day8::part2();
+
 }
