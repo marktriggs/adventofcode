@@ -949,7 +949,18 @@ mod day9 {
         dbg!(intcode.output);
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let code = read_file("input_files/day9.txt");
+
+        let mut intcode = intcode::new(
+            code.split(',').map(|s| s.parse().unwrap()).collect(),
+            vec![2],
+            Vec::new());
+
+        intcode.evaluate();
+
+        dbg!(intcode.output);
+    }
 }
 
 
@@ -988,4 +999,5 @@ fn main() {
     }
 
     day9::part1();
+    day9::part2();
 }
