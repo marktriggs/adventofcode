@@ -42,7 +42,9 @@ pub mod intcode {
     }
 
     impl IntCode {
-        pub fn set_memory(&mut self, addr: usize, value: i64, mode: ParameterMode) {
+        pub fn set_memory(&mut self, addr: i64, value: i64, mode: ParameterMode) {
+            let addr = addr as usize;
+
             match mode {
                 ParameterMode::Position => {
                     self.memory.insert(addr, value);
@@ -158,7 +160,7 @@ pub mod intcode {
             let target_addr = intcode.read_relative(3);
 
             intcode.set_memory(
-                target_addr as usize,
+                target_addr,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     + intcode.read_absolute(op2_addr, self.parameter_modes[1]),
                 self.parameter_modes[2],
@@ -177,7 +179,7 @@ pub mod intcode {
             let target_addr = intcode.read_relative(3);
 
             intcode.set_memory(
-                target_addr as usize,
+                target_addr,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     * intcode.read_absolute(op2_addr, self.parameter_modes[1]),
                 self.parameter_modes[2],
@@ -205,7 +207,7 @@ pub mod intcode {
 
                     let target_addr = intcode.read_relative(1);
 
-                    intcode.set_memory(target_addr as usize, value, self.parameter_modes[0]);
+                    intcode.set_memory(target_addr, value, self.parameter_modes[0]);
                     intcode.pc += 2;
                 }
                 None => {
@@ -270,13 +272,13 @@ pub mod intcode {
 
             if a < b {
                 intcode.set_memory(
-                    intcode.read_relative(3) as usize,
+                    intcode.read_relative(3),
                     1,
                     self.parameter_modes[2],
                 );
             } else {
                 intcode.set_memory(
-                    intcode.read_relative(3) as usize,
+                    intcode.read_relative(3),
                     0,
                     self.parameter_modes[2],
                 );
@@ -296,13 +298,13 @@ pub mod intcode {
 
             if a == b {
                 intcode.set_memory(
-                    intcode.read_relative(3) as usize,
+                    intcode.read_relative(3),
                     1,
                     self.parameter_modes[2],
                 );
             } else {
                 intcode.set_memory(
-                    intcode.read_relative(3) as usize,
+                    intcode.read_relative(3),
                     0,
                     self.parameter_modes[2],
                 );
