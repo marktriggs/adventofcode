@@ -8,31 +8,52 @@ extern crate lazy_static;
 extern crate regex;
 
 pub mod intcode {
+    use std::collections::HashMap;
+
     pub struct IntCode {
         pub pc: usize,
-        pub memory: Vec<i64>,
+        pub memory: HashMap<usize, i64>,
 
         pub terminated: bool,
         pub waiting_for_input: bool,
 
         pub input: Vec<i64>,
         pub output: Vec<i64>,
+
+        pub relative_base: i64,
     }
 
     pub fn new(code: Vec<i64>, input: Vec<i64>, output: Vec<i64>) -> IntCode {
+        let mut memory = HashMap::new();
+
+        for i in 0..code.len() {
+            memory.insert(i, code[i]);
+        }
+
         IntCode {
-            memory: code,
+            memory,
             pc: 0,
             terminated: false,
             waiting_for_input: false,
             input,
             output,
+            relative_base: 0,
         }
     }
 
     impl IntCode {
-        pub fn set_memory(&mut self, addr: usize, value: i64) {
-            self.memory[addr] = value;
+        pub fn set_memory(&mut self, addr: usize, value: i64, mode: ParameterMode) {
+            match mode {
+                ParameterMode::Position => {
+                    self.memory.insert(addr, value);
+                },
+                ParameterMode::Relative => {
+                    self.memory.insert((self.relative_base + addr as i64) as usize, value);
+                },
+                ParameterMode::Immediate => {
+                    panic!("Can't set an immediate value");
+                },
+            };
         }
 
         // Read a value relative to the program counter
@@ -40,20 +61,30 @@ pub mod intcode {
             self.read_absolute((self.pc + offset) as i64, ParameterMode::Position)
         }
 
-        // Read a value from an address (Position mode) or just return addr
-        // (Immediate mode)
+        fn memory_fetch(&self, addr: usize) -> i64 {
+            *(self.memory.get(&addr).unwrap_or(&0))
+        }
+
+        // Read a value.  Will either:
+        //   * read from an address (Position mode)
+        //   * treat addr as an immediate value & return it (Immediate mode)
+        //   * read from address + relative_base (Relative mode)
         pub fn read_absolute(&self, addr: i64, mode: ParameterMode) -> i64 {
             match mode {
                 ParameterMode::Position => {
                     assert!(addr >= 0);
-                    self.memory[addr as usize]
-                }
+                    self.memory_fetch(addr as usize)
+                },
+                ParameterMode::Relative => {
+                    assert!(addr + self.relative_base >= 0);
+                    self.memory_fetch((addr + self.relative_base) as usize)
+                },
                 ParameterMode::Immediate => addr,
             }
         }
 
         fn next_instruction(&self) -> Box<dyn Instruction> {
-            let instruction = self.memory[self.pc];
+            let instruction = self.memory_fetch(self.pc);
 
             // Right two digits
             let opcode = instruction % 100;
@@ -67,10 +98,11 @@ pub mod intcode {
             let parameter_modes = parameter_modes
                 .iter()
                 .map(|&n| {
-                    if n == 0 {
-                        ParameterMode::Position
-                    } else {
-                        ParameterMode::Immediate
+                    match n {
+                        0 => ParameterMode::Position,
+                        1 => ParameterMode::Immediate,
+                        2 => ParameterMode::Relative,
+                        _ => panic!("Unknown parameter mode code: {}", n),
                     }
                 })
                 .collect();
@@ -78,16 +110,17 @@ pub mod intcode {
             match opcode {
                 1 => Box::new(Addition { parameter_modes }),
                 2 => Box::new(Multiplication { parameter_modes }),
-                3 => Box::new(Input {}),
+                3 => Box::new(Input { parameter_modes }),
                 4 => Box::new(Output { parameter_modes }),
                 5 => Box::new(JumpIfTrue { parameter_modes }),
                 6 => Box::new(JumpIfFalse { parameter_modes }),
                 7 => Box::new(LessThan { parameter_modes }),
                 8 => Box::new(Equals { parameter_modes }),
+                9 => Box::new(AdjustRelativeBase { parameter_modes }),
                 99 => Box::new(Terminate {}),
                 _ => panic!(
                     "Invalid instruction at offset {}: {}",
-                    &self.pc, &self.memory[self.pc]
+                    &self.pc, &self.memory_fetch(self.pc)
                 ),
             }
         }
@@ -112,6 +145,7 @@ pub mod intcode {
     pub enum ParameterMode {
         Position,
         Immediate,
+        Relative,
     }
 
     struct Addition {
@@ -121,7 +155,11 @@ pub mod intcode {
         parameter_modes: Vec<ParameterMode>,
     }
     struct Terminate {}
-    struct Input {}
+
+    struct Input {
+        parameter_modes: Vec<ParameterMode>,
+    }
+
     struct Output {
         parameter_modes: Vec<ParameterMode>,
     }
@@ -140,6 +178,10 @@ pub mod intcode {
         parameter_modes: Vec<ParameterMode>,
     }
 
+    struct AdjustRelativeBase {
+        parameter_modes: Vec<ParameterMode>,
+    }
+
     impl Instruction for Addition {
         fn apply(&self, intcode: &mut IntCode) {
             let op1_addr = intcode.read_relative(1);
@@ -150,6 +192,7 @@ pub mod intcode {
                 target_addr as usize,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     + intcode.read_absolute(op2_addr, self.parameter_modes[1]),
+                self.parameter_modes[2]
             );
             intcode.pc += 4;
         }
@@ -165,6 +208,7 @@ pub mod intcode {
                 target_addr as usize,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     * intcode.read_absolute(op2_addr, self.parameter_modes[1]),
+                self.parameter_modes[2]
             );
             intcode.pc += 4;
         }
@@ -184,7 +228,8 @@ pub mod intcode {
                     intcode.waiting_for_input = false;
 
                     let target_addr = intcode.read_relative(1);
-                    intcode.set_memory(target_addr as usize, value);
+
+                    intcode.set_memory(target_addr as usize, value, self.parameter_modes[0]);
                     intcode.pc += 2;
                 }
                 None => {
@@ -236,9 +281,9 @@ pub mod intcode {
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a < b {
-                intcode.set_memory(intcode.read_relative(3) as usize, 1);
+                intcode.set_memory(intcode.read_relative(3) as usize, 1, self.parameter_modes[2]);
             } else {
-                intcode.set_memory(intcode.read_relative(3) as usize, 0);
+                intcode.set_memory(intcode.read_relative(3) as usize, 0, self.parameter_modes[2]);
             }
 
             intcode.pc += 4;
@@ -251,12 +296,20 @@ pub mod intcode {
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a == b {
-                intcode.set_memory(intcode.read_relative(3) as usize, 1);
+                intcode.set_memory(intcode.read_relative(3) as usize, 1, self.parameter_modes[2]);
             } else {
-                intcode.set_memory(intcode.read_relative(3) as usize, 0);
+                intcode.set_memory(intcode.read_relative(3) as usize, 0, self.parameter_modes[2]);
             }
 
             intcode.pc += 4;
+        }
+    }
+
+    impl Instruction for AdjustRelativeBase {
+        fn apply(&self, intcode: &mut IntCode) {
+            let offset = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
+            intcode.relative_base += offset;
+            intcode.pc += 2;
         }
     }
 }
@@ -880,6 +933,26 @@ mod day8 {
 }
 
 
+mod day9 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let code = read_file("input_files/day9.txt");
+
+        let mut intcode = intcode::new(
+            code.split(',').map(|s| s.parse().unwrap()).collect(),
+            vec![1],
+            Vec::new());
+
+        intcode.evaluate();
+
+        dbg!(intcode.output);
+    }
+
+    pub fn part2() {}
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -909,8 +982,10 @@ fn main() {
 
         day7::part1();
         day7::part2();
+
+        day8::part1();
+        day8::part2();
     }
 
-    day8::part2();
-
+    day9::part1();
 }
