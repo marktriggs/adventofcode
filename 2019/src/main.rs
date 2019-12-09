@@ -26,8 +26,8 @@ pub mod intcode {
     pub fn new(code: Vec<i64>, input: Vec<i64>, output: Vec<i64>) -> IntCode {
         let mut memory = HashMap::new();
 
-        for i in 0..code.len() {
-            memory.insert(i, code[i]);
+        for (i, &instruction) in code.iter().enumerate() {
+            memory.insert(i, instruction);
         }
 
         IntCode {
@@ -46,13 +46,14 @@ pub mod intcode {
             match mode {
                 ParameterMode::Position => {
                     self.memory.insert(addr, value);
-                },
+                }
                 ParameterMode::Relative => {
-                    self.memory.insert((self.relative_base + addr as i64) as usize, value);
-                },
+                    self.memory
+                        .insert((self.relative_base + addr as i64) as usize, value);
+                }
                 ParameterMode::Immediate => {
                     panic!("Can't set an immediate value");
-                },
+                }
             };
         }
 
@@ -74,11 +75,11 @@ pub mod intcode {
                 ParameterMode::Position => {
                     assert!(addr >= 0);
                     self.memory_fetch(addr as usize)
-                },
+                }
                 ParameterMode::Relative => {
                     assert!(addr + self.relative_base >= 0);
                     self.memory_fetch((addr + self.relative_base) as usize)
-                },
+                }
                 ParameterMode::Immediate => addr,
             }
         }
@@ -97,13 +98,11 @@ pub mod intcode {
 
             let parameter_modes = parameter_modes
                 .iter()
-                .map(|&n| {
-                    match n {
-                        0 => ParameterMode::Position,
-                        1 => ParameterMode::Immediate,
-                        2 => ParameterMode::Relative,
-                        _ => panic!("Unknown parameter mode code: {}", n),
-                    }
+                .map(|&n| match n {
+                    0 => ParameterMode::Position,
+                    1 => ParameterMode::Immediate,
+                    2 => ParameterMode::Relative,
+                    _ => panic!("Unknown parameter mode code: {}", n),
                 })
                 .collect();
 
@@ -120,7 +119,8 @@ pub mod intcode {
                 99 => Box::new(Terminate {}),
                 _ => panic!(
                     "Invalid instruction at offset {}: {}",
-                    &self.pc, &self.memory_fetch(self.pc)
+                    &self.pc,
+                    &self.memory_fetch(self.pc)
                 ),
             }
         }
@@ -151,37 +151,6 @@ pub mod intcode {
     struct Addition {
         parameter_modes: Vec<ParameterMode>,
     }
-    struct Multiplication {
-        parameter_modes: Vec<ParameterMode>,
-    }
-    struct Terminate {}
-
-    struct Input {
-        parameter_modes: Vec<ParameterMode>,
-    }
-
-    struct Output {
-        parameter_modes: Vec<ParameterMode>,
-    }
-
-    // Part 2 extras
-    struct JumpIfTrue {
-        parameter_modes: Vec<ParameterMode>,
-    }
-    struct JumpIfFalse {
-        parameter_modes: Vec<ParameterMode>,
-    }
-    struct LessThan {
-        parameter_modes: Vec<ParameterMode>,
-    }
-    struct Equals {
-        parameter_modes: Vec<ParameterMode>,
-    }
-
-    struct AdjustRelativeBase {
-        parameter_modes: Vec<ParameterMode>,
-    }
-
     impl Instruction for Addition {
         fn apply(&self, intcode: &mut IntCode) {
             let op1_addr = intcode.read_relative(1);
@@ -192,12 +161,15 @@ pub mod intcode {
                 target_addr as usize,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     + intcode.read_absolute(op2_addr, self.parameter_modes[1]),
-                self.parameter_modes[2]
+                self.parameter_modes[2],
             );
             intcode.pc += 4;
         }
     }
 
+    struct Multiplication {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for Multiplication {
         fn apply(&self, intcode: &mut IntCode) {
             let op1_addr = intcode.read_relative(1);
@@ -208,12 +180,13 @@ pub mod intcode {
                 target_addr as usize,
                 intcode.read_absolute(op1_addr, self.parameter_modes[0])
                     * intcode.read_absolute(op2_addr, self.parameter_modes[1]),
-                self.parameter_modes[2]
+                self.parameter_modes[2],
             );
             intcode.pc += 4;
         }
     }
 
+    struct Terminate {}
     impl Instruction for Terminate {
         fn apply(&self, intcode: &mut IntCode) {
             intcode.terminated = true;
@@ -221,6 +194,9 @@ pub mod intcode {
         }
     }
 
+    struct Input {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for Input {
         fn apply(&self, intcode: &mut IntCode) {
             match intcode.input.pop() {
@@ -239,6 +215,9 @@ pub mod intcode {
         }
     }
 
+    struct Output {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for Output {
         fn apply(&self, intcode: &mut IntCode) {
             let source_addr = intcode.read_relative(1);
@@ -249,6 +228,9 @@ pub mod intcode {
         }
     }
 
+    struct JumpIfTrue {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for JumpIfTrue {
         fn apply(&self, intcode: &mut IntCode) {
             let test = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
@@ -262,6 +244,9 @@ pub mod intcode {
         }
     }
 
+    struct JumpIfFalse {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for JumpIfFalse {
         fn apply(&self, intcode: &mut IntCode) {
             let test = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
@@ -275,36 +260,61 @@ pub mod intcode {
         }
     }
 
+    struct LessThan {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for LessThan {
         fn apply(&self, intcode: &mut IntCode) {
             let a = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a < b {
-                intcode.set_memory(intcode.read_relative(3) as usize, 1, self.parameter_modes[2]);
+                intcode.set_memory(
+                    intcode.read_relative(3) as usize,
+                    1,
+                    self.parameter_modes[2],
+                );
             } else {
-                intcode.set_memory(intcode.read_relative(3) as usize, 0, self.parameter_modes[2]);
+                intcode.set_memory(
+                    intcode.read_relative(3) as usize,
+                    0,
+                    self.parameter_modes[2],
+                );
             }
 
             intcode.pc += 4;
         }
     }
 
+    struct Equals {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for Equals {
         fn apply(&self, intcode: &mut IntCode) {
             let a = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a == b {
-                intcode.set_memory(intcode.read_relative(3) as usize, 1, self.parameter_modes[2]);
+                intcode.set_memory(
+                    intcode.read_relative(3) as usize,
+                    1,
+                    self.parameter_modes[2],
+                );
             } else {
-                intcode.set_memory(intcode.read_relative(3) as usize, 0, self.parameter_modes[2]);
+                intcode.set_memory(
+                    intcode.read_relative(3) as usize,
+                    0,
+                    self.parameter_modes[2],
+                );
             }
 
             intcode.pc += 4;
         }
     }
 
+    struct AdjustRelativeBase {
+        parameter_modes: Vec<ParameterMode>,
+    }
     impl Instruction for AdjustRelativeBase {
         fn apply(&self, intcode: &mut IntCode) {
             let offset = intcode.read_absolute(intcode.read_relative(1), self.parameter_modes[0]);
@@ -357,7 +367,7 @@ mod shared {
     }
 
     pub fn input_lines(file: &str) -> impl Iterator<Item = String> {
-        let f = File::open(file).unwrap_or_else(|_|panic!("Failed to open input file: {}", &file));
+        let f = File::open(file).unwrap_or_else(|_| panic!("Failed to open input file: {}", &file));
         BufReader::new(f).lines().map(Result::unwrap)
     }
 
@@ -372,7 +382,7 @@ mod shared {
         if inputs.is_empty() {
             vec![Vec::new()]
         } else {
-            let elt = inputs.get(0).unwrap().clone();
+            let elt = inputs.get(0).unwrap();
             let subperms = permutations(inputs.iter().skip(1).cloned().collect());
 
             subperms
@@ -380,7 +390,7 @@ mod shared {
                 .flat_map(|subperm: &Vec<T>| {
                     (0..=subperm.len()).map(move |idx| {
                         let mut r = subperm.clone();
-                        r.insert(idx, elt);
+                        r.insert(idx, *elt);
                         r
                     })
                 })
@@ -890,9 +900,15 @@ mod day8 {
         let width = 25;
         let height = 6;
 
-        let min_zeroes = image.chunks(width * height).min_by_key(|layer| layer.iter().filter(|&&pixel| pixel == '0').count()).unwrap();
+        let min_zeroes = image
+            .chunks(width * height)
+            .min_by_key(|layer| layer.iter().filter(|&&pixel| pixel == '0').count())
+            .unwrap();
 
-        dbg!(min_zeroes.iter().filter(|&&pixel| pixel == '1').count() * min_zeroes.iter().filter(|&&pixel| pixel == '2').count());
+        dbg!(
+            min_zeroes.iter().filter(|&&pixel| pixel == '1').count()
+                * min_zeroes.iter().filter(|&&pixel| pixel == '2').count()
+        );
     }
 
     pub fn part2() {
@@ -912,14 +928,14 @@ mod day8 {
                         '0' => {
                             // black
                             result[idx] = ' ';
-                        },
+                        }
                         '1' => {
                             // white
                             result[idx] = '#';
-                        },
+                        }
                         '2' => {
                             // transparent
-                        },
+                        }
                         _ => panic!("bad pixels, man"),
                     }
                 }
@@ -932,7 +948,6 @@ mod day8 {
     }
 }
 
-
 mod day9 {
     use crate::shared::*;
 
@@ -942,7 +957,8 @@ mod day9 {
         let mut intcode = intcode::new(
             code.split(',').map(|s| s.parse().unwrap()).collect(),
             vec![1],
-            Vec::new());
+            Vec::new(),
+        );
 
         intcode.evaluate();
 
@@ -955,14 +971,14 @@ mod day9 {
         let mut intcode = intcode::new(
             code.split(',').map(|s| s.parse().unwrap()).collect(),
             vec![2],
-            Vec::new());
+            Vec::new(),
+        );
 
         intcode.evaluate();
 
         dbg!(intcode.output);
     }
 }
-
 
 mod day_n {
     use crate::shared::*;
