@@ -271,17 +271,9 @@ pub mod intcode {
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a < b {
-                intcode.set_memory(
-                    intcode.read_relative(3),
-                    1,
-                    self.parameter_modes[2],
-                );
+                intcode.set_memory(intcode.read_relative(3), 1, self.parameter_modes[2]);
             } else {
-                intcode.set_memory(
-                    intcode.read_relative(3),
-                    0,
-                    self.parameter_modes[2],
-                );
+                intcode.set_memory(intcode.read_relative(3), 0, self.parameter_modes[2]);
             }
 
             intcode.pc += 4;
@@ -297,17 +289,9 @@ pub mod intcode {
             let b = intcode.read_absolute(intcode.read_relative(2), self.parameter_modes[1]);
 
             if a == b {
-                intcode.set_memory(
-                    intcode.read_relative(3),
-                    1,
-                    self.parameter_modes[2],
-                );
+                intcode.set_memory(intcode.read_relative(3), 1, self.parameter_modes[2]);
             } else {
-                intcode.set_memory(
-                    intcode.read_relative(3),
-                    0,
-                    self.parameter_modes[2],
-                );
+                intcode.set_memory(intcode.read_relative(3), 0, self.parameter_modes[2]);
             }
 
             intcode.pc += 4;
@@ -338,6 +322,7 @@ mod shared {
     pub use std::fmt::{self, Display};
     pub use std::fs::{self, File};
     pub use std::io::{self, BufRead, BufReader, Write};
+    pub use std::iter::FromIterator;
     pub use std::str;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
@@ -982,6 +967,232 @@ mod day9 {
     }
 }
 
+// Going full Rust data modelling madness on this one!  Wheeeee
+mod day10 {
+    use crate::shared::*;
+
+    /// Grids of stuff
+    struct Grid<T: Copy> {
+        grid: Vec<Vec<T>>,
+        width: usize,
+        height: usize,
+    }
+
+    impl<T: Copy> Grid<T> {
+        fn get(&self, x: usize, y: usize) -> T {
+            self.grid[y][x]
+        }
+
+        fn set(&mut self, x: usize, y: usize, val: T) {
+            self.grid[y][x] = val;
+        }
+
+
+        fn in_range(&self, x: i64, y: i64) -> bool {
+            x < self.width as i64 && y < self.height as i64 && x >= 0 && y >= 0
+        }
+
+        fn new(width: usize, height: usize, init_value: T) -> Grid<T> {
+            let grid: Vec<Vec<T>> = (0..height)
+                .map(|_| (0..width).map(|_| init_value).collect())
+                .collect();
+            Grid {
+                grid,
+                width,
+                height,
+            }
+        }
+    }
+
+    impl<T: std::fmt::Debug + Copy> std::fmt::Debug for Grid<T> {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            formatter.write_str("\n")?;
+            for row in &self.grid {
+                formatter
+                    .write_str(
+                        &row.iter()
+                            .map(|entry| format!("{:?}", entry))
+                            .collect::<String>(),
+                    )
+                    .unwrap();
+                formatter.write_str("\n")?
+            }
+
+            Ok(())
+        }
+    }
+
+    /// Stuff floating in space
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    enum Space {
+        Asteroid,
+        Empty,
+    }
+
+    impl From<char> for Space {
+        fn from(ch: char) -> Space {
+            match ch {
+                '#' => Space::Asteroid,
+                _ => Space::Empty,
+            }
+        }
+    }
+
+    impl std::fmt::Debug for Space {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            formatter.write_str(match self {
+                Space::Asteroid => "#",
+                Space::Empty => ".",
+            })
+        }
+    }
+
+    /// Marking areas as visible or not
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    enum Visibility {
+        Visible,
+        Obscured,
+    }
+
+    impl std::fmt::Debug for Visibility {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            formatter
+                .write_str(match self {
+                    Visibility::Visible => "O",
+                    Visibility::Obscured => "?",
+                })
+                .unwrap();
+
+            Ok(())
+        }
+    }
+
+    fn parse_grid<T: Copy>(s: &str) -> Grid<T>
+    where
+        T: From<char>,
+    {
+        let grid = s
+            .split('\n')
+            .map(|row| row.chars().map(T::from).collect::<Vec<T>>())
+            .collect::<Vec<Vec<T>>>();
+
+        let height = grid.len();
+        let width = grid[0].len();
+
+        Grid {
+            grid,
+            height,
+            width,
+        }
+    }
+
+    pub fn part1() {
+        let mut best_score = 0;
+        let mut best_coords = (999, 999);
+
+        let map: Grid<Space> = parse_grid(&read_file("input_files/day10.txt"));
+
+        for ast_y in 0..map.height {
+            for ast_x in 0..map.width {
+                let debug = (ast_x == 6 && ast_y == 0);
+
+                if map.get(ast_x, ast_y) != Space::Asteroid {
+                    continue;
+                }
+
+                // Calculate how many asteroids this one can see
+                let mut vismap: Grid<Visibility> = Grid::new(map.width, map.height, Visibility::Visible);
+                for y in 0..map.height {
+                    for x in 0..map.width {
+                        if x == ast_x && y == ast_y {
+                            // Itsa me!
+                            continue
+                        }
+
+                        if map.get(x, y) != Space::Asteroid {
+                            // The cold darkness of space
+                            continue;
+                        }
+
+                        let ydiff = y as i64 - ast_y as i64;
+                        let xdiff = x as i64 - ast_x as i64;
+
+                        if ydiff == 0 {
+                            let xdir = xdiff / xdiff.abs();
+                            let mut testx = x as i64 + xdir;
+                            while vismap.in_range(testx, y as i64) {
+                                vismap.set(testx as usize, y as usize, Visibility::Obscured);
+                                testx += xdir;
+                            }
+                        } else if xdiff == 0 {
+                            let ydir = ydiff / ydiff.abs();
+                            let mut testy = y as i64 + ydir;
+
+                            while vismap.in_range(x as i64, testy) {
+                                vismap.set(x as usize, testy as usize, Visibility::Obscured);
+                                testy += ydir;
+                            }
+                        } else {
+                            let xdir = xdiff / xdiff.abs();
+                            let ydir = ydiff / ydiff.abs();
+
+                            let superdebug = (debug && x == 5 && y == 1);
+
+                            let mut testx = x as i64 + xdir;
+
+                            while vismap.in_range(testx, y as i64) {
+                                let mut testy = y as i64;
+                                while vismap.in_range(testx, testy) {
+                                    if (superdebug) {
+                                        dbg!((testx, testy));
+                                    }
+                                    if (testy - y as i64) * xdiff == (testx - x as i64) * ydiff {
+                                        if superdebug {
+                                            dbg!("BAM", (testx, testy));
+                                        }
+                                        vismap.set(testx as usize, testy as usize, Visibility::Obscured);
+                                    }
+                                    testy += ydir;
+                                }
+
+                                testx += xdir;
+                            }
+                        }
+                    }
+                }
+
+                if debug {
+                    dbg!(&vismap);
+                }
+
+                let mut score = 0;
+                for y in 0..map.height {
+                    for x in 0..map.width {
+                        if x == ast_x && y == ast_y {
+                            continue;
+                        }
+
+                        if map.get(x, y) == Space::Asteroid && vismap.get(x, y) == Visibility::Visible {
+                            score += 1;
+                        }
+                    }
+                }
+
+                if score > best_score {
+                    best_score = score;
+                    best_coords = (ast_x, ast_y);
+                }
+
+                println!("{}, {}: {}", ast_x, ast_y, score);
+            }
+        }
+
+        dbg!(best_score, best_coords);
+    }
+
+    pub fn part2() {}
+}
+
 mod day_n {
     use crate::shared::*;
 
@@ -1014,8 +1225,10 @@ fn main() {
 
         day8::part1();
         day8::part2();
+
+        day9::part1();
+        day9::part2();
     }
 
-    day9::part1();
-    day9::part2();
+    day10::part1();
 }
