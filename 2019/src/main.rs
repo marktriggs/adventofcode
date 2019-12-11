@@ -1086,6 +1086,14 @@ mod day10 {
         }
     }
 
+    fn gcd(a: usize, b: usize) -> usize {
+        if b == 0 {
+            a
+        } else {
+            gcd(b, a % b)
+        }
+    }
+
     pub fn part1() {
         let mut best_score = 0;
         let mut best_coords = (999, 999);
@@ -1094,8 +1102,6 @@ mod day10 {
 
         for ast_y in 0..map.height {
             for ast_x in 0..map.width {
-                let debug = (ast_x == 6 && ast_y == 0);
-
                 if map.get(ast_x, ast_y) != Space::Asteroid {
                     continue;
                 }
@@ -1114,55 +1120,68 @@ mod day10 {
                             continue;
                         }
 
-                        let ydiff = y as i64 - ast_y as i64;
-                        let xdiff = x as i64 - ast_x as i64;
+                        // Three cases to consider:
+                        //
+                        //   * this asteroid is on the same X axis as our
+                        //     source, so will obscure the remainder of that
+                        //     axis; or
+                        //
+                        //   * this asteroid is on the same Y axis as our
+                        //     source, so will obscure the remainder of that
+                        //     axis; or
+                        //
+                        //   * this asteroid is diagonal relative to our source
+                        //     and obscures the remainder of that line
 
-                        if ydiff == 0 {
-                            let xdir = xdiff / xdiff.abs();
-                            let mut testx = x as i64 + xdir;
-                            while vismap.in_range(testx, y as i64) {
-                                vismap.set(testx as usize, y as usize, Visibility::Obscured);
-                                testx += xdir;
+                        let xdir = if x > ast_x { 1 } else { -1 };
+                        let ydir = if y > ast_y { 1 } else { -1 };
+
+                        if ast_x == x {
+                            // Both on X axis.  Block out remaining Y coordinates
+                            let mut y = y as i64 + ydir;
+                            while vismap.in_range(x as i64, y as i64) {
+                                vismap.set(x as usize, y as usize, Visibility::Obscured);
+                                y += ydir;
                             }
-                        } else if xdiff == 0 {
-                            let ydir = ydiff / ydiff.abs();
-                            let mut testy = y as i64 + ydir;
-
-                            while vismap.in_range(x as i64, testy) {
-                                vismap.set(x as usize, testy as usize, Visibility::Obscured);
-                                testy += ydir;
+                        } else if ast_y == y {
+                            // Both on Y axis.  Block out remaining X coordinates
+                            let mut x = x as i64 + xdir;
+                            while vismap.in_range(x as i64, y as i64) {
+                                vismap.set(x as usize, y as usize, Visibility::Obscured);
+                                x += xdir;
                             }
                         } else {
-                            let xdir = xdiff / xdiff.abs();
-                            let ydir = ydiff / ydiff.abs();
+                            // Diagonal.  Project the line formed between our
+                            // two asteroids out to the edge of the map, marking
+                            // off the squares it crosses.
+                            //
+                            // If our two asteroids form a square with width W
+                            // and height H, we find subsequent points the line
+                            // crosses by finding successive W & H values that
+                            // have the same ratio.  To find what we should add
+                            // to our initial W & H to preserve their ratio, we
+                            // take their GCD and divide by that.  W/GCD and
+                            // H/GCD can be repeatedly added to each value to
+                            // get a new pair on the same line.
 
-                            let superdebug = (debug && x == 5 && y == 1);
+                            let width = (x as i64 - ast_x as i64).abs() as usize;
+                            let height = (y as i64 - ast_y as i64).abs() as usize;
 
-                            let mut testx = x as i64 + xdir;
+                            let gcd = gcd(width, height);
 
-                            while vismap.in_range(testx, y as i64) {
-                                let mut testy = y as i64;
-                                while vismap.in_range(testx, testy) {
-                                    if (superdebug) {
-                                        dbg!((testx, testy));
-                                    }
-                                    if (testy - y as i64) * xdiff == (testx - x as i64) * ydiff {
-                                        if superdebug {
-                                            dbg!("BAM", (testx, testy));
-                                        }
-                                        vismap.set(testx as usize, testy as usize, Visibility::Obscured);
-                                    }
-                                    testy += ydir;
-                                }
+                            let unit_width_adjustment = (width / gcd) as i64 * xdir;
+                            let unit_height_adjustment = (height / gcd) as i64 * ydir;
 
-                                testx += xdir;
+                            let mut x = x as i64 + unit_width_adjustment;
+                            let mut y = y as i64 + unit_height_adjustment;
+
+                            while vismap.in_range(x, y) {
+                                vismap.set(x as usize, y as usize, Visibility::Obscured);
+                                x += unit_width_adjustment;
+                                y += unit_height_adjustment;
                             }
                         }
                     }
-                }
-
-                if debug {
-                    dbg!(&vismap);
                 }
 
                 let mut score = 0;
@@ -1190,7 +1209,93 @@ mod day10 {
         dbg!(best_score, best_coords);
     }
 
-    pub fn part2() {}
+    #[derive(Debug)]
+    struct Target {
+        x: i64,
+        y: i64,
+        angle: f64,
+        distance: f64,
+        exploded: bool,
+    }
+
+    pub fn part2() {
+        let origin_x = 26i64;
+        let origin_y = 36i64;
+
+        let map: Grid<Space> = parse_grid(&read_file("input_files/day10.txt"));
+        let mut targets: Vec<Target> = Vec::new();
+
+        for ast_y in 0..map.height {
+            for ast_x in 0..map.width {
+                if map.get(ast_x, ast_y) != Space::Asteroid {
+                    continue;
+                }
+
+                let ast_x = ast_x as i64;
+                let ast_y = ast_y as i64;
+
+                if ast_x == origin_x && ast_y == origin_y {
+                    continue;
+                }
+
+                let x_off = ast_x as i64 - origin_x;
+                let y_off = ast_y as i64 - origin_y;
+
+                let distance: f64 = ((x_off * x_off) as f64 + (y_off * y_off) as f64).sqrt();
+
+                let angle = if x_off == 0 || y_off == 0 {
+                    if x_off == 0 {
+                        if y_off > 0 { 180f64 } else { 0f64 }
+                    } else {
+                        if x_off > 0 { 90f64 } else { 270f64 }
+                    }
+
+                } else {
+                    let angle_degrees = (x_off as f64 / y_off as f64).atan() * (180.0 / std::f64::consts::PI);
+
+                    if x_off > 0 && y_off > 0 {
+                        // Quadrant 1
+                        180f64 - angle_degrees
+                    } else if x_off > 0 && y_off < 0 {
+                        // Quadrant 0
+                        angle_degrees.abs()
+                    } else if x_off < 0 && y_off > 0 {
+                        // Quadrant 2
+                        270f64 + (-90f64 - angle_degrees)
+                    } else if x_off < 0 && y_off < 0 {
+                        // Quadrant 3
+                        360f64 - angle_degrees
+                    } else {
+                        // Lines up with us
+                        angle_degrees
+                    }
+                };
+
+                targets.push(Target { x: ast_x, y: ast_y, angle, distance, exploded: false });
+            }
+        }
+
+        targets.sort_by(|t1, t2| t1.angle.partial_cmp(&t2.angle).unwrap().then(t1.distance.partial_cmp(&t2.distance).unwrap()));
+
+        let mut exploded_count = 0;
+        let mut last_angle_hit: f64 = -1.0;
+
+        for t in targets.iter_mut() {
+            if t.exploded || t.angle == last_angle_hit {
+                continue;
+            }
+
+            exploded_count += 1;
+
+            t.exploded = true;
+            last_angle_hit = t.angle;
+
+            if exploded_count == 200 {
+                dbg!("200th victim", t);
+                break;
+            }
+        }
+    }
 }
 
 mod day_n {
@@ -1230,5 +1335,6 @@ fn main() {
         day9::part2();
     }
 
-    day10::part1();
+    // day10::part1();
+    day10::part2();
 }
