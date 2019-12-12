@@ -1298,6 +1298,163 @@ mod day10 {
     }
 }
 
+mod day11 {
+    use crate::shared::*;
+
+    #[derive(Hash, Debug, Eq, PartialEq, Copy, Clone)]
+    struct Point(i64, i64);
+
+    impl Point {
+        fn move_direction(&self, dir: &Direction) -> Point {
+            Point(self.0 + dir.0,
+                  self.1 + dir.1)
+        }
+    }
+
+    struct Direction(i64, i64);
+
+    impl Direction {
+        fn turn_left(&self) -> Direction {
+            match self {
+                Direction(0, 1) => Direction(-1, 0),
+                Direction(-1, 0) => Direction(0, -1),
+                Direction(0, -1) => Direction(1, 0),
+                Direction(1, 0) => Direction(0, 1),
+                _ => unreachable!(),
+            }
+        }
+
+        fn turn_right(&self) -> Direction {
+            match self {
+                Direction(0, 1) => Direction(1, 0),
+                Direction(-1, 0) => Direction(0, 1),
+                Direction(0, -1) => Direction(-1, 0),
+                Direction(1, 0) => Direction(0, -1),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    enum Colour {
+        Black,
+        White,
+    }
+
+    struct PanelPainter {
+        panel: HashMap<Point, Colour>,
+        position: Point,
+        direction: Direction,
+    }
+
+    impl PanelPainter {
+        fn new() -> PanelPainter {
+            PanelPainter {
+                panel: HashMap::new(),
+                position: Point(0, 0),
+                direction: Direction(0, 1),
+            }
+        }
+
+        fn current_colour(&self) -> Colour {
+            *(self.panel.get(&self.position).unwrap_or(&Colour::Black))
+        }
+
+        fn paint(&mut self, colour: Colour) {
+            self.panel.insert(self.position, colour);
+        }
+
+        fn step(&mut self) {
+            self.position = self.position.move_direction(&self.direction);
+        }
+    }
+
+    pub fn part1() {
+        let mut painter = PanelPainter::new();
+        let code = read_file("input_files/day11.txt");
+
+        let mut intcode = intcode::new(code.split(',').map(|s| s.parse().unwrap()).collect(),
+                                   vec!(0),
+                                   Vec::new());
+
+        loop {
+            intcode.evaluate();
+
+            let turn_direction = intcode.output.pop().unwrap();
+            let paint_colour = if intcode.output.pop().unwrap() == 0 { Colour::Black } else { Colour::White };
+
+            painter.paint(paint_colour);
+
+            if turn_direction == 0 {
+                painter.direction = painter.direction.turn_left();
+            } else {
+                painter.direction = painter.direction.turn_right();
+            }
+
+            painter.step();
+
+            if intcode.terminated {
+                break;
+            }
+
+            intcode.input.push(if painter.current_colour() == Colour::Black { 0 } else { 1 });
+        }
+
+        dbg!(painter.panel.len());
+    }
+
+    pub fn part2() {
+        let mut painter = PanelPainter::new();
+        let code = read_file("input_files/day11.txt");
+
+        let mut intcode = intcode::new(code.split(',').map(|s| s.parse().unwrap()).collect(),
+                                   vec!(1),
+                                   Vec::new());
+
+        loop {
+            intcode.evaluate();
+
+            let turn_direction = intcode.output.pop().unwrap();
+            let paint_colour = if intcode.output.pop().unwrap() == 0 { Colour::Black } else { Colour::White };
+
+            painter.paint(paint_colour);
+
+            if turn_direction == 0 {
+                painter.direction = painter.direction.turn_left();
+            } else {
+                painter.direction = painter.direction.turn_right();
+            }
+
+            painter.step();
+
+            if intcode.terminated {
+                break;
+            }
+
+            intcode.input.push(if painter.current_colour() == Colour::Black { 0 } else { 1 });
+        }
+
+        let min_x = painter.panel.keys().map(|point| point.0).min().unwrap();
+        let max_x = painter.panel.keys().map(|point| point.0).max().unwrap();
+        let min_y = painter.panel.keys().map(|point| point.1).min().unwrap();
+        let max_y = painter.panel.keys().map(|point| point.1).max().unwrap();
+
+        for y in (min_y..=max_y).rev() {
+            for x in (min_x..=max_x) {
+                let colour = painter.panel.get(&Point(x, y)).unwrap_or(&Colour::Black);
+                let ch = match colour {
+                    Colour::Black => ' ',
+                    Colour::White => '#',
+                };
+
+                print!("{}", ch);
+            }
+            println!("\n");
+        }
+    }
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -1333,8 +1490,13 @@ fn main() {
 
         day9::part1();
         day9::part2();
+
+        day10::part1();
+        day10::part2();
+
+        day11::part1();
     }
 
-    // day10::part1();
-    day10::part2();
+    day11::part1();
+    day11::part2();
 }
