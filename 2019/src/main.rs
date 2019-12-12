@@ -1397,7 +1397,7 @@ mod day11 {
                 break;
             }
 
-            intcode.input.push(if painter.current_colour() == Colour::Black { 0 } else { 1 });
+            intcode.input.push(painter.current_colour() as i64);
         }
 
         dbg!(painter.panel.len());
@@ -1431,7 +1431,7 @@ mod day11 {
                 break;
             }
 
-            intcode.input.push(if painter.current_colour() == Colour::Black { 0 } else { 1 });
+            intcode.input.push(painter.current_colour() as i64);
         }
 
         let min_x = painter.panel.keys().map(|point| point.0).min().unwrap();
@@ -1449,7 +1449,7 @@ mod day11 {
 
                 print!("{}", ch);
             }
-            println!("\n");
+            println!();
         }
     }
 }
