@@ -1723,7 +1723,116 @@ mod day13 {
         dbg!(coords.len());
     }
 
-    pub fn part2() {}
+    #[derive(Clone, Copy, Eq, PartialEq)]
+    enum Tile {
+        Empty,
+        Wall,
+        Block,
+        Paddle,
+        Ball,
+    }
+
+    impl From<usize> for Tile {
+        fn from(tile_type: usize) -> Tile {
+            match tile_type {
+                0 => Tile::Empty,
+                1 => Tile::Wall,
+                2 => Tile::Block,
+                3 => Tile::Paddle,
+                4 => Tile::Ball,
+                _ => panic!("Not a valid tile number: {}", tile_type),
+            }
+        }
+    }
+
+    pub fn part2() {
+        let mut code: Vec<i64> = read_file("input_files/day13.txt").split(',').map(|s| s.parse().unwrap()).collect();
+        // FREEEEE
+        code[0] = 2;
+
+        let mut intcode = intcode::new(
+            code,
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let width = 42;
+        let height = 26;
+        let mut framebuffer: Vec<Vec<Tile>> = (0..height).map(|_| vec![Tile::Empty; width]).collect();
+        let mut current_score = 0;
+
+        let mut last_paddle_x = 0;
+        let mut last_ball_x = 0;
+
+        for _ in (0..500) {
+            println!();
+        }
+
+        loop {
+            intcode.evaluate();
+
+            for directive in intcode.output.chunks(3) {
+                if directive[0] == -1 && directive[1] == 0 {
+                    // Score update
+                    current_score = directive[2];
+                } else {
+                    let x = directive[0];
+                    let y = directive[1];
+                    let tile = Tile::from(directive[2] as usize);
+
+                    if tile == Tile::Ball {
+                        last_ball_x = x;
+                    }
+
+                    if tile == Tile::Paddle {
+                        last_paddle_x = x;
+                    }
+
+                    framebuffer[y as usize][x as usize] = tile;
+                }
+            }
+
+            intcode.output.clear();
+
+            print!("{}[2J", 27 as char);
+            print!("{}[3J", 27 as char);
+            println!("{:>42}", format!("Score: {}", current_score));
+            for row in &framebuffer {
+                for col in row {
+                    let ch = match col {
+                        Tile::Empty => ' ',
+                        Tile::Wall => '#',
+                        Tile::Block => 'X',
+                        Tile::Paddle => '=',
+                        Tile::Ball => 'o',
+                    };
+
+                    print!("{}", ch);
+                }
+
+                println!();
+            }
+
+
+            if intcode.terminated {
+                break;
+            }
+
+            assert!(intcode.waiting_for_input);
+
+            if last_paddle_x < last_ball_x {
+                intcode.input.push(1);
+            } else if last_paddle_x > last_ball_x {
+                intcode.input.push(-1);
+            } else {
+                intcode.input.push(0);
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+
+        println!("FINAL SCORE: {}", current_score);
+    }
 }
 
 mod day_n {
@@ -1770,7 +1879,9 @@ fn main() {
 
         day12::part1();
         day12::part2();
+
+        day13::part1();
+        day13::part2();
     }
 
-    day13::part1()
 }
