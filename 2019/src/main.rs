@@ -314,6 +314,7 @@ mod shared {
     pub use regex::Regex;
 
     pub use intcode::{self, IntCode};
+    pub use std::cell::RefCell;
     pub use std::cmp::{self, Ordering};
     pub use std::collections::BTreeMap;
     pub use std::collections::HashMap;
@@ -324,7 +325,6 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
-    pub use std::cell::RefCell;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -988,7 +988,6 @@ mod day10 {
             self.grid[y][x] = val;
         }
 
-
         fn in_range(&self, x: i64, y: i64) -> bool {
             x < self.width as i64 && y < self.height as i64 && x >= 0 && y >= 0
         }
@@ -1108,12 +1107,13 @@ mod day10 {
                 }
 
                 // Calculate how many asteroids this one can see
-                let mut vismap: Grid<Visibility> = Grid::new(map.width, map.height, Visibility::Visible);
+                let mut vismap: Grid<Visibility> =
+                    Grid::new(map.width, map.height, Visibility::Visible);
                 for y in 0..map.height {
                     for x in 0..map.width {
                         if x == ast_x && y == ast_y {
                             // Itsa me!
-                            continue
+                            continue;
                         }
 
                         if map.get(x, y) != Space::Asteroid {
@@ -1167,7 +1167,7 @@ mod day10 {
 
                             let width = (x as i64 - ast_x as i64).abs() as usize;
                             let height = (y as i64 - ast_y as i64).abs() as usize;
- 
+
                             let gcd = gcd(width, height);
 
                             let unit_width_adjustment = (width / gcd) as i64 * xdir;
@@ -1192,7 +1192,9 @@ mod day10 {
                             continue;
                         }
 
-                        if map.get(x, y) == Space::Asteroid && vismap.get(x, y) == Visibility::Visible {
+                        if map.get(x, y) == Space::Asteroid
+                            && vismap.get(x, y) == Visibility::Visible
+                        {
                             score += 1;
                         }
                     }
@@ -1246,13 +1248,21 @@ mod day10 {
 
                 let angle = if x_off == 0 || y_off == 0 {
                     if x_off == 0 {
-                        if y_off > 0 { 180f64 } else { 0f64 }
+                        if y_off > 0 {
+                            180f64
+                        } else {
+                            0f64
+                        }
                     } else {
-                        if x_off > 0 { 90f64 } else { 270f64 }
+                        if x_off > 0 {
+                            90f64
+                        } else {
+                            270f64
+                        }
                     }
-
                 } else {
-                    let angle_degrees = (x_off as f64 / y_off as f64).atan() * (180.0 / std::f64::consts::PI);
+                    let angle_degrees =
+                        (x_off as f64 / y_off as f64).atan() * (180.0 / std::f64::consts::PI);
 
                     if x_off > 0 && y_off > 0 {
                         // Quadrant 1
@@ -1272,11 +1282,22 @@ mod day10 {
                     }
                 };
 
-                targets.push(Target { x: ast_x, y: ast_y, angle, distance, exploded: false });
+                targets.push(Target {
+                    x: ast_x,
+                    y: ast_y,
+                    angle,
+                    distance,
+                    exploded: false,
+                });
             }
         }
 
-        targets.sort_by(|t1, t2| t1.angle.partial_cmp(&t2.angle).unwrap().then(t1.distance.partial_cmp(&t2.distance).unwrap()));
+        targets.sort_by(|t1, t2| {
+            t1.angle
+                .partial_cmp(&t2.angle)
+                .unwrap()
+                .then(t1.distance.partial_cmp(&t2.distance).unwrap())
+        });
 
         let mut exploded_count = 0;
         let mut last_angle_hit: f64 = -1.0;
@@ -1307,8 +1328,7 @@ mod day11 {
 
     impl Point {
         fn move_direction(&self, dir: &Direction) -> Point {
-            Point(self.0 + dir.0,
-                  self.1 + dir.1)
+            Point(self.0 + dir.0, self.1 + dir.1)
         }
     }
 
@@ -1374,15 +1394,21 @@ mod day11 {
         let mut painter = PanelPainter::new();
         let code = read_file("input_files/day11.txt");
 
-        let mut intcode = intcode::new(code.split(',').map(|s| s.parse().unwrap()).collect(),
-                                   vec!(0),
-                                   Vec::new());
+        let mut intcode = intcode::new(
+            code.split(',').map(|s| s.parse().unwrap()).collect(),
+            vec![0],
+            Vec::new(),
+        );
 
         loop {
             intcode.evaluate();
 
             let turn_direction = intcode.output.pop().unwrap();
-            let paint_colour = if intcode.output.pop().unwrap() == 0 { Colour::Black } else { Colour::White };
+            let paint_colour = if intcode.output.pop().unwrap() == 0 {
+                Colour::Black
+            } else {
+                Colour::White
+            };
 
             painter.paint(paint_colour);
 
@@ -1408,15 +1434,21 @@ mod day11 {
         let mut painter = PanelPainter::new();
         let code = read_file("input_files/day11.txt");
 
-        let mut intcode = intcode::new(code.split(',').map(|s| s.parse().unwrap()).collect(),
-                                   vec!(1),
-                                   Vec::new());
+        let mut intcode = intcode::new(
+            code.split(',').map(|s| s.parse().unwrap()).collect(),
+            vec![1],
+            Vec::new(),
+        );
 
         loop {
             intcode.evaluate();
 
             let turn_direction = intcode.output.pop().unwrap();
-            let paint_colour = if intcode.output.pop().unwrap() == 0 { Colour::Black } else { Colour::White };
+            let paint_colour = if intcode.output.pop().unwrap() == 0 {
+                Colour::Black
+            } else {
+                Colour::White
+            };
 
             painter.paint(paint_colour);
 
@@ -1498,28 +1530,29 @@ mod day12 {
         fn step_x(&mut self) {
             self.position.x += self.velocity.x;
         }
-
     }
 
     impl std::fmt::Debug for Moon {
         fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-            formatter.write_str(&format!("pos=<x={}, y={}, z={}>, vel=<x={}, y={}, z={}>",
-                                         self.position.x, self.position.y, self.position.z,
-                                         self.velocity.x, self.velocity.y, self.velocity.z))
+            formatter.write_str(&format!(
+                "pos=<x={}, y={}, z={}>, vel=<x={}, y={}, z={}>",
+                self.position.x,
+                self.position.y,
+                self.position.z,
+                self.velocity.x,
+                self.velocity.y,
+                self.velocity.z
+            ))
         }
     }
 
-
-
-
-
     pub fn part1() {
-        let moons = vec!(
+        let moons = vec![
             RefCell::new(Moon::new(1, 2, -9)),
             RefCell::new(Moon::new(-1, -9, -4)),
             RefCell::new(Moon::new(17, 6, 8)),
             RefCell::new(Moon::new(12, 4, 2)),
-        );
+        ];
 
         for _step in 0..1000 {
             let moons_len = moons.len();
@@ -1527,7 +1560,7 @@ mod day12 {
             for i in 0..moons_len - 1 {
                 let mut m1 = moons[i].borrow_mut();
 
-                for j in i+1..moons_len {
+                for j in i + 1..moons_len {
                     let mut m2 = moons[j].borrow_mut();
 
                     if m1.position.x > m2.position.x {
@@ -1604,7 +1637,7 @@ mod day12 {
                     match (*x).cmp(this_x) {
                         std::cmp::Ordering::Less => lt_x += 1,
                         std::cmp::Ordering::Greater => gt_x += 1,
-                        _ => {},
+                        _ => {}
                     }
                 }
 
@@ -1616,12 +1649,16 @@ mod day12 {
                 positions[i] += velocities[i];
             }
 
-            let key = Key { positions: positions.clone(), velocities: velocities.clone() };
+            let key = Key {
+                positions: positions.clone(),
+                velocities: velocities.clone(),
+            };
 
             match seen.insert(key, step) {
                 Some(first_step) => {
                     return (first_step, step);
-                }, None => {}
+                }
+                None => {}
             }
         }
 
@@ -1629,14 +1666,14 @@ mod day12 {
     }
 
     pub fn part2() {
-        let mut xs: Vec<i64> = vec!(1, -1, 17, 12);
-        let mut xvels: Vec<i64> = vec!(0, 0, 0, 0);
+        let mut xs: Vec<i64> = vec![1, -1, 17, 12];
+        let mut xvels: Vec<i64> = vec![0, 0, 0, 0];
 
-        let mut ys: Vec<i64> = vec!(2, -9, 6, 4);
-        let mut yvels: Vec<i64> = vec!(0, 0, 0, 0);
+        let mut ys: Vec<i64> = vec![2, -9, 6, 4];
+        let mut yvels: Vec<i64> = vec![0, 0, 0, 0];
 
-        let mut zs: Vec<i64> = vec!(-9, -4, 8, 2);
-        let mut zvels: Vec<i64> = vec!(0, 0, 0, 0);
+        let mut zs: Vec<i64> = vec![-9, -4, 8, 2];
+        let mut zvels: Vec<i64> = vec![0, 0, 0, 0];
 
         // Turns out the cycle begins immediately, so I didn't end up needing the first value here
         let (_, x_step) = steps_to_cycle(&mut xs, &mut xvels);
@@ -1659,9 +1696,35 @@ mod day12 {
             gcd(b, a % b)
         }
     }
-
 }
 
+mod day13 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let code = read_file("input_files/day13.txt");
+
+        let mut intcode = intcode::new(
+            code.split(',').map(|s| s.parse().unwrap()).collect(),
+            Vec::new(),
+            Vec::new(),
+        );
+
+        intcode.evaluate();
+
+        let mut coords: Vec<(i64, i64)> = intcode
+            .output
+            .chunks(3)
+            .filter(|chunk| chunk[2] == 2)
+            .map(|chunk| (chunk[0], chunk[1]))
+            .collect();
+        coords.dedup();
+
+        dbg!(coords.len());
+    }
+
+    pub fn part2() {}
+}
 
 mod day_n {
     use crate::shared::*;
@@ -1704,8 +1767,10 @@ fn main() {
 
         day11::part1();
         day11::part2();
+
+        day12::part1();
+        day12::part2();
     }
 
-    day12::part1();
-    day12::part2();
+    day13::part1()
 }
