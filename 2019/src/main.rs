@@ -324,6 +324,7 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
+    pub use std::cell::RefCell;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -1166,7 +1167,7 @@ mod day10 {
 
                             let width = (x as i64 - ast_x as i64).abs() as usize;
                             let height = (y as i64 - ast_y as i64).abs() as usize;
-
+ 
                             let gcd = gcd(width, height);
 
                             let unit_width_adjustment = (width / gcd) as i64 * xdir;
@@ -1454,6 +1455,213 @@ mod day11 {
     }
 }
 
+mod day12 {
+    use crate::shared::*;
+
+    #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
+    struct Point3D {
+        x: i64,
+        y: i64,
+        z: i64,
+    }
+
+    impl std::ops::Add for Point3D {
+        type Output = Self;
+
+        fn add(self, other: Self) -> Self {
+            Self {
+                x: self.x + other.x,
+                y: self.y + other.y,
+                z: self.z + other.z,
+            }
+        }
+    }
+
+    #[derive(Clone, Hash, Eq, PartialEq)]
+    struct Moon {
+        position: Point3D,
+        velocity: Point3D,
+    }
+
+    impl Moon {
+        fn new(x: i64, y: i64, z: i64) -> Moon {
+            Moon {
+                position: Point3D { x, y, z },
+                velocity: Point3D { x: 0, y: 0, z: 0 },
+            }
+        }
+
+        fn step(&mut self) {
+            self.position = self.position + self.velocity;
+        }
+
+        fn step_x(&mut self) {
+            self.position.x += self.velocity.x;
+        }
+
+    }
+
+    impl std::fmt::Debug for Moon {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            formatter.write_str(&format!("pos=<x={}, y={}, z={}>, vel=<x={}, y={}, z={}>",
+                                         self.position.x, self.position.y, self.position.z,
+                                         self.velocity.x, self.velocity.y, self.velocity.z))
+        }
+    }
+
+
+
+
+
+    pub fn part1() {
+        let moons = vec!(
+            RefCell::new(Moon::new(1, 2, -9)),
+            RefCell::new(Moon::new(-1, -9, -4)),
+            RefCell::new(Moon::new(17, 6, 8)),
+            RefCell::new(Moon::new(12, 4, 2)),
+        );
+
+        for _step in 0..1000 {
+            let moons_len = moons.len();
+            // Apply gravity
+            for i in 0..moons_len - 1 {
+                let mut m1 = moons[i].borrow_mut();
+
+                for j in i+1..moons_len {
+                    let mut m2 = moons[j].borrow_mut();
+
+                    if m1.position.x > m2.position.x {
+                        m1.velocity.x -= 1;
+                        m2.velocity.x += 1;
+                    } else if m1.position.x < m2.position.x {
+                        m1.velocity.x += 1;
+                        m2.velocity.x -= 1;
+                    }
+
+                    if m1.position.y > m2.position.y {
+                        m1.velocity.y -= 1;
+                        m2.velocity.y += 1;
+                    } else if m1.position.y < m2.position.y {
+                        m1.velocity.y += 1;
+                        m2.velocity.y -= 1;
+                    }
+
+                    if m1.position.z > m2.position.z {
+                        m1.velocity.z -= 1;
+                        m2.velocity.z += 1;
+                    } else if m1.position.z < m2.position.z {
+                        m1.velocity.z += 1;
+                        m2.velocity.z -= 1;
+                    }
+                }
+            }
+
+            // Apply velocity
+            for moon in &moons {
+                moon.borrow_mut().step();
+            }
+
+            // println!("After step {}", step + 1);
+            // for moon in &moons {
+            //     dbg!(moon.borrow());
+            // }
+        }
+
+        let mut total_energy = 0;
+
+        for moon in &moons {
+            let m = moon.borrow();
+
+            let potential = m.position.x.abs() + m.position.y.abs() + m.position.z.abs();
+            let kinetic = m.velocity.x.abs() + m.velocity.y.abs() + m.velocity.z.abs();
+
+            total_energy += potential * kinetic;
+        }
+
+        println!("Total energy: {}", total_energy);
+    }
+
+    #[derive(Eq, PartialEq, Hash)]
+    struct Key {
+        positions: Vec<i64>,
+        velocities: Vec<i64>,
+    }
+
+    // Returns (first_step, repeat_step)
+    fn steps_to_cycle(positions: &mut Vec<i64>, velocities: &mut Vec<i64>) -> (usize, usize) {
+        let mut seen: HashMap<Key, usize> = HashMap::new();
+        assert!(positions.len() == velocities.len());
+
+        for step in 0..1000000usize {
+            // Apply gravity
+            for i in 0..positions.len() {
+                let this_x = &positions[i];
+
+                let mut lt_x = 0;
+                let mut gt_x = 0;
+
+                for x in positions.iter() {
+                    match (*x).cmp(this_x) {
+                        std::cmp::Ordering::Less => lt_x += 1,
+                        std::cmp::Ordering::Greater => gt_x += 1,
+                        _ => {},
+                    }
+                }
+
+                velocities[i] += (gt_x - lt_x);
+            }
+
+            // Apply velocity
+            for i in 0..positions.len() {
+                positions[i] += velocities[i];
+            }
+
+            let key = Key { positions: positions.clone(), velocities: velocities.clone() };
+
+            match seen.insert(key, step) {
+                Some(first_step) => {
+                    return (first_step, step);
+                }, None => {}
+            }
+        }
+
+        panic!("Didn't find a repeat!");
+    }
+
+    pub fn part2() {
+        let mut xs: Vec<i64> = vec!(1, -1, 17, 12);
+        let mut xvels: Vec<i64> = vec!(0, 0, 0, 0);
+
+        let mut ys: Vec<i64> = vec!(2, -9, 6, 4);
+        let mut yvels: Vec<i64> = vec!(0, 0, 0, 0);
+
+        let mut zs: Vec<i64> = vec!(-9, -4, 8, 2);
+        let mut zvels: Vec<i64> = vec!(0, 0, 0, 0);
+
+        // Turns out the cycle begins immediately, so I didn't end up needing the first value here
+        let (_, x_step) = steps_to_cycle(&mut xs, &mut xvels);
+        let (_, y_step) = steps_to_cycle(&mut ys, &mut yvels);
+        let (_, z_step) = steps_to_cycle(&mut zs, &mut zvels);
+
+        // Sayz the internet
+        // lcm(a, b, c) = lcm(a, lcm(b, c))
+        dbg!(lcm(lcm(x_step, y_step), z_step));
+    }
+
+    fn lcm(a: usize, b: usize) -> usize {
+        (a * b) / gcd(a, b)
+    }
+
+    fn gcd(a: usize, b: usize) -> usize {
+        if b == 0 {
+            a
+        } else {
+            gcd(b, a % b)
+        }
+    }
+
+}
+
 
 mod day_n {
     use crate::shared::*;
@@ -1495,8 +1703,9 @@ fn main() {
         day10::part2();
 
         day11::part1();
+        day11::part2();
     }
 
-    day11::part1();
-    day11::part2();
+    day12::part1();
+    day12::part2();
 }
