@@ -1833,6 +1833,125 @@ mod day13 {
 
         println!("FINAL SCORE: {}", current_score);
     }
+
+    fn write_frame(grid: &Vec<Vec<Tile>>, out: &mut impl Write) {
+        const PIXEL_SIZE: usize = 50;
+
+        let img_width = PIXEL_SIZE * grid[0].len();
+        let img_height = PIXEL_SIZE * grid.len();
+
+        out.write_all(b"P6\n").unwrap();
+        out.write_all(format!("{}\n", img_width).as_bytes())
+            .unwrap();
+        out.write_all(format!("{}\n", img_height).as_bytes())
+            .unwrap();
+        out.write_all(b"255\n").unwrap();
+
+        let mut output_row: Vec<u8> = Vec::new();
+
+        for row in grid {
+            output_row.clear();
+
+            for &cell in row {
+                let val = match cell {
+                    Tile::Empty => 255,
+                    Tile::Wall => 255,
+                    Tile::Block => 0,
+                    Tile::Paddle => 64,
+                    Tile::Ball => 128,
+                };
+
+                for _ in 0..PIXEL_SIZE {
+                    // RGB
+                    output_row.push(val);
+                    output_row.push(val);
+                    output_row.push(val);
+                }
+            }
+
+            // Repeat the row PIXEL_SIZE to make square pixels.
+            for _ in 0..PIXEL_SIZE {
+                out.write_all(&output_row).unwrap();
+            }
+        }
+    }
+
+    // WARNING: dumps ppm files to stdout
+    //
+    // Run with: target/release/adventofcode2019 | ffmpeg -vcodec ppm -f image2pipe -framerate 60 -i - out.mp4
+    pub fn part2_deluxe_mode() {
+        let mut code: Vec<i64> = read_file("input_files/day13.txt").split(',').map(|s| s.parse().unwrap()).collect();
+        // FREEEEE
+        code[0] = 2;
+
+        let mut intcode = intcode::new(
+            code,
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let stdout = std::io::stdout();
+        let mut stdout_handle = stdout.lock();
+
+        let width = 42;
+        let height = 26;
+        let mut framebuffer: Vec<Vec<Tile>> = (0..height).map(|_| vec![Tile::Empty; width]).collect();
+        let mut current_score = 0;
+
+        let mut last_paddle_x = 0;
+        let mut last_ball_x = 0;
+
+        for _ in (0..500) {
+            println!();
+        }
+
+        loop {
+            intcode.evaluate();
+
+            for directive in intcode.output.chunks(3) {
+                if directive[0] == -1 && directive[1] == 0 {
+                    // Score update
+                    current_score = directive[2];
+                } else {
+                    let x = directive[0];
+                    let y = directive[1];
+                    let tile = Tile::from(directive[2] as usize);
+
+                    if tile == Tile::Ball {
+                        last_ball_x = x;
+                    }
+
+                    if tile == Tile::Paddle {
+                        last_paddle_x = x;
+                    }
+
+                    framebuffer[y as usize][x as usize] = tile;
+                }
+            }
+
+            intcode.output.clear();
+
+            // PPM image away!
+            write_frame(&framebuffer, &mut stdout_handle);
+
+
+            if intcode.terminated {
+                break;
+            }
+
+            assert!(intcode.waiting_for_input);
+
+            if last_paddle_x < last_ball_x {
+                intcode.input.push(1);
+            } else if last_paddle_x > last_ball_x {
+                intcode.input.push(-1);
+            } else {
+                intcode.input.push(0);
+            }
+        }
+
+        println!("FINAL SCORE: {}", current_score);
+    }
 }
 
 mod day_n {
@@ -1882,6 +2001,6 @@ fn main() {
 
         day13::part1();
         day13::part2();
+        day13::part2_deluxe_mode();
     }
-
 }
