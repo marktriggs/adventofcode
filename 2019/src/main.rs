@@ -1954,6 +1954,83 @@ mod day13 {
     }
 }
 
+mod day14 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct ChemQuant {
+        qty: i64,
+        chem: String,
+    }
+
+    impl From<&str> for ChemQuant {
+        fn from(s: &str) -> ChemQuant {
+            let bits: Vec<&str> = s.split(" ").collect();
+
+            ChemQuant {
+                qty: bits[0].parse().unwrap(),
+                chem: bits[1].to_owned(),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    struct Reaction {
+        inputs: Vec<ChemQuant>,
+        output: ChemQuant,
+    }
+
+    pub fn part1() {
+        let reactions: Vec<Reaction> = input_lines("input_files/day14.txt").map(|line| {
+            let bits: Vec<String> = line.split(" => ").map(str::to_owned).collect();
+
+            let inputs: Vec<ChemQuant> = bits[0].split(", ").map(ChemQuant::from).collect();
+            let output: ChemQuant = ChemQuant::from(&bits[1] as &str);
+
+            Reaction { inputs, output }
+        }).collect();
+
+        let mut goal_amounts: HashMap<String, i64> = HashMap::new();
+
+        goal_amounts.insert("FUEL".to_owned(), 1);
+
+        loop {
+            let mut done = true;
+
+            for (chem, &amount_needed) in &goal_amounts.clone() {
+                if chem == "ORE" {
+                    // Nothing more to be done
+                    continue;
+                }
+
+                if amount_needed <= 0 {
+                    continue;
+                }
+
+                done = false;
+                let reaction = reactions.iter().find(|r| &(r.output.chem) == chem).unwrap();
+                let reactions_needed = (amount_needed as f64 / reaction.output.qty as f64).ceil() as i64;
+
+                for input in &reaction.inputs {
+                    let e = goal_amounts.entry(input.chem.clone()).or_insert(0);
+                    *e += (reactions_needed * input.qty);
+                }
+
+                goal_amounts.insert(chem.clone(), amount_needed - (reaction.output.qty * reactions_needed));
+                break;
+            }
+
+            if done {
+                break;
+            }
+        }
+
+        dbg!(goal_amounts);
+    }
+
+    pub fn part2() {}
+}
+
 mod day_n {
     use crate::shared::*;
 
@@ -2003,4 +2080,6 @@ fn main() {
         day13::part2();
         day13::part2_deluxe_mode();
     }
+
+    day14::part1();
 }
