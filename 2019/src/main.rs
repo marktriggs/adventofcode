@@ -1835,7 +1835,7 @@ mod day13 {
     }
 
     fn write_frame(grid: &Vec<Vec<Tile>>, out: &mut impl Write) {
-        const PIXEL_SIZE: usize = 50;
+        const PIXEL_SIZE: usize = 25;
 
         let img_width = PIXEL_SIZE * grid[0].len();
         let img_height = PIXEL_SIZE * grid.len();
@@ -1854,18 +1854,18 @@ mod day13 {
 
             for &cell in row {
                 let val = match cell {
-                    Tile::Empty => 255,
-                    Tile::Wall => 255,
-                    Tile::Block => 0,
-                    Tile::Paddle => 64,
-                    Tile::Ball => 128,
+                    Tile::Empty => (255, 255, 255),
+                    Tile::Wall => (188, 143, 143),
+                    Tile::Block => (32, 32, 32),
+                    Tile::Paddle => (178, 34, 34),
+                    Tile::Ball => (255, 0, 0),
                 };
 
                 for _ in 0..PIXEL_SIZE {
                     // RGB
-                    output_row.push(val);
-                    output_row.push(val);
-                    output_row.push(val);
+                    output_row.push(val.0);
+                    output_row.push(val.1);
+                    output_row.push(val.2);
                 }
             }
 
@@ -1876,9 +1876,6 @@ mod day13 {
         }
     }
 
-    // WARNING: dumps ppm files to stdout
-    //
-    // Run with: target/release/adventofcode2019 | ffmpeg -vcodec ppm -f image2pipe -framerate 60 -i - out.mp4
     pub fn part2_deluxe_mode() {
         let mut code: Vec<i64> = read_file("input_files/day13.txt").split(',').map(|s| s.parse().unwrap()).collect();
         // FREEEEE
@@ -1890,9 +1887,6 @@ mod day13 {
             Vec::new(),
         );
 
-        let stdout = std::io::stdout();
-        let mut stdout_handle = stdout.lock();
-
         let width = 42;
         let height = 26;
         let mut framebuffer: Vec<Vec<Tile>> = (0..height).map(|_| vec![Tile::Empty; width]).collect();
@@ -1901,9 +1895,13 @@ mod day13 {
         let mut last_paddle_x = 0;
         let mut last_ball_x = 0;
 
-        for _ in (0..500) {
-            println!();
-        }
+        let mut ffmpeg = std::process::Command::new("ffmpeg")
+            .args(&["-vcodec", "ppm", "-y", "-f", "image2pipe", "-framerate", "30", "-i", "-", "day13.mp4"])
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .expect("Failed to start ffmpeg");
+
+        let to_ffmpeg = ffmpeg.stdin.as_mut().expect("Failed to open ffmpeg stdin");
 
         loop {
             intcode.evaluate();
@@ -1931,9 +1929,9 @@ mod day13 {
 
             intcode.output.clear();
 
-            // PPM image away!
-            write_frame(&framebuffer, &mut stdout_handle);
 
+            // PPM image away!
+            write_frame(&framebuffer, to_ffmpeg);
 
             if intcode.terminated {
                 break;
@@ -1949,6 +1947,8 @@ mod day13 {
                 intcode.input.push(0);
             }
         }
+
+        ffmpeg.wait().unwrap();
 
         println!("FINAL SCORE: {}", current_score);
     }
