@@ -10,6 +10,7 @@ extern crate regex;
 pub mod intcode {
     use std::collections::HashMap;
 
+    #[derive(Clone)]
     pub struct IntCode {
         pub pc: usize,
         pub memory: HashMap<usize, i64>,
@@ -320,6 +321,7 @@ mod shared {
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
+    pub use std::collections::VecDeque;
     pub use std::fmt::{self, Display};
     pub use std::fs::{self, File};
     pub use std::io::{self, BufRead, BufReader, Write};
@@ -2028,8 +2030,210 @@ mod day14 {
         dbg!(goal_amounts);
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let reactions: Vec<Reaction> = input_lines("input_files/day14.txt").map(|line| {
+            let bits: Vec<String> = line.split(" => ").map(str::to_owned).collect();
+
+            let inputs: Vec<ChemQuant> = bits[0].split(", ").map(ChemQuant::from).collect();
+            let output: ChemQuant = ChemQuant::from(&bits[1] as &str);
+
+            Reaction { inputs, output }
+        }).collect();
+
+        let mut goal_amounts: HashMap<String, i64> = HashMap::new();
+
+        // 1_000_000_000_000
+
+        // Trial and error & binary searched to find this value!
+        goal_amounts.insert("FUEL".to_owned(), 2269325);
+
+        loop {
+            let mut done = true;
+
+            for (chem, &amount_needed) in &goal_amounts.clone() {
+                if chem == "ORE" {
+                    // Nothing more to be done
+                    continue;
+                }
+
+                if amount_needed <= 0 {
+                    continue;
+                }
+
+                done = false;
+                let reaction = reactions.iter().find(|r| &(r.output.chem) == chem).unwrap();
+                let reactions_needed = (amount_needed as f64 / reaction.output.qty as f64).ceil() as i64;
+
+                for input in &reaction.inputs {
+                    let e = goal_amounts.entry(input.chem.clone()).or_insert(0);
+                    *e += (reactions_needed * input.qty);
+                }
+
+                goal_amounts.insert(chem.clone(), amount_needed - (reaction.output.qty * reactions_needed));
+                break;
+            }
+
+            if done {
+                break;
+            }
+        }
+
+        dbg!(goal_amounts);
+    }
+
+
 }
+
+mod day15 {
+    use crate::shared::*;
+
+    struct Exploration {
+        state: intcode::IntCode,
+        position: (i64, i64),
+        move_count: usize,
+        try_direction: usize,
+    }
+
+    #[derive(Eq, PartialEq, Copy, Clone, Debug)]
+    enum Tile {
+        Open,
+        Wall,
+        OxygenSystem,
+    }
+
+    pub fn move_position(pos: (i64, i64), direction: usize) -> (i64, i64) {
+        match direction {
+            1 => (pos.0, pos.1 + 1),
+            2 => (pos.0, pos.1 - 1),
+            3 => (pos.0 - 1, pos.1),
+            4 => (pos.0 + 1, pos.1),
+            _ => panic!("Bad direction: {}", direction),
+        }
+    }
+
+    fn map_world() -> HashMap<(i64, i64), Tile> {
+        let code: Vec<i64> = read_file("input_files/day15.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let intcode = intcode::new(
+            code,
+            Vec::new(),
+            Vec::new(),
+        );
+
+        let mut world: HashMap<(i64, i64), Tile> = HashMap::new();
+
+        let mut queue: VecDeque<Exploration> = VecDeque::from(
+            vec!(
+                Exploration { state: intcode.clone(), position: (0, 0), try_direction: 1, move_count: 1 },
+                Exploration { state: intcode.clone(), position: (0, 0), try_direction: 2, move_count: 1 },
+                Exploration { state: intcode.clone(), position: (0, 0), try_direction: 3, move_count: 1 },
+                Exploration { state: intcode.clone(), position: (0, 0), try_direction: 4, move_count: 1 },
+            ));
+
+        while (!queue.is_empty()) {
+            let mut exploration = queue.pop_front().unwrap();
+
+            let tested_position = move_position(exploration.position, exploration.try_direction);
+
+            if !world.contains_key(&tested_position) {
+                if !exploration.state.input.is_empty() {
+                    dbg!(&exploration.state.input);
+                }
+
+                exploration.state.input.push(exploration.try_direction as i64);
+                exploration.state.evaluate();
+
+                let output = exploration.state.output.pop().unwrap();
+
+                let tile = match output {
+                    0 => Tile::Wall,
+                    1 => Tile::Open,
+                    2 => Tile::OxygenSystem,
+                    _ => panic!("Unexpected response: {}", output),
+                };
+
+                if tile == Tile::OxygenSystem {
+                    dbg!(exploration.move_count);
+                }
+
+                world.insert(tested_position, tile);
+
+                if tile != Tile::Wall {
+                    queue.push_front(Exploration { state: exploration.state.clone(), position: tested_position, try_direction: 1, move_count: exploration.move_count + 1 });
+                    queue.push_front(Exploration { state: exploration.state.clone(), position: tested_position, try_direction: 2, move_count: exploration.move_count + 1 });
+                    queue.push_front(Exploration { state: exploration.state.clone(), position: tested_position, try_direction: 3, move_count: exploration.move_count + 1 });
+                    queue.push_front(Exploration { state: exploration.state.clone(), position: tested_position, try_direction: 4, move_count: exploration.move_count + 1 });
+                }
+
+            }
+        }
+
+        world
+    }
+
+    fn dump_world(world: &HashMap<(i64, i64), Tile>) {
+        let min_x = *(world.iter().map(|((x, _y), _v)| x).min().unwrap());
+        let max_x = *(world.iter().map(|((x, _y), _v)| x).max().unwrap());
+        let min_y = *(world.iter().map(|((_x, y), _v)| y).min().unwrap());
+        let max_y = *(world.iter().map(|((_x, y), _v)| y).max().unwrap());
+
+        for y in (min_y..=max_y) {
+            for x in (min_x..=max_x) {
+                print!("{}",
+                       match world.get(&(x, y)).unwrap_or(&Tile::Open) {
+                           Tile::Wall => '#',
+                           Tile::Open => ' ',
+                           Tile::OxygenSystem => 'O',
+                       });
+            }
+            println!();
+        }
+    }
+
+    pub fn part1() {
+        let world = map_world();
+
+        dump_world(&world);
+    }
+
+    pub fn part2() {
+        let mut world = map_world();
+
+        let oxygen_system = world.iter().find(|&(_, v)| v == &Tile::OxygenSystem).map(|(k, _)| k).unwrap();
+
+        let mut queue: VecDeque<(i64, i64)> = VecDeque::from(vec!(*oxygen_system));
+
+        let mut minutes = 0;
+        loop {
+            let mut next_queue: VecDeque<(i64, i64)> = VecDeque::new();
+
+            while !queue.is_empty() {
+                let pos = queue.pop_front().unwrap();
+
+                // If there are adjacent squares to fill in, do it...
+                for direction in 1..=4 {
+                    let adjacent_pos = move_position(pos, direction);
+
+                    if world.get(&adjacent_pos).unwrap_or(&Tile::Open) == &Tile::Open {
+                        world.insert(adjacent_pos, Tile::OxygenSystem);
+                        next_queue.push_front(adjacent_pos);
+                    }
+                }
+            }
+
+            if next_queue.is_empty() {
+                break;
+            }
+
+            minutes += 1;
+            queue = next_queue;
+        }
+
+        println!("Filled in {} minutes", minutes);
+    }
+}
+
+
 
 mod day_n {
     use crate::shared::*;
@@ -2079,7 +2283,11 @@ fn main() {
         day13::part1();
         day13::part2();
         day13::part2_deluxe_mode();
+
+        day14::part1();
+        day14::part2();
     }
 
-    day14::part1();
+    day15::part1();
+    day15::part2();
 }
