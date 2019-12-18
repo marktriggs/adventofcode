@@ -2234,6 +2234,139 @@ mod day15 {
 }
 
 
+mod day16 {
+    use crate::shared::*;
+
+    fn repeat_for_phase<T>(base_pattern: &Vec<T>, phase: usize) -> impl Iterator<Item=T> + '_
+        where T: Clone
+    {
+        base_pattern.iter().map(move |elt| (0..phase).map(move |_| elt.clone())).flatten().cycle()
+    }
+
+
+    pub fn part1() {
+        let pattern: Vec<i64> = vec!(0, 1, 0, -1);
+        let input_s = read_file("input_files/day16.txt");
+        let mut input: Vec<i64> = input_s.chars().map(|ch| ch.to_digit(10).unwrap() as i64).collect();
+
+        for _phase in (0..100) {
+            let mut result: Vec<i64> = vec![0; input.len()];
+
+            for repeat in 0..input.len() {
+                let output: i64 = input
+                    .iter()
+                    .zip(repeat_for_phase(&pattern, repeat + 1).skip(1))
+                    .map(|(digit, pattern)| ((digit * pattern)))
+                    .sum();
+
+                result[repeat] = (output % 10).abs();
+            }
+
+            input = result;
+        }
+
+        dbg!(input.iter().take(8).cloned().collect::<Vec<i64>>());
+    }
+
+    pub fn part2() {
+        // let pattern: Vec<i64> = vec!(0, 1, 0, -1);
+        let input_s = read_file("input_files/day16.txt");
+
+        let repeated_input: String = (0..10_000).map(|_| input_s.clone()).collect();
+
+        // input len: 6,500,000 
+        let offset = 5975589;
+
+        // 0 - 5975588 (inclusive) all zero
+        // -- then add to the end & mod 8 times
+
+        let mut input: Vec<i64> = repeated_input.chars().map(|ch| ch.to_digit(10).unwrap() as i64).collect();
+
+        for _phase in (0..100) {
+            // dbg!(_phase);
+            let mut result: Vec<i64> = vec![0; input.len()];
+
+            let mut total: i64 = input.iter().skip(offset).sum();
+            result[offset] = (total % 10).abs();
+
+            for repeat in (offset + 1)..input.len() {
+                let adjusted = total - input[repeat - 1];
+                total = adjusted;
+                result[repeat] = (total % 10).abs();
+            }
+
+            input = result;
+        }
+
+        dbg!(input.iter().skip(offset).take(8).cloned().map(|n| format!("{}", n)).collect::<String>());
+
+    }
+}
+
+
+mod day17 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let code: Vec<i64> = read_file("input_files/day17.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut intcode = intcode::new(
+            code,
+            Vec::new(),
+            Vec::new(),
+        );
+
+        intcode.evaluate();
+
+        let mut world: HashMap<(usize, usize), char> = HashMap::new();
+
+        let mut x = 0;
+        let mut y = 0;
+
+        let mut width = 0;
+        let mut height = 0;
+
+        for ch in intcode.output {
+            if (ch as u8 as char) == '\n' {
+                height = y;
+                y += 1;
+                x = 0;
+            } else {
+                world.insert((x, y), ch as u8 as char);
+                x += 1;
+                width = x;
+            }
+        }
+
+        let mut total = 0;
+
+        for x in 1..(width - 1) {
+            for y in 1..(height - 1) {
+                if world.get(&(x, y)).unwrap() == &'#' &&
+                    world.get(&(x + 1, y)).unwrap() == &'#' &&
+                    world.get(&(x - 1, y)).unwrap() == &'#' &&
+                    world.get(&(x, y + 1)).unwrap() == &'#' &&
+                    world.get(&(x, y - 1)).unwrap() == &'#' {
+                        total += x * y;
+                        world.insert((x, y), 'O');
+                    }
+            }
+        }
+
+        for x in 0..width {
+            for y in 0..height {
+                print!("{}", world.get(&(x, y)).unwrap_or(&'.'));
+            }
+            println!();
+        }
+
+        println!("Total was {}", total);
+    }
+
+    pub fn part2() {}
+}
+
+
 
 mod day_n {
     use crate::shared::*;
@@ -2286,8 +2419,13 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        day15::part1();
+        day15::part2();
+
+        day16::part1();
+        day16::part2();
     }
 
-    day15::part1();
-    day15::part2();
+    day17::part1();
 }
