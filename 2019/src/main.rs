@@ -324,7 +324,7 @@ mod shared {
     pub use std::collections::VecDeque;
     pub use std::fmt::{self, Display};
     pub use std::fs::{self, File};
-    pub use std::io::{self, BufRead, BufReader, Write};
+    pub use std::io::{self, BufRead, BufReader, Write, Read};
     pub use std::iter::FromIterator;
     pub use std::str;
 
@@ -2306,6 +2306,9 @@ mod day16 {
 
 mod day17 {
     use crate::shared::*;
+    extern crate termion;
+    use self::termion::raw::IntoRawMode;
+
 
     pub fn part1() {
         let code: Vec<i64> = read_file("input_files/day17.txt").split(',').map(|s| s.parse().unwrap()).collect();
@@ -2320,42 +2323,42 @@ mod day17 {
 
         let mut world: HashMap<(usize, usize), char> = HashMap::new();
 
-        let mut x = 0;
-        let mut y = 0;
+        let mut col = 0;
+        let mut row = 0;
 
         let mut width = 0;
         let mut height = 0;
 
         for ch in intcode.output {
             if (ch as u8 as char) == '\n' {
-                height = y;
-                y += 1;
-                x = 0;
+                height = row;
+                row += 1;
+                col = 0;
             } else {
-                world.insert((x, y), ch as u8 as char);
-                x += 1;
-                width = x;
+                world.insert((row, col), ch as u8 as char);
+                col += 1;
+                width = col;
             }
         }
 
         let mut total = 0;
 
-        for x in 1..(width - 1) {
-            for y in 1..(height - 1) {
-                if world.get(&(x, y)).unwrap() == &'#' &&
-                    world.get(&(x + 1, y)).unwrap() == &'#' &&
-                    world.get(&(x - 1, y)).unwrap() == &'#' &&
-                    world.get(&(x, y + 1)).unwrap() == &'#' &&
-                    world.get(&(x, y - 1)).unwrap() == &'#' {
-                        total += x * y;
-                        world.insert((x, y), 'O');
+        for row in 1..(height - 1) {
+            for col in 1..(width - 1) {
+                if world.get(&(row, col)).unwrap() == &'#' &&
+                    world.get(&(row + 1, col)).unwrap() == &'#' &&
+                    world.get(&(row - 1, col)).unwrap() == &'#' &&
+                    world.get(&(row, col + 1)).unwrap() == &'#' &&
+                    world.get(&(row, col - 1)).unwrap() == &'#' {
+                        total += row * col;
+                        world.insert((row, col), 'O');
                     }
             }
         }
 
-        for x in 0..width {
-            for y in 0..height {
-                print!("{}", world.get(&(x, y)).unwrap_or(&'.'));
+        for row in 0..height {
+            for col in 0..width {
+                print!("{}", world.get(&(row, col)).unwrap_or(&'.'));
             }
             println!();
         }
@@ -2363,7 +2366,263 @@ mod day17 {
         println!("Total was {}", total);
     }
 
-    pub fn part2() {}
+    enum Facing {
+        Up,
+        Down,
+        Left,
+        Right,
+    }
+
+    fn apply_adjustment(position: (usize, usize), adjustment: (i64, i64)) -> (usize, usize) {
+        ((position.0 as i64 + adjustment.0) as usize, (position.1 as i64 + adjustment.1) as usize)
+    }
+
+    pub fn part2_simulator() {
+        let code: Vec<i64> = read_file("input_files/day17.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut intcode = intcode::new(
+            code,
+            Vec::new(),
+            Vec::new(),
+        );
+
+        intcode.evaluate();
+
+        let mut world: HashMap<(usize, usize), char> = HashMap::new();
+
+        let mut col = 0;
+        let mut row = 0;
+
+        let mut width = 0;
+        let mut height = 0;
+
+        for ch in intcode.output {
+            if (ch as u8 as char) == '\n' {
+                height = row;
+                row += 1;
+                col = 0;
+            } else {
+                world.insert((row, col), ch as u8 as char);
+                col += 1;
+                width = col;
+            }
+        }
+
+        let mut vacuum_facing = Facing::Up;
+        let mut vacuum_position = (0, 0);
+
+        let mut movements: Vec<char> = Vec::new();
+
+        loop {
+            print!("{}[2J", 27 as char);
+            print!("{}[3J", 27 as char);
+
+            for row in 0..height {
+                for col in 0..width {
+                    if world.get(&(row, col)).unwrap_or(&'.') == &'^' {
+                        // Our little guy
+                        let ch = match vacuum_facing {
+                            Facing::Up => '^',
+                            Facing::Down => 'v',
+                            Facing::Right => '>',
+                            Facing::Left => '<',
+                        };
+
+                        vacuum_position = (row, col);
+                        print!("{}", ch);
+                    } else {
+                        print!("{}",  world.get(&(row, col)).unwrap_or(&'.'));
+                    }
+                }
+                println!();
+            }
+
+            let mut _stdout = std::io::stdout().into_raw_mode().unwrap();
+            let stdin = std::io::stdin();
+            let stdin = stdin.lock();
+            let input = stdin.bytes().next().unwrap().unwrap();
+
+            if input as char == 'q' {
+                break;
+            }
+
+            match input {
+                65 => {
+                    // up - move forward
+                    let adjustment = match vacuum_facing {
+                        Facing::Up => (-1, 0),
+                        Facing::Down => (1, 0),
+                        Facing::Right => (0, 1),
+                        Facing::Left => (0, -1),
+                    };
+
+                    let new_position = apply_adjustment(vacuum_position, adjustment);
+                    let &target_tile_type = world.get(&new_position).unwrap_or(&'.');
+
+                    if target_tile_type == '#' || target_tile_type == 'X' {
+                        // OK!
+                        // Old square is visited
+                        world.insert(vacuum_position, 'X');
+
+                        // New square is us
+                        vacuum_position = new_position;
+                        world.insert(vacuum_position, '^');
+
+                        movements.push('1');
+                    }
+                },
+                66 => {
+                    // down
+                },
+                67 => {
+                    // turn right
+                    vacuum_facing = match vacuum_facing {
+                        Facing::Up => Facing::Right,
+                        Facing::Down => Facing::Left,
+                        Facing::Right => Facing::Down,
+                        Facing::Left => Facing::Up,
+                    };
+
+                    movements.push('R');
+                },
+                68 => {
+                    // left
+                    vacuum_facing = match vacuum_facing {
+                        Facing::Up => Facing::Left,
+                        Facing::Down => Facing::Right,
+                        Facing::Right => Facing::Up,
+                        Facing::Left => Facing::Down,
+                    };
+                    movements.push('L');
+                },
+                _ => {
+                    // dbg!("\n\nNO IDEA", input);
+                    // break;
+                },
+            }
+        }
+
+        println!("{}", movements.iter().collect::<String>());
+    }
+
+    fn collapse_movements(movements: &str) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut chars = movements.chars();
+        let mut run_length = 0;
+
+        loop {
+            match chars.next() {
+                Some(ch) => {
+                    if ch == 'L' || ch == 'R' {
+                        if run_length > 0 {
+                            result.push(format!("{}", run_length));
+                        }
+
+                        result.push(format!("{}", ch));
+                        run_length = 0;
+                    } else {
+                        run_length += 1;
+                    }
+                },
+                None => {
+                    if run_length > 0 {
+                        result.push(format!("{}", run_length));
+                    }
+
+                    break;
+                }
+            };
+        }
+
+        result
+    }
+
+
+    fn matches(moves: &[String], a: &[String], b: &[String], c: &[String]) -> bool {
+        if moves.len() == 0 {
+            true
+        } else {
+            (&moves[0..a.len()] == a && matches(&moves[a.len()..], a, b, c)) ||
+                (&moves[0..b.len()] == b && matches(&moves[b.len()..], a, b, c)) ||
+                (&moves[0..c.len()] == c && matches(&moves[c.len()..], a, b, c))
+        }
+    }
+
+    fn find_groups(moves: &str) -> Option<(Vec<String>, Vec<String>, Vec<String>)> {
+        let moves: Vec<String> = moves.split(",").map(str::to_owned).collect();
+
+        for a_len in 1..20 {
+            for b_len in 1..20 {
+                for c_len in 1..20 {
+                    for b_gap in 0..(moves.len() - a_len - b_len - c_len) {
+                        for c_gap in 0..(moves.len() - a_len - b_len - c_len - b_gap) {
+                            if (a_len + b_len + c_len + b_gap + c_gap) >= moves.len() {
+                                continue;
+                            }
+
+                            let a_start = 0;
+                            let b_start = a_len + b_gap;
+                            let c_start = b_start + b_len + c_gap;
+
+                            let a = &moves[a_start..a_len];
+                            let b = &moves[b_start..(b_start + b_len)];
+                            let c = &moves[c_start..(c_start + c_len)];
+
+                            if matches(&moves, a, b, c) {
+                                return Some((a.to_vec(), b.to_vec(), c.to_vec()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn part2() {
+        // Path strategy: always go as far as you can without stopping.  This string output from the simulator.
+        let movements = "L111111L1111R11111111R11111111L111111L1111L1111111111R11111111L111111L1111R11111111L1111R1111L1111R11111111R11111111L111111L1111L1111111111R11111111L1111R1111L1111R11111111R11111111L111111L1111L1111111111R11111111L1111R1111L1111R11111111L111111L1111R11111111R11111111L111111L1111L1111111111R11111111";
+        let collapsed = collapse_movements(movements).join(",");
+
+        if let Some((a, b, c)) = find_groups(&collapsed) {
+            let a = a.join(",");
+            let b = b.join(",");
+            let c = c.join(",");
+
+            let main_program = collapsed.replace(&a, "A").replace(&b, "B").replace(&c, "C");
+
+            let mut code: Vec<i64> = read_file("input_files/day17.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+            // Enter the right mode
+            assert_eq!(code[0], 1);
+            code[0] = 2;
+
+            let mut input: Vec<char> = Vec::new();
+
+            input.extend(main_program.chars()); input.push('\n');
+            input.extend(a.chars()); input.push('\n');
+            input.extend(b.chars()); input.push('\n');
+            input.extend(c.chars()); input.push('\n');
+            input.push('n'); input.push('\n');
+
+            // intcode wants input in reverse order and as i64s
+            let input: Vec<i64> = input.iter().map(|&ch| ch as i64).rev().collect();
+
+            let mut intcode = intcode::new(
+                code,
+                input,
+                Vec::new(),
+            );
+
+            intcode.evaluate();
+
+            assert!(intcode.terminated);
+            dbg!(intcode.output.pop().unwrap());
+        } else {
+            panic!("No solution found");
+        }
+    }
 }
 
 
@@ -2425,7 +2684,9 @@ fn main() {
 
         day16::part1();
         day16::part2();
-    }
 
-    day17::part1();
+        day17::part1();
+        day17::part2_simulator();
+        day17::part2();
+    }
 }
