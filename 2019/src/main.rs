@@ -2783,6 +2783,10 @@ mod day18 {
         fn count_keys(&self) -> usize {
             self.player.key_set.count
         }
+
+        fn accumulated_cost(&self) -> usize {
+            self.accumulated_cost
+        }
     }
 
     struct Reachability {
@@ -2860,10 +2864,10 @@ mod day18 {
             result
         }
 
-        fn find_reachable_keys(&self, state: &State) -> Vec<(KeyType, usize, Point)> {
-            self.map.get(&state.player.position).unwrap().iter().filter(|reachability| {
+        fn find_reachable_keys(&self, state: &PlayerState) -> Vec<(KeyType, usize, Point)> {
+            self.map.get(&state.position).unwrap().iter().filter(|reachability| {
                 // We're OK if we have all the right keys
-                state.player.key_set.contains_all(&reachability.keys_required) && !state.player.key_set.has_key(reachability.target_key)
+                state.key_set.contains_all(&reachability.keys_required) && !state.key_set.has_key(reachability.target_key)
             })
                 .map(|reachability| (reachability.target_key, reachability.cost, reachability.target_position))
                 .collect()
@@ -2876,8 +2880,6 @@ mod day18 {
         let reachability_map = ReachabilityMap::build(&world);
 
         let mut queue = std::collections::BinaryHeap::new();
-
-        assert!(world.starting_positions.len() == 1);
 
         queue.push(State::new(world.starting_positions[0]));
 
@@ -2908,66 +2910,115 @@ mod day18 {
                 }
             }
 
-            for (key, cost, point) in reachability_map.find_reachable_keys(&state) {
+            for (key, cost, point) in reachability_map.find_reachable_keys(&state.player) {
                 let next_state = state.add_key(key, cost, point);
                 queue.push(next_state);
             }
         }
     }
 
+    #[derive(Eq, PartialEq, Hash, Clone)]
     struct RobotStates {
-        robots: Vec<State>,
+        robots: Vec<PlayerState>,
+        accumulated_cost: usize,
     }
 
     impl RobotStates {
         fn new(starting_positions: Vec<Point>) -> RobotStates {
             RobotStates {
-                robots: starting_positions.iter().map(|&position| State::new(position)).collect(),
+                robots: starting_positions.iter().map(|&p| PlayerState {
+                    position: p,
+                    key_set: KeySet::new(),
+                }).collect(),
+                accumulated_cost: 0,
+            }
+        }
+
+        fn accumulated_cost(&self) -> usize {
+            self.accumulated_cost
+        }
+
+        fn count_keys(&self) -> usize {
+            // All robots will be given all keys
+            self.robots[0].key_set.count
+        }
+
+        fn add_key(&self, robot: usize, key: KeyType, cost: usize, new_position: Point) -> RobotStates {
+            let mut robots = self.robots.clone();
+
+            // Target robot moves
+            robots[robot].position = new_position;
+
+            // All robots get the key
+            for mut r in robots.iter_mut() {
+                r.key_set = r.key_set.add_key(key);
+            }
+
+            RobotStates {
+                robots,
+                accumulated_cost: self.accumulated_cost + cost,
             }
         }
     }
+
+    impl std::cmp::Ord for RobotStates {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.accumulated_cost.cmp(&other.accumulated_cost)
+        }
+    }
+
+    impl std::cmp::PartialOrd for RobotStates {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
 
     pub fn part2() {
         let world = World::parse(&read_file("input_files/day18_pt2.txt"));
 
         let reachability_map = ReachabilityMap::build(&world);
 
-        // let mut queue = std::collections::BinaryHeap::new();
-        //
-        // queue.push(State::new(world.starting_position));
-        //
-        // let mut best = std::usize::MAX;
-        //
-        // let mut seen_player_states: HashMap<PlayerState, usize> = HashMap::new();
-        //
-        // while !queue.is_empty() {
-        //     let state = queue.pop().unwrap();
-        //
-        //     if state.accumulated_cost > best {
-        //         // No point continuing this path
-        //         continue;
-        //     }
-        //
-        //     if let Some(cost) = seen_player_states.get(&state.player) {
-        //         if state.accumulated_cost >= *cost {
-        //             continue;
-        //         }
-        //     }
-        //
-        //     seen_player_states.insert(state.player.clone(), state.accumulated_cost);
-        //
-        //     if state.count_keys() == world.count_keys() {
-        //         if state.accumulated_cost < best {
-        //             best = state.accumulated_cost;
-        //             println!("Finished in {}", state.accumulated_cost);
-        //         }
-        //     }
-        //
-        //     for (key, cost, point) in reachability_map.find_reachable_keys(&state) {
-        //         let next_state = state.add_key(key, cost, point);
-        //         queue.push(next_state);
-        //     }
-        // }
+        let mut queue = std::collections::BinaryHeap::new();
+
+        queue.push(RobotStates::new(world.starting_positions.clone()));
+
+        let mut best = std::usize::MAX;
+
+        let mut seen_states: HashMap<RobotStates, usize> = HashMap::new();
+
+        while !queue.is_empty() {
+            let state = queue.pop().unwrap();
+
+            if state.accumulated_cost > best {
+                // No point continuing this path
+                continue;
+            }
+
+            if let Some(cost) = seen_states.get(&state) {
+                if state.accumulated_cost >= *cost {
+                    continue;
+                }
+            }
+
+            seen_states.insert(state.clone(), state.accumulated_cost);
+
+            if state.count_keys() == world.count_keys() {
+                if state.accumulated_cost < best {
+                    best = state.accumulated_cost;
+                    println!("Finished in {}", state.accumulated_cost);
+                }
+            }
+
+            for robot in 0..4 {
+                let robot_state = &state.robots[robot];
+
+                for (key, cost, point) in reachability_map.find_reachable_keys(robot_state) {
+                    let next_state = state.add_key(robot, key, cost, point);
+                    queue.push(next_state);
+                }
+            }
+        }
     }
 }
 
@@ -3033,8 +3084,9 @@ fn main() {
         day17::part1();
         day17::part2_simulator();
         day17::part2();
+
+        day18::part1();
+        day18::part2();
     }
 
-    day18::part1();
-    // day18::part2();
 }
