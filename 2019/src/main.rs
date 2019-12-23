@@ -2626,6 +2626,225 @@ mod day17 {
 }
 
 
+mod day18 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+    struct Point (i64, i64);
+
+    impl Point {
+        fn neighbours(&self) -> Vec<Point> {
+            vec!(Point(self.0 + 1, self.1),
+                 Point(self.0 - 1, self.1),
+                 Point(self.0, self.1 + 1),
+                 Point(self.0, self.1 - 1))
+        }
+    }
+
+    type KeyType = char;
+
+    #[derive(Debug, Clone, Copy)]
+    enum Tile {
+        Open,
+        Key(KeyType),
+        Door(KeyType),
+        Wall,
+    }
+
+    #[derive(Debug, Clone)]
+    struct World {
+        grid: Vec<Vec<Tile>>,
+        starting_position: Point,
+        key_count: usize,
+    }
+
+    impl World {
+        fn parse(s: &str) -> World {
+            let mut key_count = 0;
+            let mut starting_position = Point(0, 0);
+
+            let grid = s.split("\n").enumerate().map(|(y, row)| {
+                row.chars().enumerate().map(|(x, ch)| {
+                    match ch {
+                        'A'..='Z' => { Tile::Door(ch.to_ascii_lowercase()) },
+                        'a'..='z' => { 
+                            key_count += 1;
+                            Tile::Key(ch.to_ascii_lowercase())
+                        },
+                        '@' => {
+                            starting_position = Point(x as i64, y as i64);
+                            Tile::Open
+                        },
+                        '#' => Tile::Wall,
+                        '.' => Tile::Open,
+                        _ => panic!("Unrecognised tile: {}", ch),
+                    }
+                }).collect()
+            }).collect();
+
+            World { grid, key_count, starting_position }
+        }
+
+        fn tile_at(&self, p: Point) -> Tile {
+            self.grid[p.1 as usize][p.0 as usize]
+        }
+
+        fn count_keys(&self) -> usize {
+            self.key_count
+        }
+    }
+
+    #[derive(Eq, PartialEq, Hash, Clone)]
+    struct PlayerState {
+        position: Point,
+        keys_held_bitset: usize,
+        key_count: usize,
+    }
+
+    #[derive(Eq, PartialEq)]
+    struct State {
+        player: PlayerState,
+        accumulated_cost: usize,
+    }
+
+    impl std::cmp::Ord for State {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.accumulated_cost.cmp(&other.accumulated_cost)
+        }
+    }
+
+    impl std::cmp::PartialOrd for State {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl State {
+        fn new(p: Point) -> State {
+            State {
+                player: PlayerState {
+                    position: p,
+                    keys_held_bitset: 0,
+                    key_count: 0,
+                },
+                accumulated_cost: 0,
+            }
+        }
+
+        fn has_key(&self, key: KeyType) -> bool {
+            let flag = 1 << (key as usize - 'a' as usize);
+            (self.player.keys_held_bitset & flag) != 0
+        }
+
+        fn add_key(&self, key: KeyType, cost: usize, new_position: Point) -> State {
+            let flag = 1 << (key as usize - 'a' as usize);
+
+            State {
+                player: PlayerState {
+                    position: new_position,
+                    keys_held_bitset: self.player.keys_held_bitset | flag,
+                    key_count: self.player.key_count + 1,
+                },
+                accumulated_cost: self.accumulated_cost + cost,
+            }
+        }
+
+        fn count_keys(&self) -> usize {
+            self.player.key_count
+        }
+    }
+
+    fn find_reachable_keys(world: &World, state: &State) -> Vec<(KeyType, usize, Point)> {
+        let mut queue: VecDeque<(Point, usize)> = VecDeque::from(vec!((state.player.position, 0)));
+        let mut visited: HashSet<Point> = HashSet::with_capacity(1024);
+
+        let mut found = Vec::new();
+
+        while !queue.is_empty() {
+            let (point, cost) = queue.pop_front().unwrap();
+
+            for next_p in point.neighbours() {
+                if visited.contains(&next_p) {
+                    continue;
+                }
+
+                visited.insert(next_p);
+
+                match world.tile_at(next_p) {
+                    Tile::Key(key) => {
+                        if !state.has_key(key) {
+                            // A new key... hooray!
+                            found.push((key, cost + 1, next_p));
+                        }
+
+                        queue.push_back((next_p, cost + 1));
+                    },
+                    Tile::Open => {
+                        queue.push_back((next_p, cost + 1));
+                    },
+                    Tile::Door(key) => {
+                        // If it's a door we have the key for, it's effectively open
+                        if state.has_key(key) {
+                            queue.push_back((next_p, cost + 1));
+                        }
+                    },
+                    _ => {
+                        // Anything else and we're stuck
+                    }
+                }
+
+            }
+        }
+
+        found
+    }
+
+
+    pub fn part1() {
+        let world = World::parse(&read_file("input_files/day18.txt"));
+
+        //let mut queue = VecDeque::from(vec!(State::new(world.starting_position)));
+        let mut queue = std::collections::BinaryHeap::new();
+
+        queue.push(State::new(world.starting_position));
+
+        let mut best = std::usize::MAX;
+
+        let mut seen_player_states: HashMap<PlayerState, usize> = HashMap::new();
+
+        while !queue.is_empty() {
+            let state = queue.pop().unwrap();
+
+            if state.accumulated_cost > best {
+                // No point continuing this path
+                continue;
+            }
+
+            if let Some(cost) = seen_player_states.get(&state.player) {
+                if state.accumulated_cost >= *cost {
+                    continue;
+                }
+            }
+
+            seen_player_states.insert(state.player.clone(), state.accumulated_cost);
+
+            if state.count_keys() == world.count_keys() {
+                if state.accumulated_cost < best {
+                    best = state.accumulated_cost;
+                    println!("Finished in {}", state.accumulated_cost);
+                }
+            }
+
+            for (key, cost, point) in find_reachable_keys(&world, &state) {
+                let next_state = state.add_key(key, cost, point);
+                queue.push(next_state);
+            }
+        }
+    }
+
+    pub fn part2() {}
+}
+
 
 mod day_n {
     use crate::shared::*;
@@ -2689,4 +2908,6 @@ fn main() {
         day17::part2_simulator();
         day17::part2();
     }
+
+    day18::part1();
 }
