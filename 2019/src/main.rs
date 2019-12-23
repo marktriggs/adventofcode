@@ -2667,13 +2667,15 @@ mod day18 {
                 row.chars().enumerate().map(|(x, ch)| {
                     match ch {
                         'A'..='Z' => { Tile::Door(ch.to_ascii_lowercase()) },
-                        'a'..='z' => { 
+                        'a'..='z' => {
                             key_count += 1;
                             Tile::Key(ch.to_ascii_lowercase())
                         },
                         '@' => {
                             starting_position = Point(x as i64, y as i64);
-                            Tile::Open
+                            // Fake key to make our reachability map work out.
+                            key_count += 1;
+                            Tile::Key('|')
                         },
                         '#' => Tile::Wall,
                         '.' => Tile::Open,
@@ -2683,6 +2685,14 @@ mod day18 {
             }).collect();
 
             World { grid, key_count, starting_position }
+        }
+
+        fn width(&self) -> usize {
+            self.grid[0].len()
+        }
+
+        fn height(&self) -> usize {
+            self.grid.len()
         }
 
         fn tile_at(&self, p: Point) -> Tile {
@@ -2697,8 +2707,7 @@ mod day18 {
     #[derive(Eq, PartialEq, Hash, Clone)]
     struct PlayerState {
         position: Point,
-        keys_held_bitset: usize,
-        key_count: usize,
+        key_set: KeySet,
     }
 
     #[derive(Eq, PartialEq)]
@@ -2719,89 +2728,154 @@ mod day18 {
         }
     }
 
+    #[derive(Eq, PartialEq, Hash, Clone, Copy)]
+    struct KeySet {
+        bitset: usize,
+        count: usize,
+    }
+
+    impl KeySet {
+        fn new() -> KeySet {
+            KeySet { bitset: 0, count: 0 }
+        }
+
+        fn has_key(&self, key: KeyType) -> bool {
+            let flag = 1 << (key as usize - 'a' as usize);
+            (self.bitset & flag) != 0
+        }
+
+        fn add_key(&self, key: KeyType) -> KeySet {
+            let flag = 1 << (key as usize - 'a' as usize);
+            KeySet {
+                bitset: self.bitset | flag,
+                count: self.count + 1,
+            }
+        }
+
+        fn contains_all(&self, other: &KeySet) -> bool {
+            (self.bitset & other.bitset) == other.bitset
+        }
+    }
+
     impl State {
         fn new(p: Point) -> State {
             State {
                 player: PlayerState {
                     position: p,
-                    keys_held_bitset: 0,
-                    key_count: 0,
+                    key_set: KeySet::new(),
                 },
                 accumulated_cost: 0,
             }
         }
 
         fn has_key(&self, key: KeyType) -> bool {
-            let flag = 1 << (key as usize - 'a' as usize);
-            (self.player.keys_held_bitset & flag) != 0
+            self.player.key_set.has_key(key)
         }
 
         fn add_key(&self, key: KeyType, cost: usize, new_position: Point) -> State {
-            let flag = 1 << (key as usize - 'a' as usize);
-
             State {
                 player: PlayerState {
                     position: new_position,
-                    keys_held_bitset: self.player.keys_held_bitset | flag,
-                    key_count: self.player.key_count + 1,
+                    key_set: self.player.key_set.add_key(key),
                 },
                 accumulated_cost: self.accumulated_cost + cost,
             }
         }
 
         fn count_keys(&self) -> usize {
-            self.player.key_count
+            self.player.key_set.count
         }
     }
 
-    fn find_reachable_keys(world: &World, state: &State) -> Vec<(KeyType, usize, Point)> {
-        let mut queue: VecDeque<(Point, usize)> = VecDeque::from(vec!((state.player.position, 0)));
-        let mut visited: HashSet<Point> = HashSet::with_capacity(1024);
+    struct Reachability {
+        keys_required: KeySet,
+        cost: usize,
+        target_key: KeyType,
+        target_position: Point,
+    }
 
-        let mut found = Vec::new();
+    struct ReachabilityMap {
+        map: HashMap<KeyType, Vec<Reachability>>,
+    }
 
-        while !queue.is_empty() {
-            let (point, cost) = queue.pop_front().unwrap();
+    impl ReachabilityMap {
+        fn build(world: &World) -> ReachabilityMap {
+            let mut result = ReachabilityMap {
+                map: HashMap::new(),
+            };
 
-            for next_p in point.neighbours() {
-                if visited.contains(&next_p) {
-                    continue;
-                }
+            for y in 0..world.height() {
+                for x in 0..world.width() {
+                    let p = Point(x as i64, y as i64);
+                    if let Tile::Key(start_key) = world.tile_at(p) {
+                        // Use this key as our starting point
+                        let mut reachable_keys = Vec::new();
 
-                visited.insert(next_p);
+                        let mut queue: VecDeque<(Point, usize, KeySet)> = VecDeque::from(vec!((p, 0, KeySet::new())));
+                        let mut visited: HashSet<Point> = HashSet::with_capacity(1024);
 
-                match world.tile_at(next_p) {
-                    Tile::Key(key) => {
-                        if !state.has_key(key) {
-                            // A new key... hooray!
-                            found.push((key, cost + 1, next_p));
+                        while !queue.is_empty() {
+                            let (point, cost, key_set) = queue.pop_front().unwrap();
+
+                            for next_p in point.neighbours() {
+                                if visited.contains(&next_p) {
+                                    continue;
+                                }
+
+                                visited.insert(next_p);
+
+                                match world.tile_at(next_p) {
+                                    Tile::Key(found_key) => {
+                                        // Found a key... hooray!
+                                        reachable_keys.push(Reachability {
+                                            keys_required: key_set,
+                                            cost: cost + 1,
+                                            target_key: found_key,
+                                            target_position: next_p,
+                                        });
+
+                                        queue.push_back((next_p, cost + 1, key_set));
+                                    },
+                                    Tile::Open => {
+                                        queue.push_back((next_p, cost + 1, key_set));
+                                    },
+                                    Tile::Door(door_key) => {
+                                        queue.push_back((next_p, cost + 1, key_set.add_key(door_key)));
+                                    },
+                                    _ => {
+                                        // Anything else and we're stuck
+                                    }
+                                }
+                            }
                         }
 
-                        queue.push_back((next_p, cost + 1));
-                    },
-                    Tile::Open => {
-                        queue.push_back((next_p, cost + 1));
-                    },
-                    Tile::Door(key) => {
-                        // If it's a door we have the key for, it's effectively open
-                        if state.has_key(key) {
-                            queue.push_back((next_p, cost + 1));
-                        }
-                    },
-                    _ => {
-                        // Anything else and we're stuck
+                        result.map.insert(start_key, reachable_keys);
                     }
                 }
-
             }
+
+            result
         }
 
-        found
+        fn find_reachable_keys(&self, world: &World, state: &State) -> Vec<(KeyType, usize, Point)> {
+            match world.tile_at(state.player.position) {
+                Tile::Key(key) => {
+                    self.map.get(&key).unwrap().iter().filter(|reachability| {
+                        // We're OK if we have all the right keys
+                        state.player.key_set.contains_all(&reachability.keys_required) && !state.player.key_set.has_key(reachability.target_key)
+                    })
+                        .map(|reachability| (reachability.target_key, reachability.cost, reachability.target_position))
+                        .collect()
+                },
+                _ => unreachable!(),
+            }
+        }
     }
-
 
     pub fn part1() {
         let world = World::parse(&read_file("input_files/day18.txt"));
+
+        let reachability_map = ReachabilityMap::build(&world);
 
         //let mut queue = VecDeque::from(vec!(State::new(world.starting_position)));
         let mut queue = std::collections::BinaryHeap::new();
@@ -2835,7 +2909,7 @@ mod day18 {
                 }
             }
 
-            for (key, cost, point) in find_reachable_keys(&world, &state) {
+            for (key, cost, point) in reachability_map.find_reachable_keys(&world, &state) {
                 let next_state = state.add_key(key, cost, point);
                 queue.push(next_state);
             }
