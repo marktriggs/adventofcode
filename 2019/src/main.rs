@@ -3023,6 +3023,71 @@ mod day18 {
 }
 
 
+mod day19 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let code: Vec<i64> = read_file("input_files/day19.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut count = 0;
+
+        for y in 0..50 {
+            for x in 0..50 {
+
+                let mut intcode = intcode::new(
+                    code.clone(),
+                    vec!(y, x),
+                    Vec::new(),
+                );
+
+                intcode.evaluate();
+
+                assert_eq!(intcode.output.len(), 1);
+                if intcode.output.pop().unwrap() == 1 {
+                    count += 1;
+                }
+            }
+        }
+
+        println!("{} points affected", count);
+    }
+
+    pub fn part2() {
+        let code: Vec<i64> = read_file("input_files/day19.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let point_in_beam = |x, y| {
+            if x < 0 || y < 0 {
+                return false;
+            }
+
+            let mut intcode = intcode::new(
+                code.clone(),
+                vec!(y, x),
+                Vec::new(),
+            );
+
+            intcode.evaluate();
+
+            intcode.output.pop().unwrap() == 1
+        };
+
+        for y in 0..2000 {
+            match (0..2000).find(|&x| point_in_beam(x, y)) {
+                Some(x) => {
+                    if point_in_beam(x + 99, y) &&
+                        point_in_beam(x + 99, y - 99) &&
+                        point_in_beam(x, y - 99) {
+                            println!("x={}; y={}", x, y - 99);
+                            return;
+                        }
+                },
+                None => {},
+            }
+        }
+    }
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -3088,5 +3153,8 @@ fn main() {
         day18::part1();
         day18::part2();
     }
+
+    // day19::part1();
+    day19::part2();
 
 }
