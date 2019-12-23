@@ -356,6 +356,11 @@ mod shared {
         fs::read_to_string(file).unwrap().trim().to_owned()
     }
 
+    // No trim!
+    pub fn read_file_raw(file: &str) -> String {
+        fs::read_to_string(file).unwrap().to_owned()
+    }
+
     pub fn input_lines(file: &str) -> impl Iterator<Item = String> {
         let f = File::open(file).unwrap_or_else(|_| panic!("Failed to open input file: {}", &file));
         BufReader::new(f).lines().map(Result::unwrap)
@@ -3088,6 +3093,99 @@ mod day19 {
 }
 
 
+mod day20 {
+    use crate::shared::*;
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+    struct Point { x: usize, y: usize }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum Tile {
+        Open,
+        Wall,
+        Teleport(Point),
+    }
+
+    #[derive(Debug)]
+    struct DonutWorld {
+        grid: Vec<Vec<Tile>>,
+        teleporters: HashMap<Point, Point>,
+    }
+
+    impl DonutWorld {
+        fn parse(s: &str) -> DonutWorld {
+            let input: Vec<Vec<char>> = s.split("\n").map(|line| {
+                line.chars().collect()
+            }).filter(|line: &Vec<_>| !line.is_empty())
+                .collect();
+
+            let input_width = input[0].len();
+            let input_height = input.len();
+
+            // Assume our input has a margin of 2 cells around it
+            let margin = 2;
+            let grid_width = input_width - (margin * 2);
+            let grid_height = input_height - (margin * 2);
+
+            dbg!(input_width);
+
+            let mut grid: Vec<Vec<Tile>> = (0..grid_height).map(|_| vec![Tile::Wall; grid_width]).collect();
+            let mut teleporters = HashMap::new();
+
+            // Teleporters that are waiting until we discover their corresponding location
+            let mut pending_teleporters: HashMap<String, Point>  = HashMap::new();
+
+            let mut found_teleporter = |point: Point, ch1, ch2| {
+                let label = format!("{}{}", ch1, ch2);
+                if pending_teleporters.contains_key(&label) {
+                    let other_point = pending_teleporters.remove(&label).unwrap();
+
+                    teleporters.insert(point.clone(), other_point.clone());
+                    teleporters.insert(other_point.clone(), point.clone());
+                } else {
+                    pending_teleporters.insert(label, point);
+                }
+            };
+
+            for grid_y in 0..grid_height {
+                for grid_x in 0..grid_width {
+                    let input_y = grid_y + margin;
+                    let input_x = grid_x + margin;
+
+                    grid[grid_y][grid_x] = match input[input_y][input_x] {
+                        '.' => {
+                            // There might be a teleporter here too.  Look around for that.
+                            if input[input_y][input_x - 1].is_ascii_uppercase() {
+                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y][input_x - 2], input[input_y][input_x - 1]);
+                            } else if input[input_y][input_x + 1].is_ascii_uppercase() {
+                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y][input_x + 1], input[input_y][input_x + 2]);
+                            } else if input[input_y - 1][input_x].is_ascii_uppercase() {
+                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y - 2][input_x], input[input_y - 1][input_x]);
+                            } else if input[input_y + 1][input_x].is_ascii_uppercase() {
+                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y + 1][input_x], input[input_y + 2][input_x]);
+                            }
+
+                            Tile::Open
+                        },
+                        _ => Tile::Wall,
+                    }
+                }
+            }
+
+            DonutWorld { grid, teleporters }
+        }
+    }
+
+
+    pub fn part1() {
+        let world = DonutWorld::parse(&read_file_raw("input_files/day20_sample.txt"));
+        dbg!(&world);
+    }
+
+    pub fn part2() {}
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -3152,9 +3250,11 @@ fn main() {
 
         day18::part1();
         day18::part2();
+
+        day19::part1();
+        day19::part2();
     }
 
-    // day19::part1();
-    day19::part2();
+    day20::part1();
 
 }
