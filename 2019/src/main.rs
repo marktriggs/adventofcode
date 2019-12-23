@@ -2654,14 +2654,14 @@ mod day18 {
     #[derive(Debug, Clone)]
     struct World {
         grid: Vec<Vec<Tile>>,
-        starting_position: Point,
+        starting_positions: Vec<Point>,
         key_count: usize,
     }
 
     impl World {
         fn parse(s: &str) -> World {
             let mut key_count = 0;
-            let mut starting_position = Point(0, 0);
+            let mut starting_positions = Vec::new();
 
             let grid = s.split("\n").enumerate().map(|(y, row)| {
                 row.chars().enumerate().map(|(x, ch)| {
@@ -2672,10 +2672,8 @@ mod day18 {
                             Tile::Key(ch.to_ascii_lowercase())
                         },
                         '@' => {
-                            starting_position = Point(x as i64, y as i64);
-                            // Fake key to make our reachability map work out.
-                            key_count += 1;
-                            Tile::Key('|')
+                            starting_positions.push(Point(x as i64, y as i64));
+                            Tile::Open
                         },
                         '#' => Tile::Wall,
                         '.' => Tile::Open,
@@ -2684,7 +2682,7 @@ mod day18 {
                 }).collect()
             }).collect();
 
-            World { grid, key_count, starting_position }
+            World { grid, key_count, starting_positions }
         }
 
         fn width(&self) -> usize {
@@ -2795,7 +2793,7 @@ mod day18 {
     }
 
     struct ReachabilityMap {
-        map: HashMap<KeyType, Vec<Reachability>>,
+        map: HashMap<Point, Vec<Reachability>>,
     }
 
     impl ReachabilityMap {
@@ -2804,71 +2802,71 @@ mod day18 {
                 map: HashMap::new(),
             };
 
+            let mut points_of_interest = world.starting_positions.clone();
+
             for y in 0..world.height() {
                 for x in 0..world.width() {
                     let p = Point(x as i64, y as i64);
-                    if let Tile::Key(start_key) = world.tile_at(p) {
-                        // Use this key as our starting point
-                        let mut reachable_keys = Vec::new();
-
-                        let mut queue: VecDeque<(Point, usize, KeySet)> = VecDeque::from(vec!((p, 0, KeySet::new())));
-                        let mut visited: HashSet<Point> = HashSet::with_capacity(1024);
-
-                        while !queue.is_empty() {
-                            let (point, cost, key_set) = queue.pop_front().unwrap();
-
-                            for next_p in point.neighbours() {
-                                if visited.contains(&next_p) {
-                                    continue;
-                                }
-
-                                visited.insert(next_p);
-
-                                match world.tile_at(next_p) {
-                                    Tile::Key(found_key) => {
-                                        // Found a key... hooray!
-                                        reachable_keys.push(Reachability {
-                                            keys_required: key_set,
-                                            cost: cost + 1,
-                                            target_key: found_key,
-                                            target_position: next_p,
-                                        });
-
-                                        queue.push_back((next_p, cost + 1, key_set));
-                                    },
-                                    Tile::Open => {
-                                        queue.push_back((next_p, cost + 1, key_set));
-                                    },
-                                    Tile::Door(door_key) => {
-                                        queue.push_back((next_p, cost + 1, key_set.add_key(door_key)));
-                                    },
-                                    _ => {
-                                        // Anything else and we're stuck
-                                    }
-                                }
-                            }
-                        }
-
-                        result.map.insert(start_key, reachable_keys);
+                    if let Tile::Key(_) = world.tile_at(p) {
+                        points_of_interest.push(p);
                     }
                 }
+            }
+
+            for p in points_of_interest {
+                let mut reachable_keys = Vec::new();
+
+                let mut queue: VecDeque<(Point, usize, KeySet)> = VecDeque::from(vec!((p, 0, KeySet::new())));
+                let mut visited: HashSet<Point> = HashSet::with_capacity(1024);
+
+                while !queue.is_empty() {
+                    let (point, cost, key_set) = queue.pop_front().unwrap();
+
+                    for next_p in point.neighbours() {
+                        if visited.contains(&next_p) {
+                            continue;
+                        }
+
+                        visited.insert(next_p);
+
+                        match world.tile_at(next_p) {
+                            Tile::Key(found_key) => {
+                                // Found a key... hooray!
+                                reachable_keys.push(Reachability {
+                                    keys_required: key_set,
+                                    cost: cost + 1,
+                                    target_key: found_key,
+                                    target_position: next_p,
+                                });
+
+                                queue.push_back((next_p, cost + 1, key_set));
+                            },
+                            Tile::Open => {
+                                queue.push_back((next_p, cost + 1, key_set));
+                            },
+                            Tile::Door(door_key) => {
+                                queue.push_back((next_p, cost + 1, key_set.add_key(door_key)));
+                            },
+                            _ => {
+                                // Anything else and we're stuck
+                            }
+                        }
+                    }
+                }
+
+                result.map.insert(p, reachable_keys);
             }
 
             result
         }
 
-        fn find_reachable_keys(&self, world: &World, state: &State) -> Vec<(KeyType, usize, Point)> {
-            match world.tile_at(state.player.position) {
-                Tile::Key(key) => {
-                    self.map.get(&key).unwrap().iter().filter(|reachability| {
-                        // We're OK if we have all the right keys
-                        state.player.key_set.contains_all(&reachability.keys_required) && !state.player.key_set.has_key(reachability.target_key)
-                    })
-                        .map(|reachability| (reachability.target_key, reachability.cost, reachability.target_position))
-                        .collect()
-                },
-                _ => unreachable!(),
-            }
+        fn find_reachable_keys(&self, state: &State) -> Vec<(KeyType, usize, Point)> {
+            self.map.get(&state.player.position).unwrap().iter().filter(|reachability| {
+                // We're OK if we have all the right keys
+                state.player.key_set.contains_all(&reachability.keys_required) && !state.player.key_set.has_key(reachability.target_key)
+            })
+                .map(|reachability| (reachability.target_key, reachability.cost, reachability.target_position))
+                .collect()
         }
     }
 
@@ -2877,10 +2875,11 @@ mod day18 {
 
         let reachability_map = ReachabilityMap::build(&world);
 
-        //let mut queue = VecDeque::from(vec!(State::new(world.starting_position)));
         let mut queue = std::collections::BinaryHeap::new();
 
-        queue.push(State::new(world.starting_position));
+        assert!(world.starting_positions.len() == 1);
+
+        queue.push(State::new(world.starting_positions[0]));
 
         let mut best = std::usize::MAX;
 
@@ -2909,14 +2908,67 @@ mod day18 {
                 }
             }
 
-            for (key, cost, point) in reachability_map.find_reachable_keys(&world, &state) {
+            for (key, cost, point) in reachability_map.find_reachable_keys(&state) {
                 let next_state = state.add_key(key, cost, point);
                 queue.push(next_state);
             }
         }
     }
 
-    pub fn part2() {}
+    struct RobotStates {
+        robots: Vec<State>,
+    }
+
+    impl RobotStates {
+        fn new(starting_positions: Vec<Point>) -> RobotStates {
+            RobotStates {
+                robots: starting_positions.iter().map(|&position| State::new(position)).collect(),
+            }
+        }
+    }
+
+    pub fn part2() {
+        let world = World::parse(&read_file("input_files/day18_pt2.txt"));
+
+        let reachability_map = ReachabilityMap::build(&world);
+
+        // let mut queue = std::collections::BinaryHeap::new();
+        //
+        // queue.push(State::new(world.starting_position));
+        //
+        // let mut best = std::usize::MAX;
+        //
+        // let mut seen_player_states: HashMap<PlayerState, usize> = HashMap::new();
+        //
+        // while !queue.is_empty() {
+        //     let state = queue.pop().unwrap();
+        //
+        //     if state.accumulated_cost > best {
+        //         // No point continuing this path
+        //         continue;
+        //     }
+        //
+        //     if let Some(cost) = seen_player_states.get(&state.player) {
+        //         if state.accumulated_cost >= *cost {
+        //             continue;
+        //         }
+        //     }
+        //
+        //     seen_player_states.insert(state.player.clone(), state.accumulated_cost);
+        //
+        //     if state.count_keys() == world.count_keys() {
+        //         if state.accumulated_cost < best {
+        //             best = state.accumulated_cost;
+        //             println!("Finished in {}", state.accumulated_cost);
+        //         }
+        //     }
+        //
+        //     for (key, cost, point) in reachability_map.find_reachable_keys(&state) {
+        //         let next_state = state.add_key(key, cost, point);
+        //         queue.push(next_state);
+        //     }
+        // }
+    }
 }
 
 
@@ -2984,4 +3036,5 @@ fn main() {
     }
 
     day18::part1();
+    // day18::part2();
 }
