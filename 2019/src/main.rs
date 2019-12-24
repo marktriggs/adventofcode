@@ -21,6 +21,8 @@ pub mod intcode {
         pub input: Vec<i64>,
         pub output: Vec<i64>,
 
+        pub instructions_executed: usize,
+
         pub relative_base: i64,
     }
 
@@ -39,6 +41,7 @@ pub mod intcode {
             input,
             output,
             relative_base: 0,
+            instructions_executed: 0,
         }
     }
 
@@ -134,6 +137,7 @@ pub mod intcode {
             }
 
             while !self.terminated && !self.waiting_for_input {
+                self.instructions_executed += 1;
                 let instruction = self.next_instruction();
                 instruction.apply(self);
             }
@@ -3360,6 +3364,142 @@ mod day20 {
 }
 
 
+mod day21 {
+    use crate::shared::*;
+
+    extern crate rand;
+    use day21::rand::prelude::*;
+
+
+    fn ascii_code(lines: &Vec<String>) -> Vec<i64> {
+        let mut result = Vec::new();
+
+        for line in lines.iter().rev() {
+            result.push('\n' as char as i64);
+            result.extend(line.chars().rev().map (|ch| ch as i64));
+        }
+
+        result
+    }
+
+    fn random_program_pt1() -> Vec<String> {
+        let instructions = &["AND", "OR", "NOT"];
+        let inputs = &["A", "B", "C", "D", "T", "J"];
+        let outputs = &["T", "J"];
+
+        let mut rng = rand::thread_rng();
+        (0..15).map(|_| {
+            let instruction = rng.gen_range(0, instructions.len());
+            let input = rng.gen_range(0, inputs.len());
+            let output = rng.gen_range(0, outputs.len());
+
+            format!("{} {} {}", instructions[instruction], inputs[input], outputs[output])
+        }).collect()
+    }
+
+    pub fn part1() {
+        let code: Vec<i64> = read_file("input_files/day21.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        loop {
+            let mut program = random_program_pt1();
+            program.push("WALK".to_string());
+
+            let mut intcode = intcode::new(
+                code.clone(),
+                ascii_code(&program),
+                Vec::new(),
+            );
+
+            intcode.evaluate();
+
+            if intcode.output.iter().all(|&ch| ch >= 0 && ch <= 255) {
+                // print!("{}", intcode.output.iter().map(|&ch| ch as u8 as char).collect::<String>());
+            } else {
+                // Made it!
+                dbg!(intcode.output);
+                break
+            }
+        }
+    }
+
+    fn random_instruction(rng: &mut impl Rng) -> String {
+        let instructions = &["AND", "OR", "NOT"];
+        let inputs = &["A", "B", "C", "D", "E", "F", "G", "H", "I", "T", "J"];
+        let outputs = &["T", "J"];
+
+        let instruction = rng.gen_range(0, instructions.len());
+        let input = rng.gen_range(0, inputs.len());
+        let output = rng.gen_range(0, outputs.len());
+
+        format!("{} {} {}", instructions[instruction], inputs[input], outputs[output])
+    }
+
+
+    fn random_program_pt2(rng: &mut impl Rng) -> Vec<String> {
+        let mut result: Vec<String> = (0..15).map(|_| {
+            random_instruction(rng)
+        }).collect();
+
+        result.push("RUN".to_owned());
+        result
+    }
+
+    fn mutate_program(program: &mut Vec<String>, rng: &mut impl Rng) {
+        let idx = rng.gen_range(0, 15);
+        program[idx] = random_instruction(rng);
+    }
+
+    // MACHINE LEARNING BABY
+    pub fn part2() {
+        let code: Vec<i64> = read_file("input_files/day21.txt").split(',').map(|s| s.parse().unwrap()).collect();
+        let mut rng = rand::thread_rng();
+
+        let min_score = 50000;
+        let mut best: Option<Vec<String>> = None;
+        let mut best_score = 0;
+
+        let mut spins = 0;
+
+        while best == None || spins < 1000 {
+            spins += 1;
+            let program = match best.clone() {
+                Some(p) => {
+                    let mut new_program = p.clone();
+                    mutate_program(&mut new_program, &mut rng);
+                    new_program
+                },
+                None => random_program_pt2(&mut rng)
+            };
+
+            let mut intcode = intcode::new(
+                code.clone(),
+                ascii_code(&program),
+                Vec::new(),
+            );
+
+            intcode.evaluate();
+
+            let last_output = intcode.output.last().unwrap();
+
+            if *last_output > 255 {
+                println!("RESULT: {}", last_output);
+                break
+            } else {
+                // print!("{}", intcode.output.iter().map(|&ch| ch as u8 as char).collect::<String>());
+                // break;
+            }
+
+            if intcode.instructions_executed > min_score && intcode.instructions_executed > best_score {
+                println!("Set best! - score was {}", intcode.instructions_executed);
+                best = Some(program);
+                best_score = intcode.instructions_executed;
+                spins = 0
+            }
+        }
+    }
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -3427,9 +3567,12 @@ fn main() {
 
         day19::part1();
         day19::part2();
+
+        day20::part1();
+        day20::part2();
     }
 
-    // day20::part1();
-    day20::part2();
+    // day21::part1();
+    day21::part2();
 
 }
