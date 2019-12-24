@@ -3174,12 +3174,83 @@ mod day20 {
 
             DonutWorld { grid, teleporters }
         }
+
+        fn width(&self) -> i64 {
+            self.grid[0].len() as i64
+        }
+
+        fn height(&self) -> i64 {
+            self.grid.len() as i64
+        }
+
+        fn reachable_positions(&self, p: Point) -> Vec<Point> {
+            let mut result = Vec::with_capacity(4);
+
+            // If we're on a teleporter, we can teleport if we like
+            match self.teleporters.get(&p) {
+                Some(other_p) => {
+                    result.push(other_p.clone());
+                },
+                _ => {}
+            }
+
+            for (x_off, y_off) in &[(-1, 0), (1, 0), (0, 1), (0, -1)] {
+                let new_x = (p.x as i64 + x_off);
+                let new_y = (p.y as i64 + y_off);
+
+                if new_x < 0 || new_y < 0 || new_x >= self.width() || new_y >= self.height() {
+                    continue;
+                }
+
+                match self.grid[new_y as usize][new_x as usize] {
+                    Tile::Open => {
+                        result.push(Point {
+                            x: new_x as usize,
+                            y: new_y as usize,
+                        });
+                    },
+                    _ => {}
+                }
+            }
+
+            result
+        }
     }
 
 
+    #[derive(Hash, Eq, PartialEq, Debug, Clone)]
+    struct State {
+        position: Point,
+        accumulated_cost: usize,
+    }
+
     pub fn part1() {
-        let world = DonutWorld::parse(&read_file_raw("input_files/day20_sample.txt"));
-        dbg!(&world);
+        let world = DonutWorld::parse(&read_file_raw("input_files/day20.txt"));
+
+        let mut queue: VecDeque<State> = VecDeque::from(vec!(State { position: Point { x: 0, y: 61 }, accumulated_cost: 0 }));
+        let target = Point { x: 57, y: 110 };
+
+        let mut seen_states: HashSet<State> = HashSet::new();
+
+        while !queue.is_empty() {
+            let state = queue.pop_front().unwrap();
+
+            if seen_states.contains(&state) {
+                continue;
+            }
+
+            seen_states.insert(state.clone());
+
+            if state.position == target {
+                println!("Out in {} steps", state.accumulated_cost);
+                break;
+            }
+
+            for next_p in world.reachable_positions(state.position) {
+                queue.push_back(State { position: next_p, accumulated_cost: state.accumulated_cost + 1 });
+            }
+        }
+
     }
 
     pub fn part2() {}
