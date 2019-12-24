@@ -3133,8 +3133,6 @@ mod day20 {
             let grid_width = input_width - (margin * 2);
             let grid_height = input_height - (margin * 2);
 
-            dbg!(input_width);
-
             let mut grid: Vec<Vec<Tile>> = (0..grid_height).map(|_| vec![Tile::Wall; grid_width]).collect();
             let mut teleporters = HashMap::new();
 
@@ -3171,21 +3169,25 @@ mod day20 {
                         '.' => {
                             // There might be a teleporter here too.  Look around for that.
                             if input[input_y][input_x - 1].is_ascii_uppercase() {
+                                let outer = (input_x == margin);
                                 found_teleporter(Point {x: grid_x, y: grid_y},
                                                  input[input_y][input_x - 2], input[input_y][input_x - 1],
-                                                 -1);
+                                                 if outer { -1 } else { 1 });
                             } else if input[input_y][input_x + 1].is_ascii_uppercase() {
+                                let outer = (grid_x == (grid_width - 1));
                                 found_teleporter(Point {x: grid_x, y: grid_y},
                                                  input[input_y][input_x + 1], input[input_y][input_x + 2],
-                                                 -1);
+                                                 if outer { -1 } else { 1 });
                             } else if input[input_y - 1][input_x].is_ascii_uppercase() {
+                                let outer = (input_y == margin);
                                 found_teleporter(Point {x: grid_x, y: grid_y},
                                                  input[input_y - 2][input_x], input[input_y - 1][input_x],
-                                                 1);
+                                                 if outer { -1 } else { 1 });
                             } else if input[input_y + 1][input_x].is_ascii_uppercase() {
+                                let outer = (grid_y == (grid_height - 1));
                                 found_teleporter(Point {x: grid_x, y: grid_y},
                                                  input[input_y + 1][input_x], input[input_y + 2][input_x],
-                                                 1);
+                                                 if outer { -1 } else { 1 });
                             }
 
                             Tile::Open
@@ -3206,17 +3208,19 @@ mod day20 {
             self.grid.len() as i64
         }
 
-        fn reachable_positions(&self, p: Point) -> Vec<Point> {
+        fn reachable_positions(&self, p: Point) -> Vec<(Point, i64)> {
             let mut result = Vec::with_capacity(4);
 
             // If we're on a teleporter, we can teleport if we like
             match self.teleporter_locations.get(&p) {
                 Some(teleporter) => {
-                    result.push(teleporter.sends_to.clone());
+                    result.push((teleporter.sends_to.clone(), 
+                                 teleporter.depth_adjustment));
                 },
                 _ => {}
             }
 
+            // We can move to neighbours on the same level
             for (x_off, y_off) in &[(-1, 0), (1, 0), (0, 1), (0, -1)] {
                 let new_x = (p.x as i64 + x_off);
                 let new_y = (p.y as i64 + y_off);
@@ -3227,10 +3231,10 @@ mod day20 {
 
                 match self.grid[new_y as usize][new_x as usize] {
                     Tile::Open => {
-                        result.push(Point {
+                        result.push((Point {
                             x: new_x as usize,
                             y: new_y as usize,
-                        });
+                        }, 0));
                     },
                     _ => {}
                 }
@@ -3245,8 +3249,21 @@ mod day20 {
     struct State {
         position: Point,
         accumulated_cost: usize,
-        level: usize,
+        level: i64,
     }
+
+    impl std::cmp::Ord for State {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.level.cmp(&other.level).then(self.accumulated_cost.cmp(&other.accumulated_cost))
+        }
+    }
+
+    impl std::cmp::PartialOrd for State {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
 
     pub fn part1() {
         let world = DonutWorld::parse(&read_file_raw("input_files/day20.txt"));
@@ -3274,18 +3291,72 @@ mod day20 {
                 break;
             }
 
-            for next_p in world.reachable_positions(state.position) {
+            for (next_p, depth_adjustment) in world.reachable_positions(state.position) {
                 queue.push_back(State {
                     position: next_p,
                     accumulated_cost: state.accumulated_cost + 1,
-                    level: 0,
+                    level: state.level + depth_adjustment,
                 });
             }
         }
 
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let world = DonutWorld::parse(&read_file_raw("input_files/day20.txt"));
+
+        // Realsies
+        let start_pos = Point { x: 0, y: 61 };
+        let target = Point { x: 57, y: 110 };
+
+        // SAMPLE 2
+        // let start_pos = Point { x: 13, y: 32 };
+        // let target = Point { x: 11, y: 0 };
+
+        let max_depth = 200;
+
+        let mut queue = std::collections::BinaryHeap::new();
+        queue.push(State {
+            position: start_pos,
+            accumulated_cost: 0,
+            level: 0,
+        });
+
+        let mut seen_states: HashMap<(Point, i64), usize> = HashMap::new();
+
+        while !queue.is_empty() {
+            let state = queue.pop().unwrap();
+
+            match seen_states.get(&(state.position, state.level)) {
+                Some(&cost) => {
+                    if cost <= state.accumulated_cost {
+                        continue;
+                    }
+                },
+                _ => {}
+            }
+
+            if state.level > max_depth {
+                continue;
+            }
+
+            seen_states.insert((state.position.clone(), state.level), state.accumulated_cost);
+
+            if state.position == target && state.level == 0 {
+                println!("Out in {} steps", state.accumulated_cost);
+            }
+
+            for (next_p, depth_adjustment) in world.reachable_positions(state.position) {
+                if state.level + depth_adjustment >= 0 {
+                    queue.push(State {
+                        position: next_p,
+                        accumulated_cost: state.accumulated_cost + 1,
+                        level: state.level + depth_adjustment,
+                    });
+                }
+            }
+        }
+    }
 }
 
 
@@ -3358,6 +3429,7 @@ fn main() {
         day19::part2();
     }
 
-    day20::part1();
+    // day20::part1();
+    day20::part2();
 
 }
