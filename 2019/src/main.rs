@@ -3103,13 +3103,19 @@ mod day20 {
     enum Tile {
         Open,
         Wall,
-        Teleport(Point),
+        Teleporter(Teleporter)
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+    struct Teleporter {
+        sends_to: Point,
+        depth_adjustment: i64,
     }
 
     #[derive(Debug)]
     struct DonutWorld {
         grid: Vec<Vec<Tile>>,
-        teleporters: HashMap<Point, Point>,
+        teleporter_locations: HashMap<Point, Teleporter>,
     }
 
     impl DonutWorld {
@@ -3133,15 +3139,24 @@ mod day20 {
             let mut teleporters = HashMap::new();
 
             // Teleporters that are waiting until we discover their corresponding location
-            let mut pending_teleporters: HashMap<String, Point>  = HashMap::new();
+            let mut pending_teleporters: HashMap<String, Point> = HashMap::new();
 
-            let mut found_teleporter = |point: Point, ch1, ch2| {
+            let mut found_teleporter = |point: Point, ch1, ch2, depth_adjustment| {
                 let label = format!("{}{}", ch1, ch2);
                 if pending_teleporters.contains_key(&label) {
                     let other_point = pending_teleporters.remove(&label).unwrap();
 
-                    teleporters.insert(point.clone(), other_point.clone());
-                    teleporters.insert(other_point.clone(), point.clone());
+                    teleporters.insert(point.clone(),
+                                       Teleporter {
+                                           sends_to: other_point.clone(),
+                                           depth_adjustment: depth_adjustment,
+                                       });
+
+                    teleporters.insert(other_point.clone(),
+                                       Teleporter {
+                                           sends_to: point.clone(),
+                                           depth_adjustment: depth_adjustment * -1,
+                                       });
                 } else {
                     pending_teleporters.insert(label, point);
                 }
@@ -3156,13 +3171,21 @@ mod day20 {
                         '.' => {
                             // There might be a teleporter here too.  Look around for that.
                             if input[input_y][input_x - 1].is_ascii_uppercase() {
-                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y][input_x - 2], input[input_y][input_x - 1]);
+                                found_teleporter(Point {x: grid_x, y: grid_y},
+                                                 input[input_y][input_x - 2], input[input_y][input_x - 1],
+                                                 -1);
                             } else if input[input_y][input_x + 1].is_ascii_uppercase() {
-                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y][input_x + 1], input[input_y][input_x + 2]);
+                                found_teleporter(Point {x: grid_x, y: grid_y},
+                                                 input[input_y][input_x + 1], input[input_y][input_x + 2],
+                                                 -1);
                             } else if input[input_y - 1][input_x].is_ascii_uppercase() {
-                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y - 2][input_x], input[input_y - 1][input_x]);
+                                found_teleporter(Point {x: grid_x, y: grid_y},
+                                                 input[input_y - 2][input_x], input[input_y - 1][input_x],
+                                                 1);
                             } else if input[input_y + 1][input_x].is_ascii_uppercase() {
-                                found_teleporter(Point {x: grid_x, y: grid_y}, input[input_y + 1][input_x], input[input_y + 2][input_x]);
+                                found_teleporter(Point {x: grid_x, y: grid_y},
+                                                 input[input_y + 1][input_x], input[input_y + 2][input_x],
+                                                 1);
                             }
 
                             Tile::Open
@@ -3172,7 +3195,7 @@ mod day20 {
                 }
             }
 
-            DonutWorld { grid, teleporters }
+            DonutWorld { grid, teleporter_locations: teleporters }
         }
 
         fn width(&self) -> i64 {
@@ -3187,9 +3210,9 @@ mod day20 {
             let mut result = Vec::with_capacity(4);
 
             // If we're on a teleporter, we can teleport if we like
-            match self.teleporters.get(&p) {
-                Some(other_p) => {
-                    result.push(other_p.clone());
+            match self.teleporter_locations.get(&p) {
+                Some(teleporter) => {
+                    result.push(teleporter.sends_to.clone());
                 },
                 _ => {}
             }
@@ -3222,12 +3245,17 @@ mod day20 {
     struct State {
         position: Point,
         accumulated_cost: usize,
+        level: usize,
     }
 
     pub fn part1() {
         let world = DonutWorld::parse(&read_file_raw("input_files/day20.txt"));
 
-        let mut queue: VecDeque<State> = VecDeque::from(vec!(State { position: Point { x: 0, y: 61 }, accumulated_cost: 0 }));
+        let mut queue: VecDeque<State> = VecDeque::from(vec!(State {
+            position: Point { x: 0, y: 61 }, 
+            accumulated_cost: 0,
+            level: 0,
+        }));
         let target = Point { x: 57, y: 110 };
 
         let mut seen_states: HashSet<State> = HashSet::new();
@@ -3247,7 +3275,11 @@ mod day20 {
             }
 
             for next_p in world.reachable_positions(state.position) {
-                queue.push_back(State { position: next_p, accumulated_cost: state.accumulated_cost + 1 });
+                queue.push_back(State {
+                    position: next_p,
+                    accumulated_cost: state.accumulated_cost + 1,
+                    level: 0,
+                });
             }
         }
 
