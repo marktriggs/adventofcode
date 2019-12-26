@@ -3500,6 +3500,88 @@ mod day21 {
 }
 
 
+mod day22 {
+    use crate::shared::*;
+
+    type Deck = VecDeque<usize>;
+
+    fn deal_into_new_stack(deck: &mut Deck) {
+        let mut i = 0;
+        let mut j = deck.len() - 1;
+
+        while i < j {
+            deck.swap(i, j);
+
+            i += 1;
+            j -= 1;
+        }
+    }
+
+    fn cut(deck: &mut Deck, n: i64) {
+        let mut size = n.abs();
+
+        if n >= 0 {
+            while size > 0 {
+                let elt = deck.pop_front().unwrap();
+                deck.push_back(elt);
+                size -= 1;
+            }
+        } else {
+            while size > 0 {
+                let elt = deck.pop_back().unwrap();
+                deck.push_front(elt);
+                size -= 1;
+            }
+        }
+    }
+
+    fn deal(deck: &mut Deck, n: usize) {
+        let mut table: Vec<Option<usize>> = vec![None; deck.len()];
+        let mut i = 0;
+
+        while !deck.is_empty() {
+            let card = deck.pop_front().unwrap();
+            assert!(table[i] == None);
+
+            table[i] = Some(card);
+
+            i = (i + n) % table.len();
+        }
+
+        while !table.is_empty() {
+            let card = table.pop().unwrap();
+
+            deck.push_front(card.unwrap());
+        }
+    }
+
+    pub fn part1() {
+        let mut deck: Deck = (0..10007).collect();
+
+        for instruction in input_lines("input_files/day22.txt") {
+            if instruction == "deal into new stack" {
+                deal_into_new_stack(&mut deck);
+            } else {
+                // Otherwise, we're an instruction with a numeric bit
+                let idx = instruction.rfind(" ").unwrap();
+                let operation = &instruction[0..idx];
+                let n: i64 = instruction[idx + 1..instruction.len()].parse().expect(&format!("Bad mojo: {}", &instruction));
+
+                match operation {
+                    "cut" => { cut(&mut deck, n) },
+                    "deal with increment" => { deal(&mut deck, n as usize) },
+                    _ => panic!("Dunno: {}", instruction),
+                }
+            }
+        }
+
+        println!("Card 2019 is at position {}", deck.iter().position(|&card| card == 2019).unwrap());
+    }
+
+    pub fn part2() {}
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -3570,9 +3652,11 @@ fn main() {
 
         day20::part1();
         day20::part2();
+
+        day21::part1();
+        day21::part2();
     }
 
-    // day21::part1();
-    day21::part2();
+    day22::part1();
 
 }
