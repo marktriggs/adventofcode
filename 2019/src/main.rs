@@ -331,6 +331,7 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Write, Read};
     pub use std::iter::FromIterator;
     pub use std::str;
+    pub use std::convert::TryInto;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -3575,10 +3576,150 @@ mod day22 {
             }
         }
 
-        println!("Card 2019 is at position {}", deck.iter().position(|&card| card == 2019).unwrap());
+        let pos = deck.iter().position(|&card| card == 2019).unwrap();
+        println!("Card 2019 is at position {}", pos);
     }
 
-    pub fn part2() {}
+
+    const CARD_COUNT: u64 = 119315717514047;
+    // const CARD_COUNT: u64 = 10007;
+    // const CARD_COUNT: u64 = 10;
+
+
+    fn position_before_deal_into_new_stack(position: u64) -> u64 {
+        CARD_COUNT - position - 1
+    }
+
+    fn position_before_cut(position: u64, n: i64) -> u64 {
+        let abs_n: u64 = n.abs().try_into().unwrap();
+
+        if n > 0 {
+            if position >= (CARD_COUNT - abs_n) {
+                // We took from the left and added to the right
+
+                // these were originally on the left
+                return position - (CARD_COUNT - abs_n);
+            } else {
+                // shifted left
+                return position + abs_n;
+            }
+        } else if n < 0 {
+            if position < abs_n {
+                // We took from the right and added to the left
+
+                // These were originally on the right
+                return CARD_COUNT - abs_n + position;
+                // return position - (CARD_COUNT - abs_n);
+            } else {
+                // shifted right
+                return position - abs_n;
+            }
+        } else {
+            return position;
+        }
+    }
+
+
+    fn position_before_deal(position: u64, n: u64) -> u64 {
+        let mut idx = 0;
+        let mut orig_idx = 0;
+
+        if position == 0 {
+            // Zero never moves
+            return 0;
+        }
+
+        loop {
+            if (idx % CARD_COUNT) == position % n {
+                // we'll find our target this loop.  Iterate!
+                let offset = (position - idx) / n;
+                return orig_idx + offset;
+            }
+
+            // Otherwise, we can skip up to the end of the current cycle
+            let positions_to_skip = ((CARD_COUNT - idx) / n);
+            if positions_to_skip > 0 {
+                orig_idx += positions_to_skip;
+                idx += positions_to_skip * n;
+            }
+
+
+            // and move to the next one
+            orig_idx += 1;
+            idx = (idx + n) % CARD_COUNT;
+        }
+    }
+
+
+    pub fn part2() {
+        // Vague idea, based on the observation that the middle of the deck doesn't matter all that much:
+        //
+        // New representation of the deck that only tracks the N first and N last cards
+        //
+        // Reversing the deck can be carried out easily
+        //
+        // Cutting too
+        //
+        // Dealing is more tricky.  Can we cheaply figure out which cards end up where based on modulo arithmetic?
+        //
+        // Then we need to repeat this many times.  Hopefully once we have the
+        // above, we'll find that it cycles after some number of applications
+        // anyway.  Then we just need to figure out 101741582076661 % CYCLE_LEN
+        // repeats.
+        //
+        // ALTERNATVE APPROCACH: Can we work backwards in the instructions?  If
+        // the card I want is at 2020, and that's after a reverse, then prior to
+        // that step it was at MAX - 2020.  Can we apply this reverse thing
+        // repeatedly to work out where the card would have to start out?
+
+        // let position = 0;
+
+        // dbg!(position_before_deal_into_new_stack(position));
+
+
+        //     0123456789
+        //  2: 2345678901
+
+        //     0123456789
+        // -2: 8901234567
+
+
+        let mut instructions: Vec<String> = input_lines("input_files/day22.txt").collect();
+        instructions.reverse();
+
+        let mut position = 2020;
+
+        let mut round = 0;
+        loop {
+            round += 1;
+
+            for instruction in &instructions {
+                if instruction == "deal into new stack" {
+                    position = position_before_deal_into_new_stack(position);
+                } else {
+                    // Otherwise, we're an instruction with a numeric bit
+                    let idx = instruction.rfind(" ").unwrap();
+                    let operation = &instruction[0..idx];
+                    let n: i64 = instruction[idx + 1..instruction.len()].parse().expect(&format!("Bad mojo: {}", &instruction));
+
+                    match operation {
+                        "cut" => {
+                            position = position_before_cut(position, n);
+                        },
+                        "deal with increment" => {
+                            position = position_before_deal(position, n as u64);
+                        },
+                        _ => panic!("Dunno: {}", instruction),
+                    }
+                }
+            }
+
+            if position == 2020 {
+                println!("Looped at round {}", round);
+                break;
+            }
+        }
+    }
 }
 
 
@@ -3657,6 +3798,6 @@ fn main() {
         day21::part2();
     }
 
-    day22::part1();
-
+    // day22::part1();
+    day22::part2();
 }
