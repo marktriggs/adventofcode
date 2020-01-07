@@ -3502,6 +3502,56 @@ mod day21 {
 
 
 mod day22 {
+    /*
+
+    I'm going to leave all evidence of my previous aborted attempts here, but
+    the "refired" versions are what eventually got me over the line here.  The
+    hint I got from Reddit was part of it:
+
+    > Indeed, each of the shuffling functions is of the general form:
+    >
+    > "x" goes to "(A*x + B) mod N"
+    >
+    > Where sometimes B is zero or A is -1. The reverse shuffling functions are then also of this form.
+
+    Applying each step in the forward direction fell out pretty easily: either
+    you were adjusting the coefficient, or the offset, or both.  Using pencil
+    and paper shenanigans I worked out how to apply the steps twice, and that's
+    what `double_transform` does.
+
+    Once I had that, I needed to work out how to do it all in reverse, since I'm
+    trying to start with position 2020 and work backwards.  The trick, then, was
+    to come up with the same transformations in reverse.
+
+    The hard part here was reversing the deal function, which was p * n % C.  I
+    knew C was prime, so intuitively I felt like I should be able to work
+    backwards to the original position, but my maths skills were failing me.
+    Googling for inverse modular arithmetic suggested that Euclid's Extended
+    Algorithm could help, but I was having trouble applying it.
+
+    Salvation came from here:
+
+    https://math.stackexchange.com/questions/684550/how-to-reverse-modulo-of-a-multiplication
+
+    and that showed how to apply the coefficient from Euclid's Extended
+    Algorithm to what I had to derive the original position.
+
+    Once I had that, I needed to apply my reversed steps an insane number of
+    times.  To save on work, I broke my shuffle count into sums of powers of
+    two, and used my transform doubling function to fast-path those power of two
+    repetitions.  I was still getting the wrong answer--and I noticed the answer
+    I got changed when I applied the transforms in varying orders, which seemed
+    wrong.
+
+    Running in debug mode flagged the error: I was overflowing on
+    multiplications.  I had a hazy memory from Project Euler that there was an
+    algorithm for doing modular multiplication without overflow, and I found a
+    function that worked for that.  And that was it!  Two weeks later I had my
+    answer :)
+
+     */
+
+
     use crate::shared::*;
 
     type Deck = VecDeque<usize>;
@@ -3576,14 +3626,16 @@ mod day22 {
             }
         }
 
+        // for (new_pos, old_pos) in deck.iter().enumerate() {
+        //     println!("{} => {}", old_pos, new_pos);
+        // }
+
         let pos = deck.iter().position(|&card| card == 2019).unwrap();
         println!("Card 2019 is at position {}", pos);
     }
 
 
-    const CARD_COUNT: u64 = 119315717514047;
     // const CARD_COUNT: u64 = 10007;
-    // const CARD_COUNT: u64 = 10;
 
 
     fn position_before_deal_into_new_stack(position: u64) -> u64 {
@@ -3620,6 +3672,10 @@ mod day22 {
     }
 
 
+    // https://en.wikipedia.org/wiki/Modular_multiplicative_inverse ?
+    //
+    // Need extended euclidian algorithm?
+
     fn position_before_deal(position: u64, n: u64) -> u64 {
         let mut idx = 0;
         let mut orig_idx = 0;
@@ -3651,7 +3707,126 @@ mod day22 {
     }
 
 
+    // Hint from reddit:
+
+    // Indeed, each of the shuffling functions is of the general form:
+    //
+    // "x" goes to "(A*x + B) mod N"
+    //
+    // Where sometimes B is zero or A is -1. The reverse shuffling functions are then also of this form.
+
     pub fn part2() {
+        let mut position = 2020;
+        println!("{}", position);
+
+        for _round in (0..1000000) {
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, 7411);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -8660);
+            position = position_before_deal(position, 63);
+            position = position_before_cut(position, -4407);
+            position = position_before_deal(position, 29);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -7243);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -896);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_deal(position, 67);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, 7005);
+            position = position_before_deal(position, 75);
+            position = position_before_cut(position, 8417);
+            position = position_before_deal(position, 38);
+            position = position_before_cut(position, -8065);
+            position = position_before_deal(position, 75);
+            position = position_before_cut(position, -8491);
+            position = position_before_deal(position, 35);
+            position = position_before_cut(position, 2255);
+            position = position_before_deal(position, 26);
+            position = position_before_cut(position, 5823);
+            position = position_before_deal(position, 60);
+            position = position_before_cut(position, -9915);
+            position = position_before_deal(position, 13);
+            position = position_before_cut(position, 3203);
+            position = position_before_deal(position, 64);
+            position = position_before_cut(position, -2973);
+            position = position_before_deal(position, 59);
+            position = position_before_cut(position, -2963);
+            position = position_before_deal(position, 5);
+            position = position_before_cut(position, 3019);
+            position = position_before_deal(position, 75);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -9068);
+            position = position_before_deal(position, 33);
+            position = position_before_cut(position, 8430);
+            position = position_before_deal(position, 61);
+            position = position_before_cut(position, -3460);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_deal(position, 46);
+            position = position_before_cut(position, -3600);
+            position = position_before_deal(position, 70);
+            position = position_before_cut(position, -5937);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -7962);
+            position = position_before_deal(position, 34);
+            position = position_before_cut(position, 6364);
+            position = position_before_deal(position, 18);
+            position = position_before_cut(position, -3388);
+            position = position_before_deal(position, 63);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, 4783);
+            position = position_before_deal(position, 32);
+            position = position_before_cut(position, 9777);
+            position = position_before_deal(position, 73);
+            position = position_before_cut(position, 5945);
+            position = position_before_deal(position, 20);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_deal(position, 42);
+            position = position_before_cut(position, 4665);
+            position = position_before_deal(position, 40);
+            position = position_before_cut(position, -1405);
+            position = position_before_deal(position, 14);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -5074);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_deal(position, 32);
+            position = position_before_cut(position, -5387);
+            position = position_before_deal(position, 70);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -4299);
+            position = position_before_deal(position, 32);
+            position = position_before_cut(position, -6954);
+            position = position_before_deal(position, 8);
+            position = position_before_cut(position, 3555);
+            position = position_before_deal(position, 34);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, 4879);
+            position = position_before_deal(position, 62);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_deal(position, 62);
+            position = position_before_deal_into_new_stack(position);
+            position = position_before_cut(position, -1543);
+            position = position_before_deal(position, 20);
+            position = position_before_cut(position, 7577);
+            position = position_before_deal(position, 3);
+            position = position_before_cut(position, -4724);
+            position = position_before_deal(position, 7);
+            position = position_before_cut(position, 8507);
+            position = position_before_deal(position, 12);
+            position = position_before_cut(position, -4758);
+            position = position_before_deal(position, 64);
+            position = position_before_cut(position, -9977);
+            position = position_before_deal(position, 22);
+            position = position_before_cut(position, 9569);
+            position = position_before_deal(position, 5);
+        }
+
+        println!("{}", position);
+    }
+
+
+    pub fn part2_orig() {
         // Vague idea, based on the observation that the middle of the deck doesn't matter all that much:
         //
         // New representation of the deck that only tracks the N first and N last cards
@@ -3684,15 +3859,12 @@ mod day22 {
         // -2: 8901234567
 
 
-        let mut instructions: Vec<String> = input_lines("input_files/day22.txt").collect();
+        let mut instructions: Vec<String> = input_lines("input_files/day22_simplified.txt").collect();
         instructions.reverse();
 
         let mut position = 2020;
-
-        let mut round = 0;
-        loop {
-            round += 1;
-
+        println!("{}", position);
+        for _ in (0..100) {
             for instruction in &instructions {
                 if instruction == "deal into new stack" {
                     position = position_before_deal_into_new_stack(position);
@@ -3714,10 +3886,202 @@ mod day22 {
                 }
             }
 
-            if position == 2020 {
-                println!("Looped at round {}", round);
-                break;
+            println!("{}", position);
+        }
+    }
+
+
+    // p' = coeff * p + offset
+    #[derive(Debug, Copy, Clone)]
+    struct Transform {
+        coeff: i64,
+        offset: i64,
+    }
+
+    pub fn part1_refired() {
+        let mut transform = Transform { coeff: 1, offset: 0 };
+
+        for instruction in input_lines("input_files/day22.txt") {
+            if instruction == "deal into new stack" {
+                // new_p = (-p - 1) % C
+                transform.coeff *= -1;
+                transform.offset *= -1;
+                transform.offset -= 1;
+            } else {
+                // Otherwise, we're an instruction with a numeric bit
+                let idx = instruction.rfind(" ").unwrap();
+                let operation = &instruction[0..idx];
+                let n: i64 = instruction[idx + 1..instruction.len()].parse().expect(&format!("Bad mojo: {}", &instruction));
+
+                match operation {
+                    "cut" => {
+                        // cut(n, p) = (p - n) % C
+                        transform.offset -= n;
+                    },
+                    "deal with increment" => {
+                        // deal_inc(i, p) = p * i % C
+                        transform.coeff = negmod((transform.coeff * n), CARD_COUNT as i64);
+                        transform.offset = negmod((transform.offset * n), CARD_COUNT as i64);
+                    },
+                    _ => panic!("Dunno: {}", instruction),
+                }
             }
+        }
+
+        dbg!(transform);
+
+        // let pos = deck.iter().position(|&card| card == 2019).unwrap();
+        // println!("Card 2019 is at position {}", pos);
+    }
+
+    // Implemented from pseudocode here: https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+    fn extended_gcd(a: i64, b: i64) -> (i64, i64) {
+        let mut s = 0;
+        let mut old_s = 1;
+
+        let mut t = 0;
+        let mut old_t = 1;
+
+        let mut r = b;
+        let mut old_r = a;
+
+        while r != 0 {
+            let quotient = old_r / r;
+
+            // (old_r, r) := (r, old_r − quotient × r)
+            let tmp = r;
+            r = old_r - quotient * tmp;
+            old_r = tmp;
+
+            // (old_s, s) := (s, old_s − quotient × s)
+            let tmp = s;
+            s = old_s - quotient * tmp;
+            old_s = tmp;
+
+            // (old_t, t) := (t, old_t − quotient × t)
+            let tmp = t;
+            t = old_t - quotient * tmp;
+            old_t = tmp;
+        }
+
+        return (old_s, old_t);
+    }
+
+
+    const CARD_COUNT: u64 = 119315717514047;
+    const SHUFFLES: u64 = 101741582076661;
+    const POSITION_OF_INTEREST: i64 = 2020;
+
+    // const CARD_COUNT: u64 = 10007;
+    // const SHUFFLES: u64 = 2;
+    // const POSITION_OF_INTEREST: i64 = 2235;
+
+    fn mult_mod(a: i64, b: i64, modulo: i64) -> i64 {
+        if b < 0 {
+            return mult_mod(a, b * -1, modulo) * -1;
+        }
+
+        let mut res = 0;
+        let mut a = a;
+        let mut b = b;
+
+        while b > 0 {
+            if b % 2 == 1 {
+                res = negmod((res + a), modulo);
+            }
+
+            a = negmod((a * 2), modulo);
+            b = b / 2;
+        }
+
+        res
+    }
+
+    pub fn part2_refired() {
+        let mut transform = Transform { coeff: 1, offset: 0 };
+
+        let mut instructions: Vec<String> = input_lines("input_files/day22.txt").collect();
+        instructions.reverse();
+
+        for instruction in &instructions {
+            // dbg!(instruction);
+
+            if instruction == "deal into new stack" {
+                // Already its own reverse!
+                // new_p = (-p - 1) % C
+                transform.coeff *= -1;
+                transform.offset *= -1;
+                transform.offset -= 1;
+            } else {
+                // Otherwise, we're an instruction with a numeric bit
+                let idx = instruction.rfind(" ").unwrap();
+                let operation = &instruction[0..idx];
+                let n: i64 = instruction[idx + 1..instruction.len()].parse().expect(&format!("Bad mojo: {}", &instruction));
+
+                match operation {
+                    "cut" => {
+                        // cut(n, p) = (p - n) % C
+                        // rev_cut(n, p) = (p + n) % C
+                        transform.offset += n;
+                    },
+                    "deal with increment" => {
+                        // deal_inc(i, p) = p * i % C
+                        // rev_deal_inc(i, p) = ?
+                        // Ah!  This is where I need some smarts?
+
+                        // https://math.stackexchange.com/questions/684550/how-to-reverse-modulo-of-a-multiplication
+                        //
+                        // Given: (x * a) % b = c
+                        // Where we know a, b, c but not x (our original position)
+                        //
+                        // Since a and b are coprime, the Euclidean algorithm lets you find s and t such that a⋅s+t⋅b=1 and it does it fairly quickly. This means that
+                        //
+                        // a*s=1 mod b
+                        //
+                        // So then you can multiply the sides of your original equation (x * a = c mod b) by the s that is output from the Euclidean algorithm, and:
+                        //
+                        // x * a * s = c * s mod b
+                        // x * 1 = c * s mod b
+                        // x = c * s mod b
+
+                        let egcd = extended_gcd(n, CARD_COUNT.try_into().unwrap());
+
+                        transform.coeff = mult_mod(transform.coeff, egcd.0, CARD_COUNT as i64);
+                        transform.offset = mult_mod(transform.offset, egcd.0, CARD_COUNT as i64);
+                    },
+                    _ => panic!("Dunno: {}", instruction),
+                }
+            }
+            // dbg!(&transform);
+        }
+
+        let mut transforms: Vec<Transform> = Vec::new();
+
+        for i in 0..64 {
+            if ((1 << i) & SHUFFLES) != 0 {
+                transforms.push(transform.clone());
+            }
+            transform = double_transform(&transform);
+        }
+
+        let mut position = POSITION_OF_INTEREST;
+
+        for transform in transforms {
+            position = negmod(mult_mod(position, transform.coeff, CARD_COUNT as i64) + transform.offset,
+                              CARD_COUNT as i64);
+        }
+
+        dbg!(&position);
+    }
+
+    fn negmod(n: i64, m: i64) -> i64 {
+        ((n % m as i64) + m as i64) % m as i64
+    }
+
+    fn double_transform(t: &Transform) -> Transform {
+        Transform {
+            coeff: mult_mod(t.coeff, t.coeff, CARD_COUNT as i64),
+            offset: (mult_mod(t.coeff, t.offset, CARD_COUNT as i64) + t.offset) % CARD_COUNT as i64,
         }
     }
 }
@@ -3799,5 +4163,8 @@ fn main() {
     }
 
     // day22::part1();
-    day22::part2();
+    // day22::part2();
+
+    // day22::part1_refired();
+    day22::part2_refired();
 }
