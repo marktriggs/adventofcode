@@ -142,6 +142,18 @@ pub mod intcode {
                 instruction.apply(self);
             }
         }
+
+        pub fn step(&mut self) {
+            if (!self.input.is_empty()) {
+                self.waiting_for_input = false;
+            }
+
+            if !self.terminated && !self.waiting_for_input {
+                self.instructions_executed += 1;
+                let instruction = self.next_instruction();
+                instruction.apply(self);
+            }
+        }
     }
 
     pub trait Instruction {
@@ -4087,6 +4099,87 @@ mod day22 {
 }
 
 
+mod day23 {
+    use crate::shared::*;
+
+    struct Packet {
+        x: i64,
+        y: i64,
+    }
+
+    struct IntCodeForWorkgroups {
+        computer: IntCode,
+        address: i64,
+        inbox: VecDeque<Packet>,
+    }
+
+    pub fn part1() {
+        let code: Vec<i64> = read_file("input_files/day23.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut computers: HashMap<_, IntCodeForWorkgroups> = (0..50).map(|address| {
+            (address, IntCodeForWorkgroups {
+                computer: intcode::new(code.clone(), vec!(address), Vec::new()),
+                address: address,
+                inbox: VecDeque::new(),
+            })
+        }).collect();
+
+        loop {
+            // Run a step
+            for (_, c) in &mut computers {
+                c.computer.step();
+            }
+
+            // Deliver any packets that are ready to go out
+            let mut deliver_me: Vec<(i64, Packet)> = Vec::new();
+
+            for (_, c) in &mut computers {
+                if c.computer.output.len() == 3 {
+                    // Packet ready to go out
+                    let y = c.computer.output.pop().unwrap();
+                    let x = c.computer.output.pop().unwrap();
+                    let target = c.computer.output.pop().unwrap();
+
+                    deliver_me.push((target, Packet { x, y }));
+                }
+            }
+
+            for (address, packet) in deliver_me {
+                if address == 255 {
+                    // That's our target for part 1
+                    println!("Packet addressed to 255 with Y value: {}", packet.y);
+                    return
+                }
+
+                computers.get_mut(&address).unwrap().inbox.push_front(packet);
+            }
+
+            // Fulfill any pending input requests.  If we have a packet for you
+            // we'll send it along.  Otherwise have a -1 for no additional
+            // charge.
+            for (_, c) in &mut computers {
+                if c.computer.waiting_for_input {
+                    if c.inbox.is_empty() {
+                        // No message
+                        c.computer.input.push(-1);
+                    } else {
+                        // Got a message
+                        let packet = c.inbox.pop_back().unwrap();
+
+                        // Reversing the order here due to my bad API again :(
+                        c.computer.input.push(packet.y);
+                        c.computer.input.push(packet.x);
+                    }
+                }
+            }
+
+        }
+    }
+
+    pub fn part2() {}
+}
+
+
 mod day_n {
     use crate::shared::*;
 
@@ -4160,11 +4253,12 @@ fn main() {
 
         day21::part1();
         day21::part2();
+
+        day22::part1();
+        day22::part2();
+        day22::part1_refired();
+        day22::part2_refired();
     }
 
-    // day22::part1();
-    // day22::part2();
-
-    // day22::part1_refired();
-    day22::part2_refired();
+    day23::part1();
 }
