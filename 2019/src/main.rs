@@ -4102,6 +4102,7 @@ mod day22 {
 mod day23 {
     use crate::shared::*;
 
+    #[derive(Clone, Debug)]
     struct Packet {
         x: i64,
         y: i64,
@@ -4176,7 +4177,100 @@ mod day23 {
         }
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let code: Vec<i64> = read_file("input_files/day23.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut computers: HashMap<_, IntCodeForWorkgroups> = (0..50).map(|address| {
+            (address, IntCodeForWorkgroups {
+                computer: intcode::new(code.clone(), vec!(address), Vec::new()),
+                address: address,
+                inbox: VecDeque::new(),
+            })
+        }).collect();
+
+        let mut nat: Option<Packet> = None;
+
+        let mut last_y_value: Option<i64> = None;
+
+        let mut round = -1;
+        let mut consecutive_receive_failures = 0;
+        loop {
+            round += 1;
+            // Run a step
+            for (_, c) in &mut computers {
+                c.computer.step();
+            }
+
+            // Deliver any packets that are ready to go out
+            let mut deliver_me: Vec<(i64, Packet)> = Vec::new();
+
+            for (_, c) in &mut computers {
+                if c.computer.output.len() == 3 {
+                    // Packet ready to go out
+                    let y = c.computer.output.pop().unwrap();
+                    let x = c.computer.output.pop().unwrap();
+                    let target = c.computer.output.pop().unwrap();
+
+                    deliver_me.push((target, Packet { x, y }));
+                }
+            }
+
+            for (address, packet) in deliver_me {
+                if address == 255 {
+                    // Store our NAT packet
+                    nat = Some(packet);
+                } else {
+                    computers.get_mut(&address).unwrap().inbox.push_front(packet);
+                }
+            }
+
+            // Fulfill any pending input requests.  If we have a packet for you
+            // we'll send it along.  Otherwise have a -1 for no additional
+            // charge.
+            for (_, c) in &mut computers {
+                if c.computer.waiting_for_input {
+                    if c.inbox.is_empty() {
+                        // No message
+                        consecutive_receive_failures += 1;
+                        c.computer.input.push(-1);
+                    } else {
+                        // Got a message.  Network no longer idle.
+                        consecutive_receive_failures = 0;
+                        let packet = c.inbox.pop_back().unwrap();
+
+                        // Reversing the order here due to my bad API again :(
+                        c.computer.input.push(packet.y);
+                        c.computer.input.push(packet.x);
+                    }
+                }
+            }
+
+            if consecutive_receive_failures >= (computers.len() * 1000) {
+                match nat.clone() {
+                    Some(packet) => {
+                        if last_y_value.is_some() && last_y_value.unwrap() == packet.y {
+                            println!("Saw repeated Y value: {}", packet.y);
+                            return;
+                        }
+
+                        let c = computers.get_mut(&0).unwrap();
+
+                        last_y_value = Some(packet.y);
+
+                        // println!("Round {} failures {} packet y {}", round, consecutive_receive_failures, packet.y);
+                        c.computer.input.push(packet.y);
+                        c.computer.input.push(packet.x);
+
+                        consecutive_receive_failures = 0;
+                        nat = None;
+                    },
+                    None => {
+                    }
+                }
+            }
+
+        }
+    }
 }
 
 
@@ -4260,5 +4354,6 @@ fn main() {
         day22::part2_refired();
     }
 
-    day23::part1();
+    // day23::part1();
+    day23::part2();
 }
