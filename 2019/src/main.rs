@@ -4192,10 +4192,10 @@ mod day23 {
 
         let mut last_y_value: Option<i64> = None;
 
-        let mut round = -1;
+        let mut _round = -1;
         let mut consecutive_receive_failures = 0;
         loop {
-            round += 1;
+            _round += 1;
             // Run a step
             for (_, c) in &mut computers {
                 c.computer.step();
@@ -4257,7 +4257,7 @@ mod day23 {
 
                         last_y_value = Some(packet.y);
 
-                        // println!("Round {} failures {} packet y {}", round, consecutive_receive_failures, packet.y);
+                        // println!("Round {} failures {} packet y {}", _round, consecutive_receive_failures, packet.y);
                         c.computer.input.push(packet.y);
                         c.computer.input.push(packet.x);
 
@@ -4269,6 +4269,271 @@ mod day23 {
                 }
             }
 
+        }
+    }
+}
+
+
+mod day24 {
+    use crate::shared::*;
+
+    #[derive(Hash, Eq, PartialEq, Clone)]
+    enum Tile {
+        Bug,
+        Empty,
+    }
+
+    enum Action {
+        Die,
+        Infest,
+    }
+
+    pub fn part1() {
+        let mut grid: Vec<Vec<Tile>> = read_file("input_files/day24.txt").split('\n').map(|s| s.chars().map(|ch| {
+            match ch {
+                '#' => Tile::Bug,
+                '.' => Tile::Empty,
+                _ => panic!("Unrecognised input: {}", ch),
+            }
+        }).collect()
+        ).collect();
+
+        let rows = grid.len();
+        let cols = grid[0].len();
+
+        // Adding a margin around our counts so I don't have to deal with edge cases.
+        let mut neighbour_counts: Vec<Vec<usize>> = (0..(rows + 2)).map(|_| {
+            vec![0; cols + 2]
+        }).collect();
+
+        // Calculate our initial neighbour counts
+        for row in 0..rows {
+            for col in 0..cols {
+                match grid[row][col] {
+                    Tile::Bug => {
+                        let n_row = row + 1;
+                        let n_col = col + 1;
+
+                        neighbour_counts[n_row - 1][n_col] += 1;
+                        neighbour_counts[n_row + 1][n_col] += 1;
+                        neighbour_counts[n_row][n_col - 1] += 1;
+                        neighbour_counts[n_row][n_col + 1] += 1;
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        // Iterate!
+
+        let mut seen_grids: HashSet<Vec<Vec<Tile>>> = HashSet::new();
+        seen_grids.insert(grid.clone());
+
+        loop {
+            let mut actions = Vec::new();
+
+            for row in 0..rows {
+                for col in 0..cols {
+                    match grid[row][col] {
+                        Tile::Bug => {
+                            if neighbour_counts[row + 1][col + 1] != 1 {
+                                actions.push(((row, col), Action::Die));
+                            }
+                        },
+                        Tile::Empty => {
+                            if neighbour_counts[row + 1][col + 1] == 1 || neighbour_counts[row + 1][col + 1] == 2 {
+                                actions.push(((row, col), Action::Infest));
+                            }
+                        }
+                    }
+                }
+            }
+
+            for ((row, col), action) in actions {
+                match action {
+                    Action::Die => {
+                        grid[row][col] = Tile::Empty;
+
+                        let n_row = row + 1;
+                        let n_col = col + 1;
+
+                        neighbour_counts[n_row - 1][n_col] -= 1;
+                        neighbour_counts[n_row + 1][n_col] -= 1;
+                        neighbour_counts[n_row][n_col - 1] -= 1;
+                        neighbour_counts[n_row][n_col + 1] -= 1;
+                    },
+                    Action::Infest => {
+                        grid[row][col] = Tile::Bug;
+
+                        let n_row = row + 1;
+                        let n_col = col + 1;
+
+                        neighbour_counts[n_row - 1][n_col] += 1;
+                        neighbour_counts[n_row + 1][n_col] += 1;
+                        neighbour_counts[n_row][n_col - 1] += 1;
+                        neighbour_counts[n_row][n_col + 1] += 1;
+                    }
+                }
+            }
+
+            if seen_grids.contains(&grid) {
+                let mut rating = 0u64;
+
+                for row in 0..rows {
+                    for col in 0..cols {
+                        if grid[row][col] == Tile::Bug {
+                            rating += 2_u64.pow((((row * rows) + col) as u32));
+                        }
+
+                        print!("{}", match grid[row][col] {
+                            Tile::Bug => '#',
+                            Tile::Empty => '.',
+                        });
+                    }
+
+                    println!();
+                }
+
+                println!("Biodiversity rating: {}", rating);
+
+                return;
+            } else {
+                seen_grids.insert(grid.clone());
+            }
+        }
+    }
+
+    struct NeighbourCounts {
+        counts: HashMap<(i64, i64), usize>,
+    }
+
+    impl NeighbourCounts {
+        fn new() -> NeighbourCounts {
+            NeighbourCounts {
+                counts: HashMap::new(),
+            }
+        }
+
+        fn incr(&mut self, x: i64, y: i64, offset: i64) {
+            let entry = self.counts.entry((x, y)).or_insert(0);
+            *entry = (*entry as i64 + offset) as usize;
+        }
+
+        fn get(&self, x: usize, y: usize) -> usize {
+            *self.counts.get(&(x as i64, y as i64)).unwrap_or(&0)
+        }
+    }
+
+    pub fn part1_sparse() {
+        let mut grid: Vec<Vec<Tile>> = read_file("input_files/day24.txt").split('\n').map(|s| s.chars().map(|ch| {
+            match ch {
+                '#' => Tile::Bug,
+                '.' => Tile::Empty,
+                _ => panic!("Unrecognised input: {}", ch),
+            }
+        }).collect()
+        ).collect();
+
+        let rows = grid.len();
+        let cols = grid[0].len();
+
+        // Adding a margin around our counts so I don't have to deal with edge cases.
+        let mut neighbour_counts = NeighbourCounts::new();
+
+        // Calculate our initial neighbour counts
+        for row in 0..rows {
+            for col in 0..cols {
+                match grid[row][col] {
+                    Tile::Bug => {
+                        let row = row as i64;
+                        let col = col as i64;
+
+                        neighbour_counts.incr(row - 1, col, 1);
+                        neighbour_counts.incr(row + 1, col, 1);
+                        neighbour_counts.incr(row, col - 1, 1);
+                        neighbour_counts.incr(row, col + 1, 1);
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        // Iterate!
+        let mut seen_grids: HashSet<Vec<Vec<Tile>>> = HashSet::new();
+        seen_grids.insert(grid.clone());
+
+        loop {
+            let mut actions = Vec::new();
+
+            for row in 0..rows {
+                for col in 0..cols {
+                    match grid[row][col] {
+                        Tile::Bug => {
+                            if neighbour_counts.get(row, col) != 1 {
+                                actions.push(((row, col), Action::Die));
+                            }
+                        },
+                        Tile::Empty => {
+                            let neighbour_count = neighbour_counts.get(row, col);
+                            if neighbour_count == 1 || neighbour_count == 2 {
+                                actions.push(((row, col), Action::Infest));
+                            }
+                        }
+                    }
+                }
+            }
+
+            for ((row, col), action) in actions {
+                match action {
+                    Action::Die => {
+                        grid[row][col] = Tile::Empty;
+
+                        let row = row as i64;
+                        let col = col as i64;
+
+                        neighbour_counts.incr(row - 1, col, -1);
+                        neighbour_counts.incr(row + 1, col, -1);
+                        neighbour_counts.incr(row, col - 1, -1);
+                        neighbour_counts.incr(row, col + 1, -1);
+                    },
+                    Action::Infest => {
+                        grid[row][col] = Tile::Bug;
+
+                        let row = row as i64;
+                        let col = col as i64;
+
+                        neighbour_counts.incr(row - 1, col, 1);
+                        neighbour_counts.incr(row + 1, col, 1);
+                        neighbour_counts.incr(row, col - 1, 1);
+                        neighbour_counts.incr(row, col + 1, 1);
+                    }
+                }
+            }
+
+            if seen_grids.contains(&grid) {
+                let mut rating = 0u64;
+
+                for row in 0..rows {
+                    for col in 0..cols {
+                        if grid[row][col] == Tile::Bug {
+                            rating += 2_u64.pow((((row * rows) + col) as u32));
+                        }
+
+                        print!("{}", match grid[row][col] {
+                            Tile::Bug => '#',
+                            Tile::Empty => '.',
+                        });
+                    }
+
+                    println!();
+                }
+
+                println!("Biodiversity rating: {}", rating);
+
+                return;
+            } else {
+                seen_grids.insert(grid.clone());
+            }
         }
     }
 }
@@ -4352,8 +4617,12 @@ fn main() {
         day22::part2();
         day22::part1_refired();
         day22::part2_refired();
+
+        day23::part1();
+        day23::part2();
     }
 
-    // day23::part1();
-    day23::part2();
+    day24::part1();
+    day24::part1_sparse();
+
 }
