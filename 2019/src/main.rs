@@ -333,6 +333,7 @@ mod shared {
     pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
     pub use std::cmp::{self, Ordering};
+    pub use std::collections::BTreeSet;
     pub use std::collections::BTreeMap;
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
@@ -4437,7 +4438,6 @@ mod day24 {
         let rows = grid.len();
         let cols = grid[0].len();
 
-        // Adding a margin around our counts so I don't have to deal with edge cases.
         let mut neighbour_counts = NeighbourCounts::new();
 
         // Calculate our initial neighbour counts
@@ -4536,7 +4536,497 @@ mod day24 {
             }
         }
     }
+
+    struct Neighbour {
+        row: i64,
+        col: i64,
+        zoff: i64,
+    }
+
+    fn load_neighbour_map() -> HashMap<(i64, i64), Vec<Neighbour>> {
+        let mut result = HashMap::new();
+
+        for row in 0..5 {
+            for col in 0..5 {
+                let mut neighbours = Vec::new();
+
+                // Boring cells
+                if row > 0 {
+                    neighbours.push(Neighbour { row: row - 1, col, zoff: 0 });
+                }
+
+                if col > 0 {
+                    neighbours.push(Neighbour { row: row, col: col - 1, zoff: 0 });
+                }
+
+                if row < 4 {
+                    neighbours.push(Neighbour { row: row + 1, col, zoff: 0 });
+                }
+
+                if col < 4 {
+                    neighbours.push(Neighbour { row: row, col: col + 1, zoff: 0 });
+                }
+
+                // Outer edges
+                if row == 0 {
+                    neighbours.push(Neighbour { row: 1, col: 2, zoff: -1 });
+                }
+
+                if col == 0 {
+                    neighbours.push(Neighbour { row: 2, col: 1, zoff: -1 });
+                }
+
+                if row == 4 {
+                    neighbours.push(Neighbour { row: 3, col: 2, zoff: -1 });
+                }
+
+                if col == 4 {
+                    neighbours.push(Neighbour { row: 2, col: 3, zoff: -1 });
+                }
+
+                // Inner edges
+
+                // 8
+                if row == 1 && col == 2 {
+                    for subcol in 0..5 {
+                        neighbours.push(Neighbour { row: 0, col: subcol, zoff: 1 });
+                    }
+                }
+
+                // 12
+                if row == 2 && col == 1 {
+                    for subrow in 0..5 {
+                        neighbours.push(Neighbour { row: subrow, col: 0, zoff: 1 });
+                    }
+                }
+
+                // 18
+                if row == 3 && col == 2 {
+                    for subcol in 0..5 {
+                        neighbours.push(Neighbour { row: 4, col: subcol, zoff: 1 });
+                    }
+                }
+
+                // 14
+                if row == 2 && col == 3 {
+                    for subrow in 0..5 {
+                        neighbours.push(Neighbour { row: subrow, col: 4, zoff: 1 });
+                    }
+                }
+
+                // The square in the middle is never anybody's neighbour.
+                result.insert((row, col), neighbours.into_iter().filter(|n| !(n.row == 2 && n.col == 2)).collect());
+            }
+        }
+
+        result
+    }
+
+    #[derive(Debug)]
+    struct NeighbourCounts3d {
+        counts: HashMap<(i64, i64, i64), i64>,
+    }
+
+    impl NeighbourCounts3d {
+        fn new() -> Self {
+            Self {
+                counts: HashMap::new(),
+            }
+        }
+
+        fn incr(&mut self, x: i64, y: i64, z: i64, offset: i64) {
+            assert!(!(x == 2 && y == 2));
+
+            let entry = self.counts.entry((x, y, z)).or_insert(0);
+            *entry = (*entry as i64 + offset) as i64;
+        }
+
+        fn get(&self, x: i64, y: i64, z: i64) -> i64 {
+            assert!(!(x == 2 && y == 2));
+
+            *self.counts.get(&(x as i64, y as i64, z)).unwrap_or(&0)
+        }
+    }
+
+
+    pub fn part2() {
+        let mut grid: HashMap<(i64, i64, i64), Tile> = HashMap::new();
+
+        for (idx_row, row) in read_file("input_files/day24.txt").split('\n').enumerate() {
+            for (idx_col, ch) in row.chars().enumerate() {
+                let tile = match ch {
+                    '#' => Tile::Bug,
+                    '.' => Tile::Empty,
+                    _ => panic!("Unrecognised input: {}", ch),
+                };
+
+                if tile == Tile::Bug {
+                    grid.insert((idx_row as i64, idx_col as i64, 0), tile);
+                }
+            }
+        }
+
+        let neighbour_map = load_neighbour_map();
+
+        let mut neighbour_counts = NeighbourCounts3d::new();
+
+        // Calculate our initial neighbour counts
+        for ((row, col, level), tile) in &grid {
+            match tile {
+                Tile::Bug => {
+                    for neighbour in neighbour_map.get(&(*row, *col)).unwrap() {
+                        let n_row = neighbour.row as i64;
+                        let n_col = neighbour.col as i64;
+                        let n_level = neighbour.zoff + level;
+
+                        neighbour_counts.incr(n_row, n_col, n_level, 1);
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        // Iterate!
+        for _round in 0..200 {
+            // Can't just walk the bugs... sometimes we resurrect a blank
+            // square!  Need to come up with a set of positions to check.  The
+            // set of all bug locations in 3d space plus the bugs neighbouring
+            // cells.  Then check those.
+            let positions_of_interest: HashSet<(i64, i64, i64)> = grid.keys().flat_map(|(row, col, level)| {
+                let mut positions = vec!((*row, *col, *level));
+
+                for neighbour in neighbour_map.get(&(*row, *col)).unwrap() {
+                    let n_row = neighbour.row as i64;
+                    let n_col = neighbour.col as i64;
+                    let n_level = neighbour.zoff + level;
+
+                    positions.push((n_row, n_col, n_level));
+                }
+
+                positions
+            }).collect();
+
+            // Accumulate actions
+            let mut actions = Vec::new();
+            for (row, col, level) in positions_of_interest {
+                match grid.get(&(row, col, level)).unwrap_or(&Tile::Empty) {
+                    Tile::Bug => {
+                        if neighbour_counts.get(row, col, level) != 1 {
+                            actions.push(((row, col, level), Action::Die));
+                        }
+                    },
+                    Tile::Empty => {
+                        let neighbour_count = neighbour_counts.get(row, col, level);
+                        if neighbour_count == 1 || neighbour_count == 2 {
+                            actions.push(((row, col, level), Action::Infest));
+                        }
+                    }
+                }
+            }
+
+            for ((row, col, level), action) in actions {
+                match action {
+                    Action::Die => {
+                        grid.remove(&(row, col, level));
+
+                        for neighbour in neighbour_map.get(&(row, col)).unwrap() {
+                            let n_row = neighbour.row as i64;
+                            let n_col = neighbour.col as i64;
+                            let n_level = neighbour.zoff + level;
+
+                            neighbour_counts.incr(n_row, n_col, n_level, -1);
+                        }
+                    },
+                    Action::Infest => {
+                        grid.insert((row, col, level), Tile::Bug);
+
+                        for neighbour in neighbour_map.get(&(row, col)).unwrap() {
+                            let n_row = neighbour.row as i64;
+                            let n_col = neighbour.col as i64;
+                            let n_level = neighbour.zoff + level;
+
+                            neighbour_counts.incr(n_row, n_col, n_level, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("Bug count after 200 minutes: {}", grid.len());
+    }
 }
+
+
+// Warning: This uses gigabytes of memory but eventually gets the answer.  Would
+// have been better to locate and grab all the inventory items, move to the
+// pressure sensor and then start dropping permutations.  Ah well!
+mod day25 {
+    use crate::shared::*;
+
+    #[derive(Clone)]
+    struct AsciiCode {
+        intcode: IntCode,
+    }
+
+    impl AsciiCode {
+        fn new(code: Vec<i64>) -> AsciiCode {
+            AsciiCode {
+                intcode: intcode::new(code, vec!(), Vec::new()),
+            }
+        }
+
+        fn readline(&mut self) -> String {
+            loop {
+                self.intcode.step();
+
+
+                if let Some(n) = self.intcode.output.last() {
+                    if *n == 10 {
+                        let result = self.intcode.output.iter().map(|&i| i as u8 as char).collect();
+                        self.intcode.output.clear();
+                        return result;
+                    }
+                }
+            }
+        }
+
+        fn sendline(&mut self, s: &str) {
+            for ch in s.chars() {
+                self.intcode.input.insert(0, ch as i64);
+            }
+        }
+    }
+
+
+    #[derive(Debug)]
+    struct Room {
+        title: String,
+        description: Vec<String>,
+        exits: Vec<String>,
+        items: Vec<String>,
+    }
+
+    fn parse_room(lines: &Vec<String>) -> Room {
+        let mut result = Room {
+            title: String::new(),
+            description: Vec::new(),
+            exits: Vec::new(),
+            items: Vec::new(),
+        };
+
+        let mut iter = lines.iter();
+
+        while let Some(line) = iter.next() {
+            if line == "\n" {
+                continue;
+            }
+
+            if line.starts_with("== ") && line.ends_with(" ==\n") {
+                result.title = line.trim().to_string();
+            } else if line == "Doors here lead:\n" {
+                // Read exits
+                while let Some(line) = iter.next() {
+                    if line == "\n" {
+                        break;
+                    }
+
+                    result.exits.push(line[2..line.len() - 1].to_string());
+                }
+            } else if line == "Items here:\n" {
+                // Read items
+                while let Some(line) = iter.next() {
+                    if line == "\n" {
+                        break;
+                    }
+
+                    result.items.push(line[2..line.len() - 1].to_string());
+                }
+
+            } else {
+                result.description.push(line.to_string());
+            }
+        }
+
+        result
+    }
+
+    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    struct State {
+        room: String,
+        items: BTreeSet<String>,
+    }
+
+    #[derive(Clone)]
+    struct Path {
+        state: State,
+        droid: AsciiCode,
+        steps: usize,
+        trace: String,
+        skip_prompts: usize,
+        seen_states: HashSet<State>,
+    }
+
+
+    pub fn part1_manual() {
+        let code: Vec<i64> = read_file("input_files/day25.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut droid = AsciiCode::new(code);
+        let stdin = std::io::stdin();
+
+        loop {
+            loop {
+                let line = droid.readline();
+
+                print!("{}", line);
+
+                if line == "Command?\n" {
+                    break;
+                }
+            }
+
+
+            let mut command = String::new();
+            stdin.read_line(&mut command).unwrap();
+
+            droid.sendline(&command);
+        }
+    }
+
+
+    pub fn part1() {
+        let code: Vec<i64> = read_file("input_files/day25.txt").split(',').map(|s| s.parse().unwrap()).collect();
+
+        let mut queue: VecDeque<Path> = VecDeque::new();
+
+        queue.push_back(Path {
+            state: State {
+                room: "".to_owned(),
+                items: BTreeSet::new(),
+            },
+            droid: AsciiCode::new(code),
+            steps: 0,
+            trace: String::new(),
+            seen_states: HashSet::new(),
+            skip_prompts: 0,
+        });
+
+        let mut messages = HashSet::new();
+
+        while !queue.is_empty() {
+            let mut path = queue.pop_front().unwrap();
+
+            // Print loop
+            let mut lines = Vec::new();
+            let mut dead = false;
+            loop {
+                let line = path.droid.readline();
+
+                if !messages.contains(&line) {
+                    print!("{}", &line);
+                    messages.insert(line.clone());
+                }
+
+                // if line == "== Pressure-Sensitive Floor ==\n" {
+                //     dbg!(path.steps);
+                //     dbg!(path.state);
+                //     dbg!(path.trace);
+                //     panic!();
+                // }
+
+                if line == "Command?\n" {
+                    if path.skip_prompts == 0 {
+                        break;
+                    } else {
+                        path.skip_prompts -= 1;
+                    }
+                }
+
+                if (line == "The molten lava is way too hot! You melt!\n" ||
+                    line == "You're launched into space! Bye!\n" ||
+                    line == "It is suddenly completely dark! You are eaten by a Grue!\n" ||
+                    line == "The giant electromagnet is stuck to you.  You can't move!!\n" ||
+                    line == "A loud, robotic voice says \"Alert! Droids on this ship are heavier than the detected value!\" and you are ejected back to the checkpoint.\n" ||
+                    line == "You take the infinite loop.\n") {
+                    dead = true;
+                    break;
+                }
+
+                lines.push(line);
+            }
+
+            if dead {
+                continue;
+            }
+
+            let room = parse_room(&lines);
+
+            let mut this_state = path.state.clone();
+            this_state.room = room.title.clone();
+
+            if path.seen_states.contains(&this_state) {
+                continue;
+            }
+
+            path.seen_states.insert(this_state);
+
+            // Take every possible combination of items
+            let mask_upper = 2_usize.pow(room.items.len() as u32);
+            for item_mask in 0..mask_upper {
+                let mut droid_with_taken_items = path.droid.clone();
+
+                let mut took_items = Vec::new();
+
+                for (idx, item) in room.items.iter().enumerate() {
+                    // // Banned items!  No touchy!
+                    // if item == "escape pod" || item == "molten lava" || item == "infinite loop" || item == "photons" {
+                    //     continue;
+                    // }
+
+                    if (item_mask & (1 << idx)) != 0 {
+                        droid_with_taken_items.sendline(&format!("take {}\n", item));
+
+                        took_items.push(item.clone());
+                    }
+                }
+
+                // Now take every possible direction with this combination of items
+                for direction in &room.exits {
+                    let mut moved_droid = droid_with_taken_items.clone();
+                    moved_droid.sendline(&format!("{}\n", direction));
+
+                    let mut new_path = path.clone();
+
+                    // What we learned: the maze isn't based on a grid.  A
+                    // sequence of steps like NESW doesn't necessarily land you
+                    // back to where you started.  Use the names of the room to
+                    // identify places we've already visited instead of
+                    // coordinates.
+
+                    // match direction.as_str() {
+                    //     "north" => { new_path.state.y += 1 },
+                    //     "south" => { new_path.state.y -= 1 },
+                    //     "east" => { new_path.state.x += 1 },
+                    //     "west" => { new_path.state.x -= 1 },
+                    //     _ => { panic!("Weird direction: {}", direction) },
+                    // }
+
+                    for item in &took_items {
+                        new_path.state.items.insert(item.clone());
+                    }
+
+                    new_path.skip_prompts = took_items.len();
+                    new_path.steps += 1;
+                    new_path.trace.push(direction.chars().nth(0).unwrap());
+
+                    new_path.droid = moved_droid;
+
+                    queue.push_back(new_path);
+                }
+            }
+        }
+    }
+}
+
 
 
 mod day_n {
@@ -4620,9 +5110,12 @@ fn main() {
 
         day23::part1();
         day23::part2();
+
+        day24::part1();
+        day24::part1_sparse();
+        day24::part2();
+
+        day25::part1_manual();
+        day25::part1();
     }
-
-    day24::part1();
-    day24::part1_sparse();
-
 }
