@@ -1,0 +1,11 @@
+[package]
+name = "adventofcode2020"
+version = "0.1.0"
+authors = ["Mark Triggs <mark@dishevelled.net>"]
+edition = '2018'
+
+[dependencies]
+regex = "*"
+lazy_static = "*"
+termion = "*"
+rand = "*"
