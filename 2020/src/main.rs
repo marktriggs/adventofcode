@@ -97,10 +97,30 @@ mod day1 {
     use crate::shared::*;
 
     pub fn part1() {
+        let amounts: Vec<usize> = input_lines("input_files/day1.txt").map(|s| s.parse().unwrap()).collect();
+
+        for i in 0..amounts.len() {
+            for j in (i + 1)..amounts.len() {
+                if (amounts[i] + amounts[j]) == 2020 {
+                    println!("{} * {} = {}", amounts[i], amounts[j], amounts[i] * amounts[j]);
+                }
+            }
+        }
     }
 
 
     pub fn part2() {
+        let amounts: Vec<usize> = input_lines("input_files/day1.txt").map(|s| s.parse().unwrap()).collect();
+
+        for i in 0..amounts.len() {
+            for j in (i + 1)..amounts.len() {
+                for k in (j + 1)..amounts.len() {
+                    if (amounts[i] + amounts[j] + amounts[k]) == 2020 {
+                        println!("{} * {} * {} = {}", amounts[i], amounts[j], amounts[k], amounts[i] * amounts[j] * amounts[k]);
+                    }
+                }
+            }
+        }
     }
 }
 
