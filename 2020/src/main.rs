@@ -7,25 +7,24 @@
 extern crate lazy_static;
 extern crate regex;
 
-
 mod shared {
     pub use regex::Regex;
 
     // pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
     pub use std::cmp::{self, Ordering};
-    pub use std::collections::BTreeSet;
     pub use std::collections::BTreeMap;
+    pub use std::collections::BTreeSet;
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
     pub use std::collections::VecDeque;
+    pub use std::convert::TryInto;
     pub use std::fmt::{self, Display};
     pub use std::fs::{self, File};
-    pub use std::io::{self, BufRead, BufReader, Write, Read};
+    pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
-    pub use std::convert::TryInto;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -57,7 +56,7 @@ mod shared {
 
     // No trim!
     pub fn read_file_raw(file: &str) -> String {
-        fs::read_to_string(file).unwrap().to_owned()
+        fs::read_to_string(file).unwrap()
     }
 
     pub fn input_lines(file: &str) -> impl Iterator<Item = String> {
@@ -97,26 +96,40 @@ mod day1 {
     use crate::shared::*;
 
     pub fn part1() {
-        let amounts: Vec<usize> = input_lines("input_files/day1.txt").map(|s| s.parse().unwrap()).collect();
+        let amounts: Vec<usize> = input_lines("input_files/day1.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
 
         for i in 0..amounts.len() {
             for j in (i + 1)..amounts.len() {
                 if (amounts[i] + amounts[j]) == 2020 {
-                    println!("{} * {} = {}", amounts[i], amounts[j], amounts[i] * amounts[j]);
+                    println!(
+                        "{} * {} = {}",
+                        amounts[i],
+                        amounts[j],
+                        amounts[i] * amounts[j]
+                    );
                 }
             }
         }
     }
 
-
     pub fn part2() {
-        let amounts: Vec<usize> = input_lines("input_files/day1.txt").map(|s| s.parse().unwrap()).collect();
+        let amounts: Vec<usize> = input_lines("input_files/day1.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
 
         for i in 0..amounts.len() {
             for j in (i + 1)..amounts.len() {
                 for k in (j + 1)..amounts.len() {
                     if (amounts[i] + amounts[j] + amounts[k]) == 2020 {
-                        println!("{} * {} * {} = {}", amounts[i], amounts[j], amounts[k], amounts[i] * amounts[j] * amounts[k]);
+                        println!(
+                            "{} * {} * {} = {}",
+                            amounts[i],
+                            amounts[j],
+                            amounts[k],
+                            amounts[i] * amounts[j] * amounts[k]
+                        );
                     }
                 }
             }
@@ -124,6 +137,75 @@ mod day1 {
     }
 }
 
+mod day2 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Password {
+        min: usize,
+        max: usize,
+        letter: char,
+        candidate_password: String,
+    }
+
+    impl Password {
+        fn from_line(line: String) -> Password {
+            let pattern = Regex::new(r"^([0-9]+)-([0-9]+) (.): (.+)$").unwrap();
+
+            if let Some(cap) = pattern.captures(&line) {
+                return Password {
+                    min: cap[1].parse().unwrap(),
+                    max: cap[2].parse().unwrap(),
+                    letter: cap[3].parse().unwrap(),
+                    candidate_password: cap[4].to_owned(),
+                };
+            }
+
+            panic!("Password parse error for {}", line);
+        }
+
+        fn is_valid(&self) -> bool {
+            let c = self
+                .candidate_password
+                .chars()
+                .filter(|&ch| ch == self.letter)
+                .count();
+
+            (c >= self.min && c <= self.max)
+        }
+
+        fn is_valid_new_policy(&self) -> bool {
+            let chars: Vec<char> = self.candidate_password.chars().collect();
+
+            (chars[self.min - 1] == self.letter) ^ (chars[self.max - 1] == self.letter)
+        }
+    }
+
+    pub fn part1() {
+        let candidate_passwords: Vec<Password> = input_lines("input_files/day2.txt")
+            .map(Password::from_line)
+            .collect();
+
+        println!(
+            "Valid password count: {}",
+            candidate_passwords.iter().filter(|p| p.is_valid()).count()
+        )
+    }
+
+    pub fn part2() {
+        let candidate_passwords: Vec<Password> = input_lines("input_files/day2.txt")
+            .map(Password::from_line)
+            .collect();
+
+        println!(
+            "Valid password count: {}",
+            candidate_passwords
+                .iter()
+                .filter(|p| p.is_valid_new_policy())
+                .count()
+        )
+    }
+}
 
 mod day_n {
     use crate::shared::*;
@@ -133,6 +215,11 @@ mod day_n {
 }
 
 fn main() {
-    day1::part1();
-    day1::part2();
+    if false {
+        day1::part1();
+        day1::part2();
+    }
+
+    day2::part1();
+    day2::part2();
 }
