@@ -207,7 +207,74 @@ mod day2 {
     }
 }
 
-mod day_n {
+mod day3 {
+    use crate::shared::*;
+
+    struct Map {
+        width: usize,
+        height: usize,
+        grid: Vec<Vec<char>>,
+    }
+
+    impl Map {
+        fn from_input(path: &str) -> Map {
+            let grid: Vec<Vec<char>> = input_lines(path)
+                .map(|line| line.chars().collect())
+                .collect();
+
+            Map {
+                width: grid[0].len(),
+                height: grid.len(),
+                grid,
+            }
+        }
+
+        fn is_tree(&self, x: usize, y: usize) -> bool {
+            self.grid[y][x] == '#'
+        }
+    }
+
+    fn trees_hit(map: &Map, right: usize, down: usize) -> usize {
+        let mut x = 0;
+        let mut y = 0;
+        let mut trees_hit = 0;
+
+        while y < map.height {
+            if map.is_tree(x, y) {
+                trees_hit += 1;
+            }
+
+            x = (x + right) % map.width;
+            y += down;
+        }
+
+        trees_hit
+    }
+
+    pub fn part1() {
+        let map = Map::from_input("input_files/day3.txt");
+
+        println!(
+            "Whacked into {} trees on our way down",
+            trees_hit(&map, 3, 1)
+        );
+    }
+
+    pub fn part2() {
+        let map = Map::from_input("input_files/day3.txt");
+
+        println!(
+            "{}",
+            trees_hit(&map, 1, 1)
+                * trees_hit(&map, 3, 1)
+                * trees_hit(&map, 5, 1)
+                * trees_hit(&map, 7, 1)
+                * trees_hit(&map, 1, 2)
+        );
+    }
+}
+
+mod dayn {
     use crate::shared::*;
 
     pub fn part1() {}
@@ -218,8 +285,11 @@ fn main() {
     if false {
         day1::part1();
         day1::part2();
+
+        day2::part1();
+        day2::part2();
     }
 
-    day2::part1();
-    day2::part2();
+    day3::part1();
+    day3::part2();
 }
