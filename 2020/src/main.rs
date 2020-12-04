@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(dead_code)]
 
+#[macro_use]
 extern crate lazy_static;
 extern crate regex;
 
@@ -25,6 +26,7 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
+    pub use std::sync::Mutex;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -274,6 +276,152 @@ mod day3 {
     }
 }
 
+mod day4 {
+    use crate::shared::*;
+
+    const REQUIRED_PASSPORT_FIELDS: &[&str] = &[
+        "byr", // (Birth Year)
+        "iyr", // (Issue Year)
+        "eyr", // (Expiration Year)
+        "hgt", // (Height)
+        "hcl", // (Hair Color)
+        "ecl", // (Eye Color)
+        "pid", // (Passport ID)
+        // "cid", // (Country ID) - ignored due to trickery
+    ];
+
+    type PassportRules = HashMap<&'static str, fn(&str) -> bool>;
+
+    fn validation_rules() -> PassportRules {
+        let mut rules: PassportRules = HashMap::new();
+
+        rules.insert("byr", |s| {
+            if let Ok(n) = s.parse::<usize>() {
+                n >= 1920 && n <= 2002
+            } else {
+                false
+            }
+        });
+
+        rules.insert("iyr", |s| {
+            if let Ok(n) = s.parse::<usize>() {
+                n >= 2010 && n <= 2020
+            } else {
+                false
+            }
+        });
+
+        rules.insert("eyr", |s| {
+            if let Ok(n) = s.parse::<usize>() {
+                n >= 2020 && n <= 2030
+            } else {
+                false
+            }
+        });
+
+        rules.insert("hgt", |s| {
+            if let Ok(n) = s.trim_end_matches(|c: char| !c.is_numeric()).parse::<usize>() {
+                if s.ends_with("cm") {
+                    return n >= 150 && n <= 193;
+                } else if s.ends_with("in") {
+                    return n >= 59 && n <= 76;
+                }
+            }
+
+            false
+        });
+
+        rules.insert("hcl", |s| {
+            Regex::new(r"^#[0-9a-f]{6}$").unwrap().is_match(s)
+        });
+
+        rules.insert("ecl", |s| {
+            Regex::new(r"^(amb|blu|brn|gry|grn|hzl|oth)$").unwrap().is_match(s)
+        });
+
+        rules.insert("pid", |s| {
+            Regex::new(r"^[0-9]{9}$").unwrap().is_match(s)
+        });
+
+        rules
+    }
+
+
+    struct Passport {
+        values: HashMap<String, String>,
+    }
+
+    impl Passport {
+        fn from_lines(lines: &[String]) -> Passport {
+            assert!(!lines.is_empty());
+
+            let mut result = Passport { values: HashMap::new() };
+
+            for line in lines {
+                for chunk in line.split(' ') {
+                    let bits: Vec<&str> = chunk.split(':').collect();
+                    result.values.insert(bits[0].to_owned(), bits[1].to_owned());
+                }
+            }
+
+            result
+        }
+
+        fn is_valid(&self) -> bool {
+            for &field in REQUIRED_PASSPORT_FIELDS {
+                if (!self.values.contains_key(field)) {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+        fn is_valid_by_rules(&self, rules: &PassportRules) -> bool {
+            for &field in REQUIRED_PASSPORT_FIELDS {
+                if (!self.values.contains_key(field)) {
+                    return false;
+                }
+
+                let rule = rules.get(field).unwrap();
+                let field_value = self.values.get(field).unwrap();
+
+                if (!rule(field_value)) {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day4.txt").collect();
+
+        println!("There are {} valid passports",
+                 lines
+                 .split(|s| s.is_empty())
+                 .map(|passport_lines| Passport::from_lines(passport_lines))
+                 .filter(|passport| passport.is_valid())
+                 .count());
+    }
+
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day4.txt").collect();
+
+        let rules = validation_rules();
+
+        println!("There are {} valid passports",
+                 lines
+                 .split(|s| s.is_empty())
+                 .map(|passport_lines| Passport::from_lines(passport_lines))
+                 .filter(|passport| passport.is_valid_by_rules(&rules))
+                 .count());
+    }
+
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -288,8 +436,11 @@ fn main() {
 
         day2::part1();
         day2::part2();
+
+        day3::part1();
+        day3::part2();
     }
 
-    day3::part1();
-    day3::part2();
+    day4::part1();
+    day4::part2();
 }
