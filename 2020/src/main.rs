@@ -287,7 +287,7 @@ mod day4 {
         "hcl", // (Hair Color)
         "ecl", // (Eye Color)
         "pid", // (Passport ID)
-        // "cid", // (Country ID) - ignored due to trickery
+               // "cid", // (Country ID) - ignored due to trickery
     ];
 
     type PassportRules = HashMap<&'static str, fn(&str) -> bool>;
@@ -320,7 +320,10 @@ mod day4 {
         });
 
         rules.insert("hgt", |s| {
-            if let Ok(n) = s.trim_end_matches(|c: char| !c.is_numeric()).parse::<usize>() {
+            if let Ok(n) = s
+                .trim_end_matches(|c: char| !c.is_numeric())
+                .parse::<usize>()
+            {
                 if s.ends_with("cm") {
                     return n >= 150 && n <= 193;
                 } else if s.ends_with("in") {
@@ -336,16 +339,15 @@ mod day4 {
         });
 
         rules.insert("ecl", |s| {
-            Regex::new(r"^(amb|blu|brn|gry|grn|hzl|oth)$").unwrap().is_match(s)
+            Regex::new(r"^(amb|blu|brn|gry|grn|hzl|oth)$")
+                .unwrap()
+                .is_match(s)
         });
 
-        rules.insert("pid", |s| {
-            Regex::new(r"^[0-9]{9}$").unwrap().is_match(s)
-        });
+        rules.insert("pid", |s| Regex::new(r"^[0-9]{9}$").unwrap().is_match(s));
 
         rules
     }
-
 
     struct Passport {
         values: HashMap<String, String>,
@@ -355,7 +357,9 @@ mod day4 {
         fn from_lines(lines: &[String]) -> Passport {
             assert!(!lines.is_empty());
 
-            let mut result = Passport { values: HashMap::new() };
+            let mut result = Passport {
+                values: HashMap::new(),
+            };
 
             for line in lines {
                 for chunk in line.split(' ') {
@@ -393,18 +397,19 @@ mod day4 {
 
             true
         }
-
     }
 
     pub fn part1() {
         let lines: Vec<String> = input_lines("input_files/day4.txt").collect();
 
-        println!("There are {} valid passports",
-                 lines
-                 .split(|s| s.is_empty())
-                 .map(|passport_lines| Passport::from_lines(passport_lines))
-                 .filter(|passport| passport.is_valid())
-                 .count());
+        println!(
+            "There are {} valid passports",
+            lines
+                .split(|s| s.is_empty())
+                .map(|passport_lines| Passport::from_lines(passport_lines))
+                .filter(|passport| passport.is_valid())
+                .count()
+        );
     }
 
     pub fn part2() {
@@ -412,14 +417,118 @@ mod day4 {
 
         let rules = validation_rules();
 
-        println!("There are {} valid passports",
-                 lines
-                 .split(|s| s.is_empty())
-                 .map(|passport_lines| Passport::from_lines(passport_lines))
-                 .filter(|passport| passport.is_valid_by_rules(&rules))
-                 .count());
+        println!(
+            "There are {} valid passports",
+            lines
+                .split(|s| s.is_empty())
+                .map(|passport_lines| Passport::from_lines(passport_lines))
+                .filter(|passport| passport.is_valid_by_rules(&rules))
+                .count()
+        );
+    }
+}
+
+mod day5 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    enum WhichHalf {
+        Lower,
+        Upper,
     }
 
+    #[derive(PartialEq, Eq, Debug, Hash)]
+    pub struct Seat {
+        row: usize,
+        column: usize,
+    }
+
+    fn search_range(lower_inclusive: usize, upper_inclusive: usize, input: &[WhichHalf]) -> usize {
+        let mut low = lower_inclusive;
+        let mut high = upper_inclusive;
+
+        for half in input {
+            match half {
+                WhichHalf::Lower => {
+                    high = low + ((high - low) / 2);
+                }
+                WhichHalf::Upper => {
+                    low = (low as f32 + ((high - low) as f32 / 2.0).ceil()) as usize;
+                }
+            }
+        }
+
+        assert_eq!(low, high);
+
+        low
+    }
+
+    pub fn calculate_seat(instructions: &str) -> Seat {
+        let instructions: Vec<WhichHalf> = instructions
+            .chars()
+            .map(|ch| {
+                if ch == 'F' || ch == 'L' {
+                    WhichHalf::Lower
+                } else if ch == 'B' || ch == 'R' {
+                    WhichHalf::Upper
+                } else {
+                    panic!("Bad mojo: {}", ch);
+                }
+            })
+            .collect();
+
+        let (row_instructions, column_instructions) = instructions.split_at(7);
+
+        let row = search_range(0, 127, row_instructions);
+        let column = search_range(0, 7, column_instructions);
+
+        Seat { row, column }
+    }
+
+    pub fn part1() {
+        let max_seat_id = input_lines("input_files/day5.txt")
+            .map(|line| {
+                let seat = calculate_seat(&line);
+                (seat.row * 8) + seat.column
+            })
+            .max()
+            .unwrap();
+
+        println!("Maximum seat ID is {}", max_seat_id);
+    }
+
+    pub fn part2() {
+        let mut all_seats: HashSet<Seat> = HashSet::new();
+
+        input_lines("input_files/day5.txt").for_each(|line| {
+            let seat = calculate_seat(&line);
+            all_seats.insert(seat);
+        });
+
+        // Printed it out and eyeballed it :)
+        for row in 0..=127 {
+            for column in 0..=7 {
+                if (all_seats.contains(&Seat { row, column })) {
+                    print!("X");
+                } else {
+                    print!("?")
+                }
+            }
+            println!();
+        }
+
+        for row in 1..=126 {
+            for column in 0..=7 {
+                if (!all_seats.contains(&Seat { row, column })) {
+                    println!(
+                        "Free seat: {:?} with id {}",
+                        Seat { row, column },
+                        (row * 8) + column
+                    );
+                }
+            }
+        }
+    }
 }
 
 mod dayn {
@@ -439,8 +548,11 @@ fn main() {
 
         day3::part1();
         day3::part2();
+
+        day4::part1();
+        day4::part2();
     }
 
-    day4::part1();
-    day4::part2();
+    day5::part1();
+    day5::part2();
 }
