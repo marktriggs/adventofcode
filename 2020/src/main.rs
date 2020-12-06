@@ -467,14 +467,10 @@ mod day5 {
     pub fn calculate_seat(instructions: &str) -> Seat {
         let instructions: Vec<WhichHalf> = instructions
             .chars()
-            .map(|ch| {
-                if ch == 'F' || ch == 'L' {
-                    WhichHalf::Lower
-                } else if ch == 'B' || ch == 'R' {
-                    WhichHalf::Upper
-                } else {
-                    panic!("Bad mojo: {}", ch);
-                }
+            .map(|ch| match ch {
+                'F' | 'L' => WhichHalf::Lower,
+                'B' | 'R' => WhichHalf::Upper,
+                _ => panic!("Bad mojo: {}", ch),
             })
             .collect();
 
@@ -520,9 +516,16 @@ mod day5 {
 
         for row in 1..=126 {
             for column in 0..=7 {
-                if (!all_seats.contains(&Seat { row, column }) &&
-                    all_seats.contains(&Seat { row: row - 1, column }) &&
-                    all_seats.contains(&Seat { row: row + 1, column })) {
+                if (!all_seats.contains(&Seat { row, column })
+                    && all_seats.contains(&Seat {
+                        row: row - 1,
+                        column,
+                    })
+                    && all_seats.contains(&Seat {
+                        row: row + 1,
+                        column,
+                    }))
+                {
                     println!(
                         "Free seat: {:?} with id {}",
                         Seat { row, column },
