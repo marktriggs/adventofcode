@@ -443,6 +443,12 @@ mod day5 {
         column: usize,
     }
 
+    impl Seat {
+        fn id(&self) -> usize {
+            (self.row * 8) + self.column
+        }
+    }
+
     fn search_range(lower_inclusive: usize, upper_inclusive: usize, input: &[WhichHalf]) -> usize {
         let mut low = lower_inclusive;
         let mut high = upper_inclusive;
@@ -486,7 +492,7 @@ mod day5 {
         let max_seat_id = input_lines("input_files/day5.txt")
             .map(|line| {
                 let seat = calculate_seat(&line);
-                (seat.row * 8) + seat.column
+                seat.id()
             })
             .max()
             .unwrap();
@@ -526,10 +532,12 @@ mod day5 {
                         column,
                     }))
                 {
+                    let seat = Seat { row, column };
+
                     println!(
                         "Free seat: {:?} with id {}",
-                        Seat { row, column },
-                        (row * 8) + column
+                        seat,
+                        seat.id()
                     );
                 }
             }
