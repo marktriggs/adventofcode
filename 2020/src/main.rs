@@ -453,7 +453,8 @@ mod day5 {
                     high = low + ((high - low) / 2);
                 }
                 WhichHalf::Upper => {
-                    low = (low as f32 + ((high - low) as f32 / 2.0).ceil()) as usize;
+                    // div by 2 rounding up
+                    low = low + ((high - low + 1) / 2);
                 }
             }
         }
