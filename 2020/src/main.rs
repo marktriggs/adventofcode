@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 #![allow(dead_code)]
+#![feature(iterator_fold_self)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -534,14 +535,48 @@ mod day5 {
                 {
                     let seat = Seat { row, column };
 
-                    println!(
-                        "Free seat: {:?} with id {}",
-                        seat,
-                        seat.id()
-                    );
+                    println!("Free seat: {:?} with id {}", seat, seat.id());
                 }
             }
         }
+    }
+}
+
+mod day6 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day6.txt").collect();
+
+        let sum: usize = lines
+            .split(|s| s.is_empty())
+            .map(|group_lines| {
+                let yes_set = group_lines.join("").chars().collect::<HashSet<char>>();
+
+                yes_set.len()
+            })
+            .sum();
+
+        println!("Sum of questions where anyone said yes: {}", sum);
+    }
+
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day6.txt").collect();
+
+        let sum: usize = lines
+            .split(|s| s.is_empty())
+            .map(|group_lines| {
+                let yes_set = group_lines
+                    .iter()
+                    .map(|line| line.chars().collect::<HashSet<char>>())
+                    .fold_first(|s1, s2| s1.intersection(&s2).cloned().collect())
+                    .unwrap();
+
+                yes_set.len()
+            })
+            .sum();
+
+        println!("Sum of questions where everyone said yes: {}", sum);
     }
 }
 
@@ -565,8 +600,11 @@ fn main() {
 
         day4::part1();
         day4::part2();
+
+        day5::part1();
+        day5::part2();
     }
 
-    day5::part1();
-    day5::part2();
+    day6::part1();
+    day6::part2();
 }
