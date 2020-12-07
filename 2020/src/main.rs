@@ -29,6 +29,8 @@ mod shared {
     pub use std::str;
     pub use std::sync::Mutex;
 
+    pub use itertools::Itertools;
+
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
 
@@ -580,6 +582,121 @@ mod day6 {
     }
 }
 
+mod day7 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone)]
+    struct BagRule {
+        bag_type: String,
+        contains: Vec<BagQuantity>,
+    }
+
+    #[derive(Debug, Clone)]
+    struct BagQuantity {
+        count: usize,
+        bag_type: String,
+    }
+
+    #[derive(Debug, Clone)]
+    struct BagRules {
+        rules: Vec<BagRule>,
+        rules_by_containee_type: HashMap<String, Vec<usize>>,
+    }
+
+    impl BagRules {
+        fn from_lines(lines: Vec<String>) -> BagRules {
+            let mut result = BagRules {
+                rules: Vec::with_capacity(lines.len()),
+                rules_by_containee_type: HashMap::new(),
+            };
+
+            for line in lines {
+                let (container, containee_descriptions) =
+                    line.split(" bags contain ").collect_tuple().unwrap();
+
+                let mut containees: Vec<BagQuantity> = Vec::new();
+
+                if containee_descriptions != "no other bags." {
+                    let descriptions: Vec<&str> = containee_descriptions
+                        .trim_end_matches('.')
+                        .split(", ")
+                        .collect();
+
+                    for d in descriptions {
+                        let bits: Vec<&str> = d.split(' ').collect();
+
+                        containees.push(BagQuantity {
+                            count: bits[0].parse().unwrap(),
+                            bag_type: format!("{} {}", bits[1], bits[2]),
+                        });
+                    }
+                }
+
+                result.rules.push(BagRule {
+                    bag_type: container.to_owned(),
+                    contains: containees.clone(),
+                });
+
+                for c in containees {
+                    let entry = result
+                        .rules_by_containee_type
+                        .entry(c.bag_type)
+                        .or_insert_with(Vec::new);
+                    entry.push(result.rules.len() - 1);
+                }
+            }
+
+            result
+        }
+
+        fn bags_that_can_contain(&self, bag_name: &str) -> Vec<&str> {
+            if let Some(rule_indexes) = self.rules_by_containee_type.get(bag_name) {
+                return rule_indexes
+                    .iter()
+                    .map(|&rule_idx| self.rules[rule_idx].bag_type.as_str())
+                    .collect();
+            }
+
+            Vec::new()
+        }
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day7.txt").collect();
+
+        let bag_rules = BagRules::from_lines(lines);
+
+        let mut possible_outcomes: HashSet<String> = HashSet::new();
+        possible_outcomes.insert("shiny gold".to_owned());
+
+        loop {
+            let mut new_outcomes: HashSet<String> = HashSet::new();
+
+            for existing_bag in &possible_outcomes {
+                let next_bags = bag_rules.bags_that_can_contain(&existing_bag);
+
+                for next_bag in next_bags {
+                    new_outcomes.insert(next_bag.to_owned());
+                }
+            }
+
+            if new_outcomes.difference(&possible_outcomes).count() == 0 {
+                // No further rule expansion is possible.
+                break;
+            }
+
+            possible_outcomes.extend(new_outcomes);
+        }
+
+        println!(
+            "There were {} possible options",
+            possible_outcomes.len() - 1
+        );
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -603,8 +720,11 @@ fn main() {
 
         day5::part1();
         day5::part2();
+
+        day6::part1();
+        day6::part2();
     }
 
-    day6::part1();
-    day6::part2();
+    day7::part1();
+    day7::part2();
 }
