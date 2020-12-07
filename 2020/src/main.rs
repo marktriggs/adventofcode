@@ -600,6 +600,7 @@ mod day7 {
     #[derive(Debug, Clone)]
     struct BagRules {
         rules: Vec<BagRule>,
+        rules_by_type: HashMap<String, usize>,
         rules_by_containee_type: HashMap<String, Vec<usize>>,
     }
 
@@ -607,6 +608,7 @@ mod day7 {
         fn from_lines(lines: Vec<String>) -> BagRules {
             let mut result = BagRules {
                 rules: Vec::with_capacity(lines.len()),
+                rules_by_type: HashMap::new(),
                 rules_by_containee_type: HashMap::new(),
             };
 
@@ -637,6 +639,10 @@ mod day7 {
                     contains: containees.clone(),
                 });
 
+                result
+                    .rules_by_type
+                    .insert(container.to_owned(), result.rules.len() - 1);
+
                 for c in containees {
                     let entry = result
                         .rules_by_containee_type
@@ -649,8 +655,16 @@ mod day7 {
             result
         }
 
-        fn bags_that_can_contain(&self, bag_name: &str) -> Vec<&str> {
-            if let Some(rule_indexes) = self.rules_by_containee_type.get(bag_name) {
+        fn rule_for_type(&self, bag_type: &str) -> Option<BagRule> {
+            if let Some(&idx) = self.rules_by_type.get(bag_type) {
+                Some(self.rules[idx].clone())
+            } else {
+                None
+            }
+        }
+
+        fn bags_that_can_contain(&self, bag_type: &str) -> Vec<&str> {
+            if let Some(rule_indexes) = self.rules_by_containee_type.get(bag_type) {
                 return rule_indexes
                     .iter()
                     .map(|&rule_idx| self.rules[rule_idx].bag_type.as_str())
@@ -663,7 +677,6 @@ mod day7 {
 
     pub fn part1() {
         let lines: Vec<String> = input_lines("input_files/day7.txt").collect();
-
         let bag_rules = BagRules::from_lines(lines);
 
         let mut possible_outcomes: HashSet<String> = HashSet::new();
@@ -694,7 +707,41 @@ mod day7 {
         );
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day7.txt").collect();
+        let bag_rules = BagRules::from_lines(lines);
+
+        let mut queue: VecDeque<BagQuantity> = VecDeque::new();
+
+        let mut final_count = 0;
+
+        queue.push_back(BagQuantity {
+            count: 1,
+            bag_type: "shiny gold".to_owned(),
+        });
+
+        while !queue.is_empty() {
+            let bag_quantity = queue.pop_front().unwrap();
+
+            if let Some(rule) = bag_rules.rule_for_type(&bag_quantity.bag_type) {
+                final_count += bag_quantity.count;
+
+                if !rule.contains.is_empty() {
+                    // Multiply out the contained bags
+                    for contained in &rule.contains {
+                        queue.push_back(BagQuantity {
+                            count: contained.count * bag_quantity.count,
+                            bag_type: contained.bag_type.clone(),
+                        });
+                    }
+                }
+            } else {
+                panic!("Rule not found?!");
+            }
+        }
+
+        println!("Needed {} additional bags", final_count - 1);
+    }
 }
 
 mod dayn {
