@@ -744,6 +744,158 @@ mod day7 {
     }
 }
 
+mod day8 {
+    use crate::shared::*;
+
+    #[derive(Clone)]
+    enum Instruction {
+        Nop(i64),
+        Acc(i64),
+        Jmp(i64),
+    }
+
+    #[derive(Eq, PartialEq)]
+    enum State {
+        Running,
+        FinishedSuccess,
+        FinishedLooped,
+    }
+
+    struct OKComputer {
+        acc: i64,
+        pc: usize,
+        instructions: Vec<Instruction>,
+        pc_history: HashSet<usize>,
+        state: State,
+    }
+
+    impl OKComputer {
+        fn parse_program(lines: &[String]) -> Vec<Instruction> {
+            lines
+                .iter()
+                .map(|line| {
+                    let (instruction_code, argstr) = line.split(' ').collect_tuple().unwrap();
+                    let arg: i64 = argstr.parse().unwrap();
+
+                    match instruction_code {
+                        "nop" => Instruction::Nop(arg),
+                        "acc" => Instruction::Acc(arg),
+                        "jmp" => Instruction::Jmp(arg),
+                        _ => panic!("Parse error: {}", line),
+                    }
+                })
+                .collect()
+        }
+
+        fn load_program(program: Vec<Instruction>) -> OKComputer {
+            OKComputer {
+                acc: 0,
+                pc: 0,
+                pc_history: HashSet::new(),
+                state: State::Running,
+                instructions: program,
+            }
+        }
+
+        fn run(&mut self) {
+            loop {
+                if self.pc_history.contains(&self.pc) {
+                    // We've looped
+                    self.state = State::FinishedLooped;
+                    break;
+                }
+
+                self.pc_history.insert(self.pc);
+
+                match self.pc.cmp(&self.instructions.len()) {
+                    Ordering::Less => {
+                        match *self.instructions.get(self.pc).expect("instruction fetch invalid") {
+                            Instruction::Nop(_) => {
+                                self.pc += 1;
+                            }
+                            Instruction::Acc(arg) => {
+                                self.acc += arg;
+                                self.pc += 1;
+                            }
+                            Instruction::Jmp(arg) => {
+                                // A fair bit of legwork here just because I didn't want to make self.pc signed.
+                                // Maybe not worth it.  We'll see.
+                                if arg < 0 {
+                                    if arg.abs() as usize > self.pc {
+                                        panic!("Jump instruction would set PC negative");
+                                    } else {
+                                        self.pc -= arg.abs() as usize;
+                                    }
+                                } else {
+                                    // NOTE: We might still go past the end of our program.  Let our next turn
+                                    // around the loop pick that up for now.
+                                    self.pc += arg as usize;
+                                }
+                            }
+                        }
+                    }
+                    Ordering::Equal => {
+                        // One past the end of the program is a win
+                        self.state = State::FinishedSuccess;
+                        break;
+                    }
+                    Ordering::Greater => {
+                        panic!("Ran off the end of the program!");
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day8.txt").collect();
+
+        let mut ok_computer = OKComputer::load_program(OKComputer::parse_program(&lines));
+
+        ok_computer.run();
+        println!("Final accumulator value was: {}", ok_computer.acc);
+    }
+
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day8.txt").collect();
+
+        let template_program = OKComputer::parse_program(&lines);
+
+        for i in 0..template_program.len() {
+            let mut modified_program = template_program.clone();
+
+            match *template_program.get(i).expect("offset invalid") {
+                Instruction::Nop(arg) => {
+                    // Try a jump
+                    modified_program[i] = Instruction::Jmp(arg);
+                }
+                Instruction::Jmp(arg) => {
+                    // Try a Nop
+                    modified_program[i] = Instruction::Nop(arg);
+                }
+                _ => {
+                    // Boring
+                    continue;
+                }
+            }
+
+            // MACHINE LEARNING!
+            let mut ok_computer = OKComputer::load_program(modified_program);
+
+            ok_computer.run();
+            if ok_computer.state == State::FinishedSuccess {
+                println!(
+                    "Fixed program with instruction {}!  Final accumulator value was: {}",
+                    i, ok_computer.acc
+                );
+                return;
+            }
+        }
+
+        panic!("It's hopeless!");
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -770,8 +922,11 @@ fn main() {
 
         day6::part1();
         day6::part2();
+
+        day7::part1();
+        day7::part2();
     }
 
-    day7::part1();
-    day7::part2();
+    day8::part1();
+    day8::part2();
 }
