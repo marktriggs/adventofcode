@@ -809,7 +809,11 @@ mod day8 {
 
                 match self.pc.cmp(&self.instructions.len()) {
                     Ordering::Less => {
-                        match *self.instructions.get(self.pc).expect("instruction fetch invalid") {
+                        match *self
+                            .instructions
+                            .get(self.pc)
+                            .expect("instruction fetch invalid")
+                        {
                             Instruction::Nop(_) => {
                                 self.pc += 1;
                             }
@@ -896,6 +900,113 @@ mod day8 {
     }
 }
 
+mod day9 {
+    use crate::shared::*;
+
+    struct OrderPreservingSet {
+        ordered_elements: VecDeque<usize>,
+        element_set: HashSet<usize>,
+        size: usize,
+    }
+
+    impl OrderPreservingSet {
+        fn new(size: usize) -> OrderPreservingSet {
+            OrderPreservingSet {
+                ordered_elements: VecDeque::new(),
+                element_set: HashSet::new(),
+                size,
+            }
+        }
+
+        fn push(&mut self, elt: usize) {
+            self.ordered_elements.push_back(elt);
+            self.element_set.insert(elt);
+
+            while self.ordered_elements.len() > self.size {
+                let discarded = self.ordered_elements.pop_front().unwrap();
+                self.element_set.remove(&discarded);
+            }
+        }
+
+        fn contains(&self, elt: usize) -> bool {
+            self.element_set.contains(&elt)
+        }
+
+        fn iter(&self) -> impl Iterator<Item = &usize> {
+            self.element_set.iter()
+        }
+    }
+
+    pub fn part1() {
+        let mut numbers: VecDeque<usize> = input_lines("input_files/day9.txt")
+            .map(|s| s.parse::<usize>().unwrap())
+            .collect();
+
+        let mut set = OrderPreservingSet::new(25);
+
+        // Pre-load our set with the first 25
+        for _ in 0..25 {
+            set.push(numbers.pop_front().unwrap());
+        }
+
+        // Start looking for invalid numbers
+        while !numbers.is_empty() {
+            let n = numbers.pop_front().unwrap();
+
+            let valid = set.iter().any(|&x| {
+                if x >= n {
+                    // This can't be part of our sum
+                    return false;
+                }
+
+                if set.contains(n - x) {
+                    // That's good enough for us!
+                    return true;
+                }
+
+                false
+            });
+
+            if valid {
+                set.push(n);
+            } else {
+                println!("Found our invalid number: {}", n);
+                break;
+            }
+        }
+    }
+
+    // Found our invalid number: 18272118
+    pub fn part2() {
+        let numbers: Vec<usize> = input_lines("input_files/day9.txt")
+            .map(|s| s.parse::<usize>().unwrap())
+            .collect();
+
+        let target = 18272118;
+
+        for i in 0..numbers.len() {
+            let mut subtotal = 0;
+            let mut offset = 0;
+
+            while subtotal < target && (i + offset) < numbers.len() {
+                subtotal += numbers[i + offset];
+                offset += 1;
+            }
+
+            if subtotal == target {
+                println!("Found our run between {} and {}", i, i + offset);
+
+                let smallest = numbers[i..(i + offset)].iter().min().unwrap();
+                let largest = numbers[i..(i + offset)].iter().max().unwrap();
+
+                println!("Encryption weakness: {}", smallest + largest);
+
+                break;
+            }
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -925,8 +1036,11 @@ fn main() {
 
         day7::part1();
         day7::part2();
+
+        day8::part1();
+        day8::part2();
     }
 
-    day8::part1();
-    day8::part2();
+    day9::part1();
+    day9::part2();
 }
