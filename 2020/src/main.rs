@@ -27,6 +27,7 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
+    pub use std::rc::Rc;
     pub use std::sync::{Arc, Mutex};
 
     pub use itertools::Itertools;
@@ -1076,11 +1077,11 @@ mod day10 {
         last_voltage: i64,
         remaining_adapters: Vec<i64>,
         target_voltage: i64,
-        cache: Arc<Mutex<HashMap<Key, usize>>>,
+        cache: Rc<RefCell<HashMap<Key, usize>>>,
     ) -> usize {
         let key: Key = Key(last_voltage, remaining_adapters.clone());
 
-        let cache_handle = cache.lock().unwrap();
+        let cache_handle = cache.borrow();
         if cache_handle.contains_key(&key) {
             // Precomputed!
             return *cache_handle.get(&key).unwrap();
@@ -1120,7 +1121,7 @@ mod day10 {
             }
         };
 
-        let mut cache_handle = cache.lock().unwrap();
+        let mut cache_handle = cache.borrow_mut();
         cache_handle.insert(key, result);
         drop(cache_handle);
 
@@ -1141,7 +1142,7 @@ mod day10 {
             0,
             adapters,
             device_joltage,
-            Arc::new(Mutex::new(HashMap::new()))
+            Rc::new(RefCell::new(HashMap::new()))
         ));
     }
 }
