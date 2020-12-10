@@ -27,7 +27,7 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
     pub use std::str;
-    pub use std::sync::Mutex;
+    pub use std::sync::{Arc, Mutex};
 
     pub use itertools::Itertools;
 
@@ -1007,6 +1007,145 @@ mod day9 {
     }
 }
 
+mod day10 {
+    use crate::shared::*;
+
+    fn find_ordering(
+        last_voltage: i64,
+        remaining_adapters: Vec<i64>,
+        ordering: Vec<i64>,
+    ) -> Option<Vec<i64>> {
+        if remaining_adapters.is_empty() {
+            return Some(ordering);
+        }
+
+        for a in &remaining_adapters {
+            let difference = a - last_voltage;
+
+            if difference >= 0 && difference <= 3 {
+                // Remove the candidate adapter.  This works because adapter outputs are unique.
+                let next_remaining: Vec<i64> = remaining_adapters
+                    .iter()
+                    .filter(|&r| r != a)
+                    .copied()
+                    .collect();
+                let mut next_ordering = ordering.clone();
+                next_ordering.push(*a);
+
+                if let Some(result) = find_ordering(*a, next_remaining, next_ordering) {
+                    return Some(result);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn part1() {
+        let mut adapters: Vec<i64> = input_lines("input_files/day10.txt")
+            .map(|s| s.parse::<i64>().unwrap())
+            .collect();
+
+        // Well... I guess they have to go in this order?
+        adapters.sort();
+
+        let device_joltage = adapters.iter().max().unwrap() + 3;
+
+        if let Some(adapter_ordering) = find_ordering(0, adapters, Vec::new()) {
+            let mut joltages = Vec::with_capacity(adapter_ordering.len() + 2);
+            joltages.push(0);
+            joltages.extend(adapter_ordering);
+            joltages.push(device_joltage);
+
+            let mut frequencies: HashMap<i64, i64> = HashMap::new();
+
+            for i in 1..joltages.len() {
+                let difference = joltages[i] - joltages[i - 1];
+                let e = frequencies.entry(difference).or_insert(0);
+                *e += 1;
+            }
+
+            dbg!(frequencies);
+        }
+    }
+
+    #[derive(Hash, Eq, PartialEq, Clone)]
+    struct Key(i64, Vec<i64>);
+
+    fn count_orderings(
+        last_voltage: i64,
+        remaining_adapters: Vec<i64>,
+        target_voltage: i64,
+        cache: Arc<Mutex<HashMap<Key, usize>>>,
+    ) -> usize {
+        let key: Key = Key(last_voltage, remaining_adapters.clone());
+
+        let cache_handle = cache.lock().unwrap();
+        if cache_handle.contains_key(&key) {
+            // Precomputed!
+            return *cache_handle.get(&key).unwrap();
+        }
+        drop(cache_handle);
+
+        let result = if last_voltage > target_voltage {
+            0
+        } else if (target_voltage - last_voltage) <= 3 {
+            if remaining_adapters.is_empty() {
+                1
+            } else {
+                1 + count_orderings(
+                    remaining_adapters[0],
+                    remaining_adapters.iter().skip(1).copied().collect(),
+                    target_voltage,
+                    cache.clone(),
+                ) + count_orderings(
+                    last_voltage,
+                    remaining_adapters.iter().skip(1).copied().collect(),
+                    target_voltage,
+                    cache.clone(),
+                )
+            }
+        } else if remaining_adapters.is_empty() {
+            0
+        } else {
+            let a = remaining_adapters[0];
+            let rest: Vec<i64> = remaining_adapters.iter().skip(1).copied().collect();
+
+            if (a - last_voltage) > 3 {
+                // Can't bridge this gap with this (or any subsequent) adapter
+                0
+            } else {
+                count_orderings(a, rest.clone(), target_voltage, cache.clone())
+                    + count_orderings(last_voltage, rest, target_voltage, cache.clone())
+            }
+        };
+
+        let mut cache_handle = cache.lock().unwrap();
+        cache_handle.insert(key, result);
+        drop(cache_handle);
+
+        result
+    }
+
+    pub fn part2() {
+        let mut adapters: Vec<i64> = input_lines("input_files/day10.txt")
+            .map(|s| s.parse::<i64>().unwrap())
+            .collect();
+
+        // Still need to be strictly increasing.
+        adapters.sort();
+
+        let device_joltage = adapters.iter().max().unwrap() + 3;
+
+        dbg!(count_orderings(
+            0,
+            adapters,
+            device_joltage,
+            Arc::new(Mutex::new(HashMap::new()))
+        ));
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1039,8 +1178,11 @@ fn main() {
 
         day8::part1();
         day8::part2();
+
+        day9::part1();
+        day9::part2();
     }
 
-    day9::part1();
-    day9::part2();
+    day10::part1();
+    day10::part2();
 }
