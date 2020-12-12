@@ -1354,6 +1354,82 @@ mod day11 {
     }
 }
 
+mod day12 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Ferry {
+        rotation: i64,
+        xpos: i64,
+        ypos: i64,
+    }
+
+    pub fn part1() {
+        let mut ferry = Ferry {
+            rotation: 90, // East
+            xpos: 0,
+            ypos: 0,
+        };
+
+        for instruction in input_lines("input_files/day12.txt") {
+            let (mode, n) = instruction.split_at(1);
+            let n: i64 = n.parse().unwrap();
+
+            match mode {
+                "N" => {
+                    ferry.ypos -= n;
+                }
+                "E" => {
+                    ferry.xpos += n;
+                }
+                "S" => {
+                    ferry.ypos += n;
+                }
+                "W" => {
+                    ferry.xpos -= n;
+                }
+                "L" => {
+                    ferry.rotation -= n;
+                    if ferry.rotation < 0 {
+                        ferry.rotation += 360;
+                    }
+                }
+                "R" => {
+                    ferry.rotation += n;
+                    if ferry.rotation >= 360 {
+                        ferry.rotation -= 360;
+                    }
+                }
+                "F" => match ferry.rotation {
+                    0 => {
+                        ferry.ypos -= n;
+                    }
+                    90 => {
+                        ferry.xpos += n;
+                    }
+                    180 => {
+                        ferry.ypos += n;
+                    }
+                    270 => {
+                        ferry.xpos -= n;
+                    }
+                    _ => {
+                        panic!("unrecognised rotation: {}", ferry.rotation);
+                    }
+                },
+                _ => panic!("unrecognised instruction"),
+            }
+        }
+
+        println!(
+            "Manhattan distance: {}",
+            ferry.xpos.abs() + ferry.ypos.abs()
+        );
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1392,8 +1468,10 @@ fn main() {
 
         day10::part1();
         day10::part2();
+
+        day11::part1();
+        day11::part2();
     }
 
-    day11::part1();
-    day11::part2();
+    day12::part1();
 }
