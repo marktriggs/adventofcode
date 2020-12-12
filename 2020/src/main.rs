@@ -26,8 +26,8 @@ mod shared {
     pub use std::fs::{self, File};
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
-    pub use std::str;
     pub use std::rc::Rc;
+    pub use std::str;
     pub use std::sync::{Arc, Mutex};
 
     pub use itertools::Itertools;
@@ -1147,6 +1147,213 @@ mod day10 {
     }
 }
 
+mod day11 {
+    use crate::shared::*;
+
+    #[derive(Eq, PartialEq, Clone, Hash, Debug, Copy)]
+    enum Tile {
+        Floor,
+        Empty,
+        Occupied,
+    }
+
+    #[derive(Eq, PartialEq, Clone, Hash, Debug)]
+    struct Grid {
+        width: usize,
+        height: usize,
+        rows: Vec<Vec<Tile>>,
+    }
+
+    impl Grid {
+        fn from_lines(lines: Vec<String>) -> Grid {
+            let rows: Vec<Vec<Tile>> = lines
+                .iter()
+                .map(|line| {
+                    line.chars()
+                        .map(|sym| match sym {
+                            '#' => Tile::Occupied,
+                            'L' => Tile::Empty,
+                            '.' => Tile::Floor,
+                            _ => panic!("Unexpected symbol during parse: {}", sym),
+                        })
+                        .collect()
+                })
+                .collect();
+
+            assert!(!rows.is_empty());
+
+            Grid {
+                width: rows[0].len(),
+                height: rows.len(),
+                rows,
+            }
+        }
+
+        fn tile_at(&self, row: i64, col: i64) -> Tile {
+            if !self.is_in_bounds(row, col) {
+                // Out of bounds
+                return Tile::Empty;
+            }
+
+            self.rows[row as usize][col as usize]
+        }
+
+        fn set(&mut self, row: i64, col: i64, tile: Tile) {
+            if !self.is_in_bounds(row, col) {
+                // Out of bounds
+                return;
+            }
+
+            self.rows[row as usize][col as usize] = tile;
+        }
+
+        fn is_in_bounds(&self, row: i64, col: i64) -> bool {
+            !(row < 0 || col < 0 || row as usize >= self.height || col as usize >= self.width)
+        }
+
+        fn adjacent_tiles(&self, row: i64, col: i64) -> [Tile; 8] {
+            [
+                self.tile_at(row - 1, col - 1),
+                self.tile_at(row - 1, col),
+                self.tile_at(row - 1, col + 1),
+                self.tile_at(row, col - 1),
+                self.tile_at(row, col + 1),
+                self.tile_at(row + 1, col - 1),
+                self.tile_at(row + 1, col),
+                self.tile_at(row + 1, col + 1),
+            ]
+        }
+
+        fn next_grid(&self) -> Grid {
+            let mut result = self.clone();
+
+            for row in 0..self.height as i64 {
+                for col in 0..self.width as i64 {
+                    let adjacent = self.adjacent_tiles(row, col);
+
+                    if self.tile_at(row, col) == Tile::Empty
+                        && !adjacent.iter().any(|&t| t == Tile::Occupied)
+                    {
+                        result.set(row, col, Tile::Occupied);
+                    } else if self.tile_at(row, col) == Tile::Occupied
+                        && adjacent.iter().filter(|&&t| t == Tile::Occupied).count() >= 4
+                    {
+                        result.set(row, col, Tile::Empty);
+                    } else {
+                        // No change
+                    }
+                }
+            }
+
+            result
+        }
+
+        fn adjacent_tiles_pt2(&self, row: i64, col: i64) -> Vec<Tile> {
+            // (row, col)
+            let directions = [
+                (-1, 0),  // north
+                (1, 0),   // south
+                (0, -1),  // west
+                (0, 1),   // east
+                (-1, -1), // north west
+                (-1, 1),  // north east
+                (1, -1),  // south west
+                (1, 1),   // south east
+            ];
+
+            directions
+                .iter()
+                .map(|direction| {
+                    let mut r = row;
+                    let mut c = col;
+
+                    loop {
+                        r += direction.0;
+                        c += direction.1;
+
+                        let tile = self.tile_at(r, c);
+
+                        if tile != Tile::Floor || !self.is_in_bounds(r, c) {
+                            break tile;
+                        }
+                    }
+                })
+                .collect()
+        }
+
+        fn next_grid_pt2(&self) -> Grid {
+            let mut result = self.clone();
+
+            for row in 0..self.height as i64 {
+                for col in 0..self.width as i64 {
+                    let adjacent = self.adjacent_tiles_pt2(row, col);
+
+                    if self.tile_at(row, col) == Tile::Empty
+                        && !adjacent.iter().any(|&t| t == Tile::Occupied)
+                    {
+                        result.set(row, col, Tile::Occupied);
+                    } else if self.tile_at(row, col) == Tile::Occupied
+                        && adjacent.iter().filter(|&&t| t == Tile::Occupied).count() >= 5
+                    {
+                        result.set(row, col, Tile::Empty);
+                    } else {
+                        // No change
+                    }
+                }
+            }
+
+            result
+        }
+
+        fn count_tiles(&self, tile: Tile) -> usize {
+            self.rows
+                .iter()
+                .map(|row| row.iter().filter(|&&t| t == tile).count())
+                .sum()
+        }
+    }
+
+    pub fn part1() {
+        let mut grid = Grid::from_lines(input_lines("input_files/day11.txt").collect());
+
+        loop {
+            let next_grid = grid.next_grid();
+
+            if next_grid == grid {
+                // We've hit a stable state
+                break;
+            }
+
+            grid = next_grid;
+        }
+
+        println!(
+            "There are {} occupied seats",
+            grid.count_tiles(Tile::Occupied)
+        );
+    }
+
+    pub fn part2() {
+        let mut grid = Grid::from_lines(input_lines("input_files/day11.txt").collect());
+
+        loop {
+            let next_grid = grid.next_grid_pt2();
+
+            if next_grid == grid {
+                // We've hit a stable state
+                break;
+            }
+
+            grid = next_grid;
+        }
+
+        println!(
+            "There are {} occupied seats",
+            grid.count_tiles(Tile::Occupied)
+        );
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1182,8 +1389,11 @@ fn main() {
 
         day9::part1();
         day9::part2();
+
+        day10::part1();
+        day10::part2();
     }
 
-    day10::part1();
-    day10::part2();
+    day11::part1();
+    day11::part2();
 }
