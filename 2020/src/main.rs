@@ -1533,6 +1533,143 @@ mod day12 {
     }
 }
 
+mod day13 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let (time_str, bus_str) = input_lines("input_files/day13.txt").collect_tuple().unwrap();
+
+        let time: usize = time_str.parse().expect(&format!("Time parse error: {}", time_str));
+        let buses: Vec<usize> = bus_str.split(',')
+            .map(|s| {
+                if s == "x" {
+                    None
+                } else {
+                    Some(s.parse::<usize>().expect(&format!("Bus parse error: {}", s)))
+                }
+            })
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .collect();
+
+        fn next_time(time: usize, bus: usize) -> usize {
+            let m = time % bus;
+
+            if m == 0 {
+                time
+            } else {
+                time + (bus - m)
+            }
+        }
+
+        let next_bus = buses.iter().min_by_key(|&&b| next_time(time, b)).unwrap();
+
+        println!("Bus id: {}; wait time: {}",
+                 next_bus,
+                 next_bus - (time % next_bus));
+    }
+
+
+    // https://en.wikipedia.org/wiki/Chinese_remainder_theorem?
+    // https://www.dcode.fr/chinese-remainder
+    // http://homepages.math.uic.edu/~leon/mcs425-s08/handouts/chinese_remainder.pdf
+
+    // Might want this to find modular inverses?
+    // Implemented from pseudocode here: https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+
+    // This gets me the modulo inverses from the pdf above:
+    // dbg!(((extended_gcd(7, 11).0 % 11) + 11) % 11);
+    // dbg!(((extended_gcd(15, 16).0 % 16) + 16) % 16);
+    // dbg!(((extended_gcd(11, 21).0 % 21) + 21) % 21);
+
+    fn extended_gcd(a: i64, b: i64) -> (i64, i64) {
+        let mut s = 0;
+        let mut old_s = 1;
+
+        let mut t = 0;
+        let mut old_t = 1;
+
+        let mut r = b;
+        let mut old_r = a;
+
+        while r != 0 {
+            let quotient = old_r / r;
+
+            // (old_r, r) := (r, old_r − quotient × r)
+            let tmp = r;
+            r = old_r - quotient * tmp;
+            old_r = tmp;
+
+            // (old_s, s) := (s, old_s − quotient × s)
+            let tmp = s;
+            s = old_s - quotient * tmp;
+            old_s = tmp;
+
+            // (old_t, t) := (t, old_t − quotient × t)
+            let tmp = t;
+            t = old_t - quotient * tmp;
+            old_t = tmp;
+        }
+
+        return (old_s, old_t);
+    }
+
+
+    fn chinese_remainder(m_vals: Vec<i64>, a_vals: Vec<i64>) -> i64 {
+        let m = m_vals.iter().fold(1, |p, n| p * n);
+
+        let z_vals: Vec<i64> = m_vals.iter().map(|nth_m| m / nth_m).collect();
+
+        let y_vals: Vec<i64> = m_vals.iter().zip(z_vals.iter()).map(|(&nth_m, &nth_z)| {
+            // z^-1 mod nth_m
+            ((extended_gcd(nth_z, nth_m).0 % nth_m) + nth_m) % nth_m
+        }).collect();
+
+        let w_vals: Vec<i64> = y_vals.iter().zip(z_vals.iter()).map(|(&nth_y, &nth_z)| {
+            (nth_y * nth_z) % m
+        }).collect();
+
+        let solution = a_vals.iter().zip(w_vals.iter()).map(|(&nth_a, &nth_w)| {
+            nth_a * nth_w
+        }).fold(0, |a, b| a + b);
+
+        solution % m
+    }
+
+
+
+    pub fn part2() {
+        let (_, bus_str) = input_lines("input_files/day13.txt").collect_tuple().unwrap();
+
+        let buses: Vec<Option<usize>> = bus_str.split(',')
+            .map(|s| {
+                if s == "x" {
+                    None
+                } else {
+                    Some(s.parse::<usize>().expect(&format!("Bus parse error: {}", s)))
+                }
+            })
+            .collect();
+
+        let bus_indexes: Vec<usize> = (0..buses.len()).filter(|&idx| buses[idx].is_some()).collect();
+
+        // Our modulo values are just our bus numbers
+        let mods: Vec<i64> = bus_indexes.iter().map(|&idx| {
+            buses[idx as usize].unwrap() as i64
+        }).collect();
+
+        // But our remainders are shifted left to t = 0
+        let remainders: Vec<i64> = bus_indexes.iter().map(|&idx| {
+            let m = buses[idx as usize].unwrap();
+            (m - idx) as i64
+        }).collect();
+
+
+        // To victory!
+        println!("Earliest possible time: {}", chinese_remainder(mods, remainders));
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1574,8 +1711,11 @@ fn main() {
 
         day11::part1();
         day11::part2();
+
+        day12::part1();
+        day12::part2();
     }
 
-    day12::part1();
-    day12::part2();
+    day13::part1();
+    day13::part2();
 }
