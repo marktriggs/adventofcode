@@ -1357,14 +1357,14 @@ mod day11 {
 mod day12 {
     use crate::shared::*;
 
-    #[derive(Debug)]
-    struct Ferry {
-        rotation: i64,
-        xpos: i64,
-        ypos: i64,
-    }
-
     pub fn part1() {
+        #[derive(Debug)]
+        struct Ferry {
+            rotation: i64,
+            xpos: i64,
+            ypos: i64,
+        }
+
         let mut ferry = Ferry {
             rotation: 90, // East
             xpos: 0,
@@ -1427,7 +1427,110 @@ mod day12 {
         );
     }
 
-    pub fn part2() {}
+    // 28479: too low
+    pub fn part2() {
+        #[derive(Debug)]
+        struct Ferry {
+            xpos: i64,
+            ypos: i64,
+        }
+
+        #[derive(Debug)]
+        struct Waypoint {
+            xpos: i64,
+            ypos: i64,
+        }
+
+        let mut ferry = Ferry { xpos: 0, ypos: 0 };
+
+        let mut waypoint = Waypoint { xpos: 10, ypos: -1 };
+
+        impl Waypoint {
+            fn unit_direction(&self) -> (i64, i64) {
+                let xdir = if self.xpos == 0 {
+                    1
+                } else {
+                    self.xpos / self.xpos.abs()
+                };
+
+                let ydir = if self.ypos == 0 {
+                    1
+                } else {
+                    self.ypos / self.ypos.abs()
+                };
+
+                (xdir, ydir)
+            }
+        }
+
+        for instruction in input_lines("input_files/day12.txt") {
+            let (mode, n) = instruction.split_at(1);
+            let n: i64 = n.parse().unwrap();
+
+            match mode {
+                "N" => {
+                    waypoint.ypos -= n;
+                }
+                "E" => {
+                    waypoint.xpos += n;
+                }
+                "S" => {
+                    waypoint.ypos += n;
+                }
+                "W" => {
+                    waypoint.xpos -= n;
+                }
+                "L" => {
+                    for _ in 0..(n / 90) {
+                        let direction = waypoint.unit_direction();
+
+                        let adjustment = match direction {
+                            (1, -1) => (-1, -1),
+                            (-1, -1) => (-1, 1),
+                            (-1, 1) => (1, 1),
+                            (1, 1) => (1, -1),
+                            _ => panic!("Bad mojo"),
+                        };
+
+                        let new_x = waypoint.ypos.abs() * adjustment.0;
+                        let new_y = waypoint.xpos.abs() * adjustment.1;
+                        waypoint.xpos = new_x;
+                        waypoint.ypos = new_y;
+                    }
+                }
+                "R" => {
+                    for _ in 0..(n / 90) {
+                        let direction = waypoint.unit_direction();
+
+                        let adjustment = match direction {
+                            (1, -1) => (1, 1),
+                            (1, 1) => (-1, 1),
+                            (-1, 1) => (-1, -1),
+                            (-1, -1) => (1, -1),
+                            _ => panic!("Bad mojo"),
+                        };
+
+                        let new_x = waypoint.ypos.abs() * adjustment.0;
+                        let new_y = waypoint.xpos.abs() * adjustment.1;
+                        waypoint.xpos = new_x;
+                        waypoint.ypos = new_y;
+                    }
+                }
+                "F" => {
+                    for _ in 0..n {
+                        ferry.xpos += waypoint.xpos;
+                        ferry.ypos += waypoint.ypos;
+                    }
+                }
+                _ => panic!("unrecognised instruction"),
+            }
+        }
+
+        println!(
+            "Pt 2 Manhattan distance: {}",
+            ferry.xpos.abs() + ferry.ypos.abs()
+        );
+    }
 }
 
 mod dayn {
@@ -1474,4 +1577,5 @@ fn main() {
     }
 
     day12::part1();
+    day12::part2();
 }
