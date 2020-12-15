@@ -1795,6 +1795,79 @@ mod day14 {
     }
 }
 
+mod day15 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let input: Vec<usize> = vec![16, 1, 0, 18, 12, 14, 19];
+        // let input: Vec<usize> = vec![0,3,6];
+
+        let mut number_last_turn: HashMap<usize, usize> = HashMap::new();
+
+        let mut turn = 0;
+
+        // populate our initial state, excluding the last number
+        for &n in &input[0..input.len() - 1] {
+            turn += 1;
+
+            number_last_turn.insert(n, turn);
+        }
+
+        let mut last_number = *input.last().unwrap();
+        turn += 1;
+
+        for _ in 0..(2020 - input.len()) {
+            let new_number = if number_last_turn.contains_key(&last_number) {
+                turn - number_last_turn.get(&last_number).unwrap()
+            } else {
+                0
+            };
+
+            number_last_turn.insert(last_number, turn);
+
+            turn += 1;
+            last_number = new_number;
+        }
+
+        println!("Number 2020 is {}", last_number);
+    }
+
+    pub fn part2() {
+        let input: Vec<usize> = vec![16, 1, 0, 18, 12, 14, 19];
+        // let input: Vec<usize> = vec![0,3,6];
+
+        let mut number_last_turn: HashMap<usize, usize> = HashMap::new();
+
+        let mut turn = 0;
+
+        // populate our initial state, excluding the last number
+        for &n in &input[0..input.len() - 1] {
+            turn += 1;
+
+            number_last_turn.insert(n, turn);
+        }
+
+        let mut last_number = *input.last().unwrap();
+        turn += 1;
+
+        for _ in 0..(30000000 - input.len()) {
+            let new_number = if number_last_turn.contains_key(&last_number) {
+                turn - number_last_turn.get(&last_number).unwrap()
+            } else {
+                0
+            };
+
+            number_last_turn.insert(last_number, turn);
+
+            turn += 1;
+            last_number = new_number;
+        }
+
+        println!("Number 2020 is {}", last_number);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -1842,8 +1915,11 @@ fn main() {
 
         day13::part1();
         day13::part2();
+
+        day14::part1();
+        day14::part2();
     }
 
-    day14::part1();
-    day14::part2();
+    day15::part1();
+    day15::part2();
 }
