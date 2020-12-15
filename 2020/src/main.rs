@@ -1537,15 +1537,23 @@ mod day13 {
     use crate::shared::*;
 
     pub fn part1() {
-        let (time_str, bus_str) = input_lines("input_files/day13.txt").collect_tuple().unwrap();
+        let (time_str, bus_str) = input_lines("input_files/day13.txt")
+            .collect_tuple()
+            .unwrap();
 
-        let time: usize = time_str.parse().expect(&format!("Time parse error: {}", time_str));
-        let buses: Vec<usize> = bus_str.split(',')
+        let time: usize = time_str
+            .parse()
+            .unwrap_or_else(|_| panic!("Time parse error: {}", time_str));
+        let buses: Vec<usize> = bus_str
+            .split(',')
             .map(|s| {
                 if s == "x" {
                     None
                 } else {
-                    Some(s.parse::<usize>().expect(&format!("Bus parse error: {}", s)))
+                    Some(
+                        s.parse::<usize>()
+                            .unwrap_or_else(|_| panic!("Bus parse error: {}", s)),
+                    )
                 }
             })
             .filter(Option::is_some)
@@ -1564,11 +1572,12 @@ mod day13 {
 
         let next_bus = buses.iter().min_by_key(|&&b| next_time(time, b)).unwrap();
 
-        println!("Bus id: {}; wait time: {}",
-                 next_bus,
-                 next_bus - (time % next_bus));
+        println!(
+            "Bus id: {}; wait time: {}",
+            next_bus,
+            next_bus - (time % next_bus)
+        );
     }
-
 
     // https://en.wikipedia.org/wiki/Chinese_remainder_theorem?
     // https://www.dcode.fr/chinese-remainder
@@ -1582,6 +1591,7 @@ mod day13 {
     // dbg!(((extended_gcd(15, 16).0 % 16) + 16) % 16);
     // dbg!(((extended_gcd(11, 21).0 % 21) + 21) % 21);
 
+    #[allow(clippy::many_single_char_names)]
     fn extended_gcd(a: i64, b: i64) -> (i64, i64) {
         let mut s = 0;
         let mut old_s = 1;
@@ -1611,60 +1621,81 @@ mod day13 {
             old_t = tmp;
         }
 
-        return (old_s, old_t);
+        (old_s, old_t)
     }
 
-
     fn chinese_remainder(m_vals: Vec<i64>, a_vals: Vec<i64>) -> i64 {
-        let m = m_vals.iter().fold(1, |p, n| p * n);
+        let m: i64 = m_vals.iter().product();
 
         let z_vals: Vec<i64> = m_vals.iter().map(|nth_m| m / nth_m).collect();
 
-        let y_vals: Vec<i64> = m_vals.iter().zip(z_vals.iter()).map(|(&nth_m, &nth_z)| {
-            // z^-1 mod nth_m
-            ((extended_gcd(nth_z, nth_m).0 % nth_m) + nth_m) % nth_m
-        }).collect();
+        let y_vals: Vec<i64> = m_vals
+            .iter()
+            .zip(z_vals.iter())
+            .map(|(&nth_m, &nth_z)| {
+                // z^-1 mod nth_m
+                ((extended_gcd(nth_z, nth_m).0 % nth_m) + nth_m) % nth_m
+            })
+            .collect();
 
-        let w_vals: Vec<i64> = y_vals.iter().zip(z_vals.iter()).map(|(&nth_y, &nth_z)| {
-            (nth_y * nth_z) % m
-        }).collect();
+        let w_vals: Vec<i64> = y_vals
+            .iter()
+            .zip(z_vals.iter())
+            .map(|(&nth_y, &nth_z)| (nth_y * nth_z) % m)
+            .collect();
 
-        let solution = a_vals.iter().zip(w_vals.iter()).map(|(&nth_a, &nth_w)| {
-            nth_a * nth_w
-        }).fold(0, |a, b| a + b);
+        let solution: i64 = a_vals
+            .iter()
+            .zip(w_vals.iter())
+            .map(|(&nth_a, &nth_w)| nth_a * nth_w)
+            .sum();
 
         solution % m
     }
 
     pub fn part2() {
-        let (_, bus_str) = input_lines("input_files/day13.txt").collect_tuple().unwrap();
+        let (_, bus_str) = input_lines("input_files/day13.txt")
+            .collect_tuple()
+            .unwrap();
 
-        let buses: Vec<Option<usize>> = bus_str.split(',')
+        let buses: Vec<Option<usize>> = bus_str
+            .split(',')
             .map(|s| {
                 if s == "x" {
                     None
                 } else {
-                    Some(s.parse::<usize>().expect(&format!("Bus parse error: {}", s)))
+                    Some(
+                        s.parse::<usize>()
+                            .unwrap_or_else(|_| panic!("Bus parse error: {}", s)),
+                    )
                 }
             })
             .collect();
 
-        let bus_indexes: Vec<usize> = (0..buses.len()).filter(|&idx| buses[idx].is_some()).collect();
+        let bus_indexes: Vec<usize> = (0..buses.len())
+            .filter(|&idx| buses[idx].is_some())
+            .collect();
 
         // Our modulo values are just our bus numbers
-        let mods: Vec<i64> = bus_indexes.iter().map(|&idx| {
-            buses[idx as usize].unwrap() as i64
-        }).collect();
+        let mods: Vec<i64> = bus_indexes
+            .iter()
+            .map(|&idx| buses[idx as usize].unwrap() as i64)
+            .collect();
 
         // But our remainders are shifted left to t = 0
-        let remainders: Vec<i64> = bus_indexes.iter().map(|&idx| {
-            let m = buses[idx as usize].unwrap();
-            (m - idx) as i64
-        }).collect();
-
+        let remainders: Vec<i64> = bus_indexes
+            .iter()
+            .map(|&idx| {
+                let m = buses[idx as usize].unwrap();
+                (m - idx) as i64
+            })
+            .collect();
 
         // To victory!
-        println!("Earliest possible time: {}", chinese_remainder(mods, remainders));
+        println!(
+            "Earliest possible time: {}",
+            chinese_remainder(mods, remainders)
+        );
     }
 }
 
@@ -1717,14 +1748,13 @@ mod day14 {
             } else {
                 panic!("Parse error: {}", line);
             }
-
         }
 
         println!("Sum of memory: {}", memory.iter().sum::<usize>());
     }
 
     fn decode_memory_address(mask: &str, address: usize) -> Vec<usize> {
-        let mut result: Vec<usize> = vec!(0);
+        let mut result: Vec<usize> = vec![0];
 
         for (idx, ch) in mask.chars().enumerate() {
             let bit_offset = (mask.len() - idx - 1);
@@ -1741,13 +1771,13 @@ mod day14 {
                             *a &= !(1 << bit_offset);
                         }
                     });
-                },
+                }
                 '1' => {
                     // overwrite with 1
                     result.iter_mut().for_each(|a| {
                         *a |= 1 << bit_offset;
                     });
-                },
+                }
                 'X' => {
                     // floating
                     let mut perms: Vec<usize> = Vec::new();
@@ -1757,7 +1787,7 @@ mod day14 {
                     }
 
                     result = perms;
-                },
+                }
                 _ => panic!("Weird mask: {}", mask),
             }
         }
@@ -1787,11 +1817,9 @@ mod day14 {
             } else {
                 panic!("Parse error: {}", line);
             }
-
         }
 
         println!("Sum of memory: {}", memory.values().sum::<usize>());
-
     }
 }
 
@@ -1866,7 +1894,6 @@ mod day15 {
         println!("Number 2020 is {}", last_number);
     }
 }
-
 
 mod dayn {
     use crate::shared::*;
