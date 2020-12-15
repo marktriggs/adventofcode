@@ -1636,8 +1636,6 @@ mod day13 {
         solution % m
     }
 
-
-
     pub fn part2() {
         let (_, bus_str) = input_lines("input_files/day13.txt").collect_tuple().unwrap();
 
@@ -1667,6 +1665,133 @@ mod day13 {
 
         // To victory!
         println!("Earliest possible time: {}", chinese_remainder(mods, remainders));
+    }
+}
+
+mod day14 {
+    use crate::shared::*;
+
+    fn apply_mask(mask: &str, value: usize) -> usize {
+        let mut result = value;
+
+        for (idx, ch) in mask.chars().enumerate() {
+            let bit_offset = (mask.len() - idx - 1);
+            let bit = match ch {
+                '0' => 0,
+                '1' => 1,
+                'X' => continue,
+                _ => panic!("Weird mask: {}", mask),
+            };
+
+            if bit == 1 {
+                result |= 1 << bit_offset
+            } else {
+                result &= !(1 << bit_offset)
+            }
+        }
+
+        result
+    }
+
+    pub fn part1() {
+        let lines = input_lines("input_files/day14.txt");
+
+        let mut mask: String = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string();
+        let mut memory: Vec<usize> = Vec::new();
+
+        let mask_regex = Regex::new("mask = (.+)").unwrap();
+        let memory_regex = Regex::new("mem\\[(.+)\\] = (.+)").unwrap();
+
+        for line in lines {
+            if let Some(cap) = mask_regex.captures(&line) {
+                mask = cap[1].to_string();
+            } else if let Some(cap) = memory_regex.captures(&line) {
+                let address: usize = cap[1].parse().unwrap();
+                let value: usize = cap[2].parse().unwrap();
+
+                while memory.len() <= address {
+                    memory.push(0);
+                }
+
+                memory[address] = apply_mask(&mask, value)
+            } else {
+                panic!("Parse error: {}", line);
+            }
+
+        }
+
+        println!("Sum of memory: {}", memory.iter().sum::<usize>());
+    }
+
+    fn decode_memory_address(mask: &str, address: usize) -> Vec<usize> {
+        let mut result: Vec<usize> = vec!(0);
+
+        for (idx, ch) in mask.chars().enumerate() {
+            let bit_offset = (mask.len() - idx - 1);
+
+            match ch {
+                '0' => {
+                    // unchanged from `address`
+                    result.iter_mut().for_each(|a| {
+                        let bit = ((address >> bit_offset) & 1);
+
+                        if bit == 1 {
+                            *a |= 1 << bit_offset;
+                        } else {
+                            *a &= !(1 << bit_offset);
+                        }
+                    });
+                },
+                '1' => {
+                    // overwrite with 1
+                    result.iter_mut().for_each(|a| {
+                        *a |= 1 << bit_offset;
+                    });
+                },
+                'X' => {
+                    // floating
+                    let mut perms: Vec<usize> = Vec::new();
+                    for a in &result {
+                        perms.push(a | (1 << bit_offset));
+                        perms.push(a & !(1 << bit_offset));
+                    }
+
+                    result = perms;
+                },
+                _ => panic!("Weird mask: {}", mask),
+            }
+        }
+
+        result
+    }
+
+    pub fn part2() {
+        let lines = input_lines("input_files/day14.txt");
+
+        let mut mask: String = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX".to_string();
+        let mut memory: HashMap<usize, usize> = HashMap::new();
+
+        let mask_regex = Regex::new("mask = (.+)").unwrap();
+        let memory_regex = Regex::new("mem\\[(.+)\\] = (.+)").unwrap();
+
+        for line in lines {
+            if let Some(cap) = mask_regex.captures(&line) {
+                mask = cap[1].to_string();
+            } else if let Some(cap) = memory_regex.captures(&line) {
+                let base_address: usize = cap[1].parse().unwrap();
+                let value: usize = cap[2].parse().unwrap();
+
+                for address in decode_memory_address(&mask, base_address) {
+                    memory.insert(address, value);
+                }
+            } else {
+                panic!("Parse error: {}", line);
+            }
+
+        }
+
+        println!("Sum of memory: {}", memory.values().sum::<usize>());
+
     }
 }
 
@@ -1714,8 +1839,11 @@ fn main() {
 
         day12::part1();
         day12::part2();
+
+        day13::part1();
+        day13::part2();
     }
 
-    day13::part1();
-    day13::part2();
+    day14::part1();
+    day14::part2();
 }
