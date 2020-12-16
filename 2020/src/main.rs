@@ -76,7 +76,7 @@ mod shared {
 
     pub fn permutations<T>(inputs: Vec<T>) -> Vec<Vec<T>>
     where
-        T: Clone + Copy + std::fmt::Debug,
+        T: Clone + std::fmt::Debug,
     {
         if inputs.is_empty() {
             vec![Vec::new()]
@@ -89,7 +89,7 @@ mod shared {
                 .flat_map(|subperm: &Vec<T>| {
                     (0..=subperm.len()).map(move |idx| {
                         let mut r = subperm.clone();
-                        r.insert(idx, *elt);
+                        r.insert(idx, elt.clone());
                         r
                     })
                 })
@@ -1895,6 +1895,167 @@ mod day15 {
     }
 }
 
+mod day16 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone)]
+    struct Rule {
+        description: String,
+        ranges: Vec<std::ops::Range<usize>>,
+    }
+
+    impl Rule {
+        fn matches(&self, n: usize) -> bool {
+            self.ranges.iter().any(|r| r.contains(&n))
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Notes {
+        rules: Vec<Rule>,
+        ticket: Vec<usize>,
+        nearby: Vec<Vec<usize>>,
+    }
+
+    fn parse_rule(s: String) -> Rule {
+        let (description, rule_s) = s.split(": ").collect_tuple().unwrap();
+        Rule {
+            description: description.to_string(),
+            ranges: rule_s
+                .split(" or ")
+                .map(|range| {
+                    let (start, end) = range
+                        .split('-')
+                        .map(|r| r.parse().unwrap())
+                        .collect_tuple()
+                        .unwrap();
+                    std::ops::Range {
+                        start,
+                        end: end + 1,
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    fn parse_notes(lines: Vec<String>) -> Notes {
+        let (rule_lines, ticket_lines, nearby_lines) =
+            lines.split(|s| s.is_empty()).collect_tuple().unwrap();
+
+        Notes {
+            rules: rule_lines
+                .iter()
+                .map(|s| parse_rule(s.to_string()))
+                .collect(),
+            ticket: ticket_lines
+                .get(1)
+                .unwrap()
+                .split(',')
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            nearby: nearby_lines
+                .iter()
+                .skip(1)
+                .map(|l| l.split(',').map(|s| s.parse().unwrap()).collect())
+                .collect(),
+        }
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day16.txt").collect();
+        let notes = parse_notes(lines);
+
+        let mut inconceivable_numbers = Vec::new();
+
+        for nearby in &notes.nearby {
+            for &n in nearby {
+                if !notes.rules.iter().any(|r| r.matches(n)) {
+                    inconceivable_numbers.push(n);
+                }
+            }
+        }
+
+        println!(
+            "Error rate: {}",
+            inconceivable_numbers.iter().sum::<usize>()
+        );
+    }
+
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day16.txt").collect();
+        let notes = parse_notes(lines);
+
+        let mut valid_tickets = Vec::new();
+
+        for nearby in &notes.nearby {
+            if nearby
+                .iter()
+                .any(|&n| !notes.rules.iter().any(|r| r.matches(n)))
+            {
+                // Invalid ticket
+            } else {
+                valid_tickets.push(nearby.clone());
+            }
+        }
+
+        // Our ticket is valid too
+        let column_count = notes.ticket.len();
+        valid_tickets.push(notes.ticket.clone());
+
+        // Each column has a list of rule indexes corresponding to the rules that
+        // satisfy it.
+        let mut column_candidates: Vec<HashSet<usize>> =
+            (0..column_count).map(|_| HashSet::new()).collect();
+
+        for (rule_idx, r) in notes.rules.iter().enumerate() {
+            for ticket_column in 0..column_count {
+                if valid_tickets
+                    .iter()
+                    .all(|ticket| r.matches(ticket[ticket_column]))
+                {
+                    column_candidates[ticket_column].insert(rule_idx);
+                }
+            }
+        }
+
+        // Iteratively whittle down the candidates by locking in the rules that can only
+        // correspond to one column.
+        for _ in (0..column_count) {
+            let locked_rules: Vec<usize> = column_candidates
+                .iter()
+                .filter(|&set| set.len() == 1)
+                .map(|set| *set.iter().next().unwrap())
+                .collect();
+
+            for set in column_candidates.iter_mut() {
+                if set.len() > 1 {
+                    for r in &locked_rules {
+                        set.remove(&r);
+                    }
+                }
+            }
+        }
+
+        assert!(column_candidates.iter().all(|c| c.len() == 1));
+
+        let ordered_rules: Vec<usize> = column_candidates
+            .iter()
+            .map(|c| *c.iter().next().unwrap())
+            .collect();
+
+        dbg!(&ordered_rules);
+
+        let mut result = 1;
+        for (column_idx, &rule_idx) in ordered_rules.iter().enumerate() {
+            if notes.rules[rule_idx].description.starts_with("departure") {
+                result *= notes.ticket[column_idx]
+            }
+        }
+
+        println!("Result: {}", result);
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1945,8 +2106,11 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        day15::part1();
+        day15::part2();
     }
 
-    day15::part1();
-    day15::part2();
+    day16::part1();
+    day16::part2();
 }
