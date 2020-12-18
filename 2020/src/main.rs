@@ -2399,6 +2399,108 @@ mod day17 {
     }
 }
 
+mod day18 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq)]
+    enum Token {
+        Number(i64),
+        Add,
+        Multiply,
+        OpenParen,
+        CloseParen,
+    }
+
+    fn tokenise(line: String) -> VecDeque<Token> {
+        let mut result = VecDeque::new();
+
+        let mut chars: VecDeque<char> = line.chars().collect();
+
+        while !chars.is_empty() {
+            let ch = chars.pop_front().unwrap();
+
+            if ch.is_digit(10) {
+                let mut n: u32 = ch.to_digit(10).unwrap();
+
+                while !chars.is_empty() && chars[0].is_digit(10) {
+                    n *= 10;
+                    n += chars.pop_front().unwrap().to_digit(10).unwrap();
+                }
+
+                result.push_back(Token::Number(n as i64));
+            } else if ch == '+' {
+                result.push_back(Token::Add);
+            } else if ch == '*' {
+                result.push_back(Token::Multiply);
+            } else if ch == '(' {
+                result.push_back(Token::OpenParen);
+            } else if ch == ')' {
+                result.push_back(Token::CloseParen);
+            } else {
+                // Ignored
+            }
+        }
+
+        result
+    }
+
+    fn eval_expression(tokens: &mut VecDeque<Token>) -> i64 {
+        if tokens.is_empty() {
+            return 0;
+        }
+
+        let mut lhs = eval_next_expression(tokens);
+
+        loop {
+            if tokens.is_empty() {
+                return lhs;
+            }
+
+            if tokens[0] == Token::CloseParen {
+                tokens.pop_front();
+                return lhs;
+            }
+
+            let op = tokens.pop_front().unwrap();
+
+            if op == Token::Add {
+                lhs += eval_next_expression(tokens);
+            } else {
+                lhs *= eval_next_expression(tokens);
+            }
+        }
+    }
+
+    fn eval_next_expression(tokens: &mut VecDeque<Token>) -> i64 {
+        if tokens.is_empty() {
+            return 0;
+        }
+
+        let token = tokens.pop_front().unwrap();
+
+        if let Token::Number(n) = token {
+            n
+        } else if token == Token::OpenParen {
+            eval_expression(tokens)
+        } else {
+            panic!("Parse error!");
+        }
+    }
+
+    pub fn part1() {
+        let expr: i64 = input_lines("input_files/day18.txt")
+            .map(|line| {
+                let mut tokens = tokenise(line);
+                eval_expression(&mut tokens)
+            })
+            .sum();
+
+        println!("{}", expr);
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -2455,8 +2557,10 @@ fn main() {
 
         day16::part1();
         day16::part2();
+
+        day17::part1();
+        day17::part2();
     }
 
-    day17::part1();
-    day17::part2();
+    day18::part1();
 }
