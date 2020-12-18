@@ -2056,6 +2056,349 @@ mod day16 {
     }
 }
 
+mod day17 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+    struct Point3D {
+        x: i64,
+        y: i64,
+        z: i64,
+    }
+
+    impl Point3D {
+        fn neighbours(&self) -> Vec<Point3D> {
+            let mut result = Vec::with_capacity(26);
+
+            for xoff in (-1..=1) {
+                for yoff in (-1..=1) {
+                    for zoff in (-1..=1) {
+                        if xoff == 0 && yoff == 0 && zoff == 0 {
+                            continue;
+                        }
+
+                        result.push(Point3D {
+                            x: self.x + xoff,
+                            y: self.y + yoff,
+                            z: self.z + zoff,
+                        });
+                    }
+                }
+            }
+
+            result
+        }
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    enum State {
+        Active,
+        Inactive,
+    }
+
+    #[derive(Debug, Clone)]
+    struct Grid3D {
+        grid: HashMap<Point3D, State>,
+    }
+
+    impl Grid3D {
+        fn parse(lines: Vec<String>) -> Grid3D {
+            let mut result = Grid3D::new();
+
+            for (row_idx, row) in lines.iter().enumerate() {
+                for (col_idx, ch) in row.chars().enumerate() {
+                    let p = Point3D {
+                        x: col_idx as i64,
+                        y: row_idx as i64,
+                        z: 0i64,
+                    };
+
+                    let v = if ch == '#' {
+                        State::Active
+                    } else {
+                        State::Inactive
+                    };
+
+                    result.grid.insert(p, v);
+                }
+            }
+
+            result
+        }
+
+        fn new() -> Grid3D {
+            Grid3D {
+                grid: HashMap::new(),
+            }
+        }
+
+        fn is_active(&self, p: &Point3D) -> bool {
+            if let Some(s) = self.grid.get(p) {
+                s == &State::Active
+            } else {
+                false
+            }
+        }
+
+        fn set_active(&mut self, p: &Point3D) {
+            self.grid.insert(p.clone(), State::Active);
+        }
+
+        fn set_inactive(&mut self, p: &Point3D) {
+            self.grid.insert(p.clone(), State::Inactive);
+        }
+
+        fn count_active(&self) -> usize {
+            self.grid.keys().filter(|p| self.is_active(p)).count()
+        }
+
+        fn bounding_cube(&self) -> (Point3D, Point3D) {
+            let min = self
+                .grid
+                .keys()
+                .cloned()
+                .fold_first(|min, p| Point3D {
+                    x: min.x.min(p.x),
+                    y: min.y.min(p.y),
+                    z: min.z.min(p.z),
+                })
+                .unwrap();
+
+            let max = self
+                .grid
+                .keys()
+                .cloned()
+                .fold_first(|max, p| Point3D {
+                    x: max.x.max(p.x),
+                    y: max.y.max(p.y),
+                    z: max.z.max(p.z),
+                })
+                .unwrap();
+
+            (min, max)
+        }
+    }
+
+    pub fn part1() {
+        let mut grid = Grid3D::parse(input_lines("input_files/day17.txt").collect());
+
+        for _cycle in 0..6 {
+            let (min, max) = grid.bounding_cube();
+
+            let mut next_grid = Grid3D::new();
+
+            for z in (min.z - 1)..=(max.z + 1) {
+                for y in (min.y - 1)..=(max.y + 1) {
+                    for x in (min.x - 1)..=(max.x + 1) {
+                        let p = Point3D { x, y, z };
+
+                        if grid.is_active(&p) {
+                            let active_neighbour_count = p
+                                .neighbours()
+                                .iter()
+                                .filter(|np| grid.is_active(np))
+                                .count();
+
+                            if active_neighbour_count == 2 || active_neighbour_count == 3 {
+                                next_grid.set_active(&p);
+                            } else {
+                                next_grid.set_inactive(&p);
+                            }
+                        } else {
+                            let active_neighbour_count = p
+                                .neighbours()
+                                .iter()
+                                .filter(|np| grid.is_active(np))
+                                .count();
+
+                            if active_neighbour_count == 3 {
+                                next_grid.set_active(&p);
+                            } else {
+                                next_grid.set_inactive(&p);
+                            }
+                        }
+                    }
+                }
+            }
+
+            grid = next_grid;
+        }
+
+        println!("Active cubes: {}", grid.count_active())
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+    struct Point4D {
+        w: i64,
+        x: i64,
+        y: i64,
+        z: i64,
+    }
+
+    impl Point4D {
+        fn neighbours(&self) -> Vec<Point4D> {
+            let mut result = Vec::with_capacity(26);
+
+            for woff in (-1..=1) {
+                for xoff in (-1..=1) {
+                    for yoff in (-1..=1) {
+                        for zoff in (-1..=1) {
+                            if woff == 0 && xoff == 0 && yoff == 0 && zoff == 0 {
+                                continue;
+                            }
+
+                            result.push(Point4D {
+                                w: self.w + woff,
+                                x: self.x + xoff,
+                                y: self.y + yoff,
+                                z: self.z + zoff,
+                            });
+                        }
+                    }
+                }
+            }
+
+            result
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Grid4D {
+        grid: HashMap<Point4D, State>,
+    }
+
+    impl Grid4D {
+        fn parse(lines: Vec<String>) -> Grid4D {
+            let mut result = Grid4D::new();
+
+            for (row_idx, row) in lines.iter().enumerate() {
+                for (col_idx, ch) in row.chars().enumerate() {
+                    let p = Point4D {
+                        w: 0,
+                        x: col_idx as i64,
+                        y: row_idx as i64,
+                        z: 0i64,
+                    };
+
+                    let v = if ch == '#' {
+                        State::Active
+                    } else {
+                        State::Inactive
+                    };
+
+                    result.grid.insert(p, v);
+                }
+            }
+
+            result
+        }
+
+        fn new() -> Grid4D {
+            Grid4D {
+                grid: HashMap::new(),
+            }
+        }
+
+        fn is_active(&self, p: &Point4D) -> bool {
+            if let Some(s) = self.grid.get(p) {
+                s == &State::Active
+            } else {
+                false
+            }
+        }
+
+        fn set_active(&mut self, p: &Point4D) {
+            self.grid.insert(p.clone(), State::Active);
+        }
+
+        fn set_inactive(&mut self, p: &Point4D) {
+            self.grid.insert(p.clone(), State::Inactive);
+        }
+
+        fn count_active(&self) -> usize {
+            self.grid.keys().filter(|p| self.is_active(p)).count()
+        }
+
+        fn bounding_cube(&self) -> (Point4D, Point4D) {
+            let min = self
+                .grid
+                .keys()
+                .cloned()
+                .fold_first(|min, p| Point4D {
+                    w: min.w.min(p.w),
+                    x: min.x.min(p.x),
+                    y: min.y.min(p.y),
+                    z: min.z.min(p.z),
+                })
+                .unwrap();
+
+            let max = self
+                .grid
+                .keys()
+                .cloned()
+                .fold_first(|max, p| Point4D {
+                    w: max.w.max(p.w),
+                    x: max.x.max(p.x),
+                    y: max.y.max(p.y),
+                    z: max.z.max(p.z),
+                })
+                .unwrap();
+
+            (min, max)
+        }
+    }
+
+    pub fn part2() {
+        let mut grid = Grid4D::parse(input_lines("input_files/day17.txt").collect());
+
+        for _cycle in 0..6 {
+            let (min, max) = grid.bounding_cube();
+
+            let mut next_grid = Grid4D::new();
+
+            for z in (min.z - 1)..=(max.z + 1) {
+                for y in (min.y - 1)..=(max.y + 1) {
+                    for x in (min.x - 1)..=(max.x + 1) {
+                        for w in (min.w - 1)..=(max.w + 1) {
+                            let p = Point4D { w, x, y, z };
+
+                            if grid.is_active(&p) {
+                                let active_neighbour_count = p
+                                    .neighbours()
+                                    .iter()
+                                    .filter(|np| grid.is_active(np))
+                                    .count();
+
+                                if active_neighbour_count == 2 || active_neighbour_count == 3 {
+                                    next_grid.set_active(&p);
+                                } else {
+                                    next_grid.set_inactive(&p);
+                                }
+                            } else {
+                                let active_neighbour_count = p
+                                    .neighbours()
+                                    .iter()
+                                    .filter(|np| grid.is_active(np))
+                                    .count();
+
+                                if active_neighbour_count == 3 {
+                                    next_grid.set_active(&p);
+                                } else {
+                                    next_grid.set_inactive(&p);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            grid = next_grid;
+        }
+
+        println!("Active cubes: {}", grid.count_active())
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -2109,8 +2452,11 @@ fn main() {
 
         day15::part1();
         day15::part2();
+
+        day16::part1();
+        day16::part2();
     }
 
-    day16::part1();
-    day16::part2();
+    day17::part1();
+    day17::part2();
 }
