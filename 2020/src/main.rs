@@ -2043,8 +2043,6 @@ mod day16 {
             .map(|c| *c.iter().next().unwrap())
             .collect();
 
-        dbg!(&ordered_rules);
-
         let mut result = 1;
         for (column_idx, &rule_idx) in ordered_rules.iter().enumerate() {
             if notes.rules[rule_idx].description.starts_with("departure") {
@@ -2488,6 +2486,27 @@ mod day18 {
     }
 
     pub fn part1() {
+        assert_eq!(
+            eval_expression(&mut tokenise("2 * 3 + (4 * 5)".to_string())),
+            26
+        );
+        assert_eq!(
+            eval_expression(&mut tokenise("5 + (8 * 3 + 9 + 3 * 4 * 3)".to_string())),
+            437
+        );
+        assert_eq!(
+            eval_expression(&mut tokenise(
+                "5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))".to_string()
+            )),
+            12240
+        );
+        assert_eq!(
+            eval_expression(&mut tokenise(
+                "((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2".to_string()
+            )),
+            13632
+        );
+
         let expr: i64 = input_lines("input_files/day18.txt")
             .map(|line| {
                 let mut tokens = tokenise(line);
@@ -2498,7 +2517,127 @@ mod day18 {
         println!("{}", expr);
     }
 
-    pub fn part2() {}
+    #[derive(Debug)]
+    enum Expression {
+        Number(i64),
+        Add {
+            lhs: Box<Expression>,
+            rhs: Box<Expression>,
+        },
+        Multiply {
+            lhs: Box<Expression>,
+            rhs: Box<Expression>,
+        },
+    }
+
+    const ADD_PRECEDENCE: usize = 10;
+    const MULTIPLY_PRECEDENCE: usize = 1;
+
+    fn parse_expression(tokens: &mut VecDeque<Token>, precedence: usize) -> Expression {
+        if tokens.is_empty() {
+            panic!("EOF");
+        }
+
+        let mut lhs = match tokens.pop_front().unwrap() {
+            Token::OpenParen => {
+                let r = parse_expression(tokens, 0);
+                tokens.pop_front();
+                r
+            }
+            Token::Number(n) => Expression::Number(n),
+            unexpected_token => panic!("Parse error! {:?}", unexpected_token),
+        };
+
+        while !tokens.is_empty() {
+            match tokens[0] {
+                Token::Add => {
+                    if ADD_PRECEDENCE < precedence {
+                        break;
+                    }
+
+                    tokens.pop_front();
+                    let rhs = parse_expression(tokens, ADD_PRECEDENCE + 1);
+
+                    lhs = Expression::Add {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs),
+                    }
+                }
+                Token::Multiply => {
+                    if MULTIPLY_PRECEDENCE < precedence {
+                        break;
+                    }
+
+                    tokens.pop_front();
+                    let rhs = parse_expression(tokens, MULTIPLY_PRECEDENCE + 1);
+
+                    lhs = Expression::Multiply {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs),
+                    }
+                }
+                Token::CloseParen => {
+                    break;
+                }
+                _ => panic!("Parse error"),
+            }
+        }
+
+        lhs
+    }
+
+    fn dump_expression(e: &Expression) -> String {
+        match e {
+            Expression::Number(n) => format!("{}", n),
+            Expression::Add { lhs, rhs } => {
+                format!("({} + {})", dump_expression(lhs), dump_expression(rhs))
+            }
+            Expression::Multiply { lhs, rhs } => {
+                format!("({} * {})", dump_expression(lhs), dump_expression(rhs))
+            }
+        }
+    }
+
+    fn eval_prattish_expression(expr: String) -> i64 {
+        let mut tokens = tokenise(expr);
+        let expr = parse_expression(&mut tokens, 0);
+
+        fn eval(e: Expression) -> i64 {
+            match e {
+                Expression::Number(n) => n,
+                Expression::Add { lhs, rhs } => eval(*lhs) + eval(*rhs),
+                Expression::Multiply { lhs, rhs } => eval(*lhs) * eval(*rhs),
+            }
+        }
+
+        eval(expr)
+    }
+
+    pub fn part2() {
+        assert_eq!(
+            eval_prattish_expression("1 + (2 * 3) + (4 * (5 + 6))".to_string()),
+            51
+        );
+        assert_eq!(eval_prattish_expression("2 * 3 + (4 * 5)".to_string()), 46);
+        assert_eq!(
+            eval_prattish_expression("5 + (8 * 3 + 9 + 3 * 4 * 3)".to_string()),
+            1445
+        );
+        assert_eq!(
+            eval_prattish_expression("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))".to_string()),
+            669060
+        );
+        assert_eq!(
+            eval_prattish_expression("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2".to_string()),
+            23340
+        );
+
+        let expr: i64 = input_lines("input_files/day18.txt")
+            .map(|line| eval_prattish_expression(line))
+            .sum();
+
+        println!("Pt2: {}", expr);
+    }
 }
 
 mod dayn {
@@ -2563,4 +2702,5 @@ fn main() {
     }
 
     day18::part1();
+    day18::part2();
 }
