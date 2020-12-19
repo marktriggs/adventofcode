@@ -2728,7 +2728,29 @@ mod day19 {
         println!("Matches: {}", hits);
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day19.txt").collect();
+
+        let (rule_lines, message_lines) =
+            lines.split(|s| s.is_empty()).collect_tuple().unwrap();
+
+        let mut rule_set = RuleSet::parse_rules(rule_lines.to_vec());
+
+        rule_set.rules[8] = Rule::Alt(vec!(vec!(42), vec!(42, 8)));
+        rule_set.rules[11] = Rule::Alt(vec!(vec!(42, 31), vec!(42, 11, 31)));
+
+        let mut hits = 0;
+
+        for message in message_lines {
+            let input: Vec<char> = message.chars().collect();
+            let matches = rule_set.match_positions(&input, 0, 0);
+            if matches.iter().any(|&idx| idx == message.len()) {
+                hits += 1;
+            }
+        }
+
+        println!("Matches: {}", hits);
+    }
 }
 
 mod dayn {
