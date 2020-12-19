@@ -2633,11 +2633,102 @@ mod day18 {
         );
 
         let expr: i64 = input_lines("input_files/day18.txt")
-            .map(|line| eval_prattish_expression(line))
+            .map(eval_prattish_expression)
             .sum();
 
         println!("Pt2: {}", expr);
     }
+}
+
+mod day19 {
+    use crate::shared::*;
+
+    type RuleSequence = Vec<usize>;
+
+    #[derive(Clone, Debug)]
+    enum Rule {
+        Literal(char),
+        Alt(Vec<RuleSequence>),
+    }
+
+    struct RuleSet {
+        rules: Vec<Rule>,
+    }
+
+    impl RuleSet {
+        fn parse_rules(lines: Vec<String>) -> RuleSet {
+            let mut rules: Vec<Option<Rule>> = vec![None; lines.len()];
+
+            for rule_s in lines {
+                let (rule_number, rule_expr) = rule_s.split(": ").collect_tuple().unwrap();
+                let rule_number: usize = rule_number.parse().unwrap();
+
+                if rule_expr.starts_with('"') {
+                    // Literal
+                    rules[rule_number] = Some(Rule::Literal(rule_expr.chars().nth(1).unwrap()));
+                } else {
+                    // Alt
+                    rules[rule_number] = Some(Rule::Alt(rule_expr.split(" | ")
+                                                        .map(|s| s.split(' ').map(|n| n.parse::<usize>().unwrap()).collect())
+                                                        .collect()));
+                }
+            }
+
+            RuleSet {
+                rules: rules.into_iter().map(|o| o.unwrap()).collect()
+            }
+        }
+
+        // Returns a list of indexes into `input` representing the character one past
+        // the portion that matched `rule`.
+        fn match_positions(&self, input: &[char], start_rule: usize, offset: usize) -> Vec<usize> {
+            if offset >= input.len() {
+                // Nope
+                return vec!();
+            }
+
+            match &self.rules[start_rule] {
+                Rule::Literal(ch) => if &input[offset] == ch {
+                    vec!(offset + 1)
+                } else {
+                    vec!()
+                },
+                Rule::Alt(patterns) => {
+                    patterns.iter().map(|p: &RuleSequence| {
+                        let next_rule = p[0];
+                        p.iter().skip(1).fold(self.match_positions(input, next_rule, offset), |match_positions, next_rule| {
+                            match_positions.iter().map(|idx| self.match_positions(input, *next_rule, *idx)).flatten().collect()
+                        })
+                    }).flatten()
+                        .collect()
+                }
+            }
+        }
+
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day19.txt").collect();
+
+        let (rule_lines, message_lines) =
+            lines.split(|s| s.is_empty()).collect_tuple().unwrap();
+
+        let rule_set = RuleSet::parse_rules(rule_lines.to_vec());
+
+        let mut hits = 0;
+
+        for message in message_lines {
+            let input: Vec<char> = message.chars().collect();
+            let matches = rule_set.match_positions(&input, 0, 0);
+            if matches.iter().any(|&idx| idx == message.len()) {
+                hits += 1;
+            }
+        }
+
+        println!("Matches: {}", hits);
+    }
+
+    pub fn part2() {}
 }
 
 mod dayn {
@@ -2699,8 +2790,11 @@ fn main() {
 
         day17::part1();
         day17::part2();
+
+        day18::part1();
+        day18::part2();
     }
 
-    day18::part1();
-    day18::part2();
+    day19::part1();
+    day19::part2();
 }
