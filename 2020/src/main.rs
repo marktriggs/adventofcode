@@ -2753,6 +2753,113 @@ mod day19 {
     }
 }
 
+mod day20 {
+    use crate::shared::*;
+
+    lazy_static! {
+        static ref TITLE_REGEX: regex::Regex = Regex::new("^Tile ([0-9]+):$").unwrap();
+    }
+
+    #[derive(Debug, Clone)]
+    struct Tile {
+        id: usize,
+        top: String,
+        left: String,
+        right: String,
+        bottom: String,
+    }
+
+    impl Tile {
+        fn parse(lines: &[String]) -> Tile {
+            let id: usize = if let Some(cap) = TITLE_REGEX.captures(&lines[0]) {
+                cap[1].parse().unwrap()
+            } else {
+                panic!("Parse error on title line: {}", lines[0]);
+            };
+
+            let top = lines[1].clone();
+            let bottom = lines[lines.len() - 1].clone();
+            let left = lines.iter().skip(1).map(|l| l.chars().next().unwrap()).collect();
+            let right = lines.iter().skip(1).map(|l| l.chars().nth(l.len() - 1).unwrap()).collect();
+
+            Tile { id, top, bottom, left, right }
+        }
+
+        fn rotate_right(&self, times: usize) -> Tile {
+            let mut result = self.clone();
+            for _ in 0..times {
+                result = Tile {
+                    id: self.id,
+                    top: result.left.chars().rev().collect(),
+                    right: result.top.clone(),
+                    bottom: result.right.chars().rev().collect(),
+                    left: result.bottom.clone(),
+                }
+            }
+
+            result
+        }
+
+
+        fn flip(&self, times: usize) -> Tile {
+            // Flip about the Y axis because why not
+            let mut result = self.clone();
+            for _ in 0..times {
+                result = Tile {
+                    id: self.id,
+                    top: self.top.chars().rev().collect(),
+                    right: self.left.clone(),
+                    bottom: self.bottom.chars().rev().collect(),
+                    left: self.right.clone(),
+                }
+            }
+
+            result
+        }
+
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day20.txt").collect();
+
+        let tiles: Vec<Tile> = lines.split(|s| s.is_empty()).map(|tile_lines| Tile::parse(tile_lines)).collect();
+
+        let mut edge_map: HashMap<String, HashSet<usize>> = HashMap::new();
+
+        // Load the edges of each tile into a big ol' map
+        for t in &tiles {
+            for flips in 0..=1 {
+                let flipped = t.flip(flips);
+
+                for rotations in 0..4 {
+                    let rotated = flipped.rotate_right(rotations);
+
+                    edge_map.entry(rotated.top.clone()).or_insert(HashSet::new()).insert(rotated.id);
+                    edge_map.entry(rotated.right.clone()).or_insert(HashSet::new()).insert(rotated.id);
+                    edge_map.entry(rotated.bottom.clone()).or_insert(HashSet::new()).insert(rotated.id);
+                    edge_map.entry(rotated.left.clone()).or_insert(HashSet::new()).insert(rotated.id);
+                }
+            }
+        }
+
+        // Find the corners by picking the tiles where two edges aren't shared
+        let corners: Vec<Tile> = tiles.iter().filter(|&tile| {
+            let mut edge_count = 0;
+            edge_count += (edge_map.get(&tile.top).unwrap().len() == 1) as usize;
+            edge_count += (edge_map.get(&tile.right).unwrap().len() == 1) as usize;
+            edge_count += (edge_map.get(&tile.bottom).unwrap().len() == 1) as usize;
+            edge_count += (edge_map.get(&tile.left).unwrap().len() == 1) as usize;
+
+            edge_count == 2
+        }).cloned().collect();
+
+        dbg!(corners.iter().map(|tile| tile.id).product::<usize>());
+    }
+
+    pub fn part2() {}
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -2815,8 +2922,11 @@ fn main() {
 
         day18::part1();
         day18::part2();
+
+        day19::part1();
+        day19::part2();
     }
 
-    day19::part1();
-    day19::part2();
+    day20::part1();
+
 }
