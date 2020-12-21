@@ -2668,14 +2668,17 @@ mod day19 {
                     rules[rule_number] = Some(Rule::Literal(rule_expr.chars().nth(1).unwrap()));
                 } else {
                     // Alt
-                    rules[rule_number] = Some(Rule::Alt(rule_expr.split(" | ")
-                                                        .map(|s| s.split(' ').map(|n| n.parse::<usize>().unwrap()).collect())
-                                                        .collect()));
+                    rules[rule_number] = Some(Rule::Alt(
+                        rule_expr
+                            .split(" | ")
+                            .map(|s| s.split(' ').map(|n| n.parse::<usize>().unwrap()).collect())
+                            .collect(),
+                    ));
                 }
             }
 
             RuleSet {
-                rules: rules.into_iter().map(|o| o.unwrap()).collect()
+                rules: rules.into_iter().map(|o| o.unwrap()).collect(),
             }
         }
 
@@ -2684,34 +2687,42 @@ mod day19 {
         fn match_positions(&self, input: &[char], start_rule: usize, offset: usize) -> Vec<usize> {
             if offset >= input.len() {
                 // Nope
-                return vec!();
+                return vec![];
             }
 
             match &self.rules[start_rule] {
-                Rule::Literal(ch) => if &input[offset] == ch {
-                    vec!(offset + 1)
-                } else {
-                    vec!()
-                },
-                Rule::Alt(patterns) => {
-                    patterns.iter().map(|p: &RuleSequence| {
-                        let next_rule = p[0];
-                        p.iter().skip(1).fold(self.match_positions(input, next_rule, offset), |match_positions, next_rule| {
-                            match_positions.iter().map(|idx| self.match_positions(input, *next_rule, *idx)).flatten().collect()
-                        })
-                    }).flatten()
-                        .collect()
+                Rule::Literal(ch) => {
+                    if &input[offset] == ch {
+                        vec![offset + 1]
+                    } else {
+                        vec![]
+                    }
                 }
+                Rule::Alt(patterns) => patterns
+                    .iter()
+                    .map(|p: &RuleSequence| {
+                        let next_rule = p[0];
+                        p.iter().skip(1).fold(
+                            self.match_positions(input, next_rule, offset),
+                            |match_positions, next_rule| {
+                                match_positions
+                                    .iter()
+                                    .map(|idx| self.match_positions(input, *next_rule, *idx))
+                                    .flatten()
+                                    .collect()
+                            },
+                        )
+                    })
+                    .flatten()
+                    .collect(),
             }
         }
-
     }
 
     pub fn part1() {
         let lines: Vec<String> = input_lines("input_files/day19.txt").collect();
 
-        let (rule_lines, message_lines) =
-            lines.split(|s| s.is_empty()).collect_tuple().unwrap();
+        let (rule_lines, message_lines) = lines.split(|s| s.is_empty()).collect_tuple().unwrap();
 
         let rule_set = RuleSet::parse_rules(rule_lines.to_vec());
 
@@ -2731,13 +2742,12 @@ mod day19 {
     pub fn part2() {
         let lines: Vec<String> = input_lines("input_files/day19.txt").collect();
 
-        let (rule_lines, message_lines) =
-            lines.split(|s| s.is_empty()).collect_tuple().unwrap();
+        let (rule_lines, message_lines) = lines.split(|s| s.is_empty()).collect_tuple().unwrap();
 
         let mut rule_set = RuleSet::parse_rules(rule_lines.to_vec());
 
-        rule_set.rules[8] = Rule::Alt(vec!(vec!(42), vec!(42, 8)));
-        rule_set.rules[11] = Rule::Alt(vec!(vec!(42, 31), vec!(42, 11, 31)));
+        rule_set.rules[8] = Rule::Alt(vec![vec![42], vec![42, 8]]);
+        rule_set.rules[11] = Rule::Alt(vec![vec![42, 31], vec![42, 11, 31]]);
 
         let mut hits = 0;
 
@@ -2760,13 +2770,15 @@ mod day20 {
         static ref TITLE_REGEX: regex::Regex = Regex::new("^Tile ([0-9]+):$").unwrap();
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
     struct Tile {
         id: usize,
         top: String,
         left: String,
         right: String,
         bottom: String,
+
+        image: Vec<Vec<char>>,
     }
 
     impl Tile {
@@ -2779,13 +2791,45 @@ mod day20 {
 
             let top = lines[1].clone();
             let bottom = lines[lines.len() - 1].clone();
-            let left = lines.iter().skip(1).map(|l| l.chars().next().unwrap()).collect();
-            let right = lines.iter().skip(1).map(|l| l.chars().nth(l.len() - 1).unwrap()).collect();
+            let left = lines
+                .iter()
+                .skip(1)
+                .map(|l| l.chars().next().unwrap())
+                .collect();
+            let right = lines
+                .iter()
+                .skip(1)
+                .map(|l| l.chars().nth(l.len() - 1).unwrap())
+                .collect();
 
-            Tile { id, top, bottom, left, right }
+            let image: Vec<Vec<char>> = {
+                let char_vec: Vec<Vec<char>> = lines
+                    .iter()
+                    .skip(1)
+                    .map(|row| row.chars().collect())
+                    .collect();
+
+                // discard borders
+                char_vec[1..char_vec.len() - 1]
+                    .iter()
+                    .map(|row: &Vec<char>| row[1..row.len() - 1].to_vec())
+                    .collect()
+            };
+
+            Tile {
+                id,
+                top,
+                bottom,
+                left,
+                right,
+                image,
+            }
         }
 
         fn rotate_right(&self, times: usize) -> Tile {
+            let width = self.image[0].len();
+            let height = self.image.len();
+
             let mut result = self.clone();
             for _ in 0..times {
                 result = Tile {
@@ -2794,12 +2838,14 @@ mod day20 {
                     right: result.top.clone(),
                     bottom: result.right.chars().rev().collect(),
                     left: result.bottom.clone(),
+                    image: (0..width)
+                        .map(|x| (0..height).map(|y| result.image[y][x]).rev().collect())
+                        .collect(),
                 }
             }
 
             result
         }
-
 
         fn flip(&self, times: usize) -> Tile {
             // Flip about the Y axis because why not
@@ -2811,18 +2857,24 @@ mod day20 {
                     right: self.left.clone(),
                     bottom: self.bottom.chars().rev().collect(),
                     left: self.right.clone(),
+                    image: result
+                        .image
+                        .iter()
+                        .map(|row| row.iter().rev().cloned().collect())
+                        .collect(),
                 }
             }
 
             result
         }
-
     }
 
     pub fn part1() {
         let lines: Vec<String> = input_lines("input_files/day20.txt").collect();
-
-        let tiles: Vec<Tile> = lines.split(|s| s.is_empty()).map(|tile_lines| Tile::parse(tile_lines)).collect();
+        let tiles: Vec<Tile> = lines
+            .split(|s| s.is_empty())
+            .map(|tile_lines| Tile::parse(tile_lines))
+            .collect();
 
         let mut edge_map: HashMap<String, HashSet<usize>> = HashMap::new();
 
@@ -2834,31 +2886,237 @@ mod day20 {
                 for rotations in 0..4 {
                     let rotated = flipped.rotate_right(rotations);
 
-                    edge_map.entry(rotated.top.clone()).or_insert(HashSet::new()).insert(rotated.id);
-                    edge_map.entry(rotated.right.clone()).or_insert(HashSet::new()).insert(rotated.id);
-                    edge_map.entry(rotated.bottom.clone()).or_insert(HashSet::new()).insert(rotated.id);
-                    edge_map.entry(rotated.left.clone()).or_insert(HashSet::new()).insert(rotated.id);
+                    edge_map
+                        .entry(rotated.top.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(rotated.id);
+                    edge_map
+                        .entry(rotated.right.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(rotated.id);
+                    edge_map
+                        .entry(rotated.bottom.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(rotated.id);
+                    edge_map
+                        .entry(rotated.left.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(rotated.id);
                 }
             }
         }
 
         // Find the corners by picking the tiles where two edges aren't shared
-        let corners: Vec<Tile> = tiles.iter().filter(|&tile| {
-            let mut edge_count = 0;
-            edge_count += (edge_map.get(&tile.top).unwrap().len() == 1) as usize;
-            edge_count += (edge_map.get(&tile.right).unwrap().len() == 1) as usize;
-            edge_count += (edge_map.get(&tile.bottom).unwrap().len() == 1) as usize;
-            edge_count += (edge_map.get(&tile.left).unwrap().len() == 1) as usize;
+        let corners: Vec<Tile> = tiles
+            .iter()
+            .filter(|&tile| {
+                let mut edge_count = 0;
+                edge_count += (edge_map.get(&tile.top).unwrap().len() == 1) as usize;
+                edge_count += (edge_map.get(&tile.right).unwrap().len() == 1) as usize;
+                edge_count += (edge_map.get(&tile.bottom).unwrap().len() == 1) as usize;
+                edge_count += (edge_map.get(&tile.left).unwrap().len() == 1) as usize;
 
-            edge_count == 2
-        }).cloned().collect();
+                edge_count == 2
+            })
+            .cloned()
+            .collect();
 
         dbg!(corners.iter().map(|tile| tile.id).product::<usize>());
     }
 
-    pub fn part2() {}
-}
+    fn stitch_picture(tiles: Vec<Tile>) -> Vec<Vec<char>> {
+        let mut tile_permutations = Vec::new();
+        for t in &tiles {
+            for flips in 0..=1 {
+                let flipped = t.flip(flips);
 
+                for rotations in 0..4 {
+                    let rotated = flipped.rotate_right(rotations);
+                    tile_permutations.push(rotated);
+                }
+            }
+        }
+
+        let mut directional_edge_map: HashMap<String, HashSet<Tile>> = HashMap::new();
+        for t in &tile_permutations {
+            directional_edge_map
+                .entry(format!("TOP:{}", t.top))
+                .or_insert_with(HashSet::new)
+                .insert(t.clone());
+            directional_edge_map
+                .entry(format!("RIGHT:{}", t.right))
+                .or_insert_with(HashSet::new)
+                .insert(t.clone());
+            directional_edge_map
+                .entry(format!("BOTTOM:{}", t.bottom))
+                .or_insert_with(HashSet::new)
+                .insert(t.clone());
+            directional_edge_map
+                .entry(format!("LEFT:{}", t.left))
+                .or_insert_with(HashSet::new)
+                .insert(t.clone());
+        }
+
+        // Find a suitable top-left corner
+        let top_left = tile_permutations
+            .iter()
+            .find(|tile| {
+                directional_edge_map
+                    .get(&format!("BOTTOM:{}", tile.top))
+                    .unwrap()
+                    .len()
+                    == 1
+                    && directional_edge_map
+                        .get(&format!("RIGHT:{}", tile.left))
+                        .unwrap()
+                        .len()
+                        == 1
+            })
+            .unwrap()
+            .clone();
+
+        let mut picture: Vec<Vec<Option<Tile>>> = vec![vec![None; 12]; 12];
+
+        let mut placed_tiles_ids: HashSet<usize> = HashSet::new();
+
+        placed_tiles_ids.insert(top_left.id);
+        picture[0][0] = Some(top_left);
+
+        // Fill out our first column
+        for y in 1..12 {
+            let above = picture[y - 1][0].as_ref().unwrap();
+
+            let tile = directional_edge_map
+                .get(&format!("TOP:{}", above.bottom))
+                .unwrap()
+                .iter()
+                .find(|t| !placed_tiles_ids.contains(&t.id))
+                .unwrap()
+                .clone();
+            placed_tiles_ids.insert(tile.id);
+            picture[y][0] = Some(tile);
+        }
+
+        // Fill out the remainder of each row
+        #[allow(clippy::needless_range_loop)]
+        for y in 0..12 {
+            for x in 1..12 {
+                let west = picture[y][x - 1].as_ref().unwrap();
+
+                let tile = directional_edge_map
+                    .get(&format!("LEFT:{}", west.right))
+                    .unwrap()
+                    .iter()
+                    .find(|t| !placed_tiles_ids.contains(&t.id))
+                    .unwrap()
+                    .clone();
+                placed_tiles_ids.insert(tile.id);
+                picture[y][x] = Some(tile);
+            }
+        }
+
+        // Join the pretty pictures
+        let picture_rows = picture[0][0].as_ref().unwrap().image.len();
+        let picture_cols = picture[0][0].as_ref().unwrap().image[0].len();
+
+        let picture_width = picture_cols * 12;
+        let picture_height = picture_rows * 12;
+
+        let mut result: Vec<Vec<char>> = vec![vec![' '; picture_width]; picture_height];
+
+        #[allow(clippy::needless_range_loop)]
+        for y in 0..picture_height {
+            for x in 0..picture_width {
+                let tile_y = y / picture_rows;
+                let tile_x = x / picture_cols;
+
+                let image_y = y % picture_rows;
+                let image_x = x % picture_cols;
+
+                result[y][x] = picture[tile_y][tile_x].as_ref().unwrap().image[image_y][image_x];
+            }
+        }
+
+        result
+    }
+
+    pub fn part2() {
+        let lines: Vec<String> = input_lines("input_files/day20.txt").collect();
+        let tiles: Vec<Tile> = lines
+            .split(|s| s.is_empty())
+            .map(|tile_lines| Tile::parse(tile_lines))
+            .collect();
+
+        let image = Tile {
+            id: 0,
+            top: "".to_string(),
+            right: "".to_string(),
+            bottom: "".to_string(),
+            left: "".to_string(),
+
+            image: stitch_picture(tiles),
+        };
+
+        let nessie: Vec<Vec<char>> = vec![
+            "                  # ".chars().collect(),
+            "#    ##    ##    ###".chars().collect(),
+            " #  #  #  #  #  #   ".chars().collect(),
+        ];
+
+        let nessie_width = nessie[0].len();
+        let nessie_height = nessie.len();
+
+        for flip in 0..=1 {
+            for rotate in 0..4 {
+                let img = image.flip(flip).rotate_right(rotate).image.clone();
+                let img_width = img[0].len();
+                let img_height = img.len();
+
+                let mut nessie_coords: HashSet<(usize, usize)> = HashSet::new();
+
+                for base_y in 0..(img_height - nessie_height) {
+                    for base_x in 0..(img_width - nessie_width) {
+                        let mut found_nessie = true;
+
+                        let mut maybe_coords: HashSet<(usize, usize)> = HashSet::new();
+                        'mainloop: for ny in 0..nessie_height {
+                            for nx in 0..nessie_width {
+                                if nessie[ny][nx] == '#' {
+                                    if img[base_y + ny][base_x + nx] != '#' {
+                                        found_nessie = false;
+                                        maybe_coords.clear();
+                                        break 'mainloop;
+                                    } else {
+                                        maybe_coords.insert(((base_x + nx), (base_y + ny)));
+                                    }
+                                }
+                            }
+                        }
+
+                        if found_nessie {
+                            nessie_coords.extend(maybe_coords);
+                        }
+                    }
+                }
+
+                if !nessie_coords.is_empty() {
+                    for line in &img {
+                        println!("{}", line.iter().collect::<String>());
+                    }
+
+                    let total_squares: usize = img
+                        .iter()
+                        .map(|row| row.iter().filter(|&&ch| ch == '#').count())
+                        .sum();
+                    println!(
+                        "Non-seamonster squares: {}",
+                        total_squares - nessie_coords.len()
+                    );
+                }
+            }
+        }
+    }
+}
 
 mod dayn {
     use crate::shared::*;
@@ -2928,5 +3186,5 @@ fn main() {
     }
 
     day20::part1();
-
+    day20::part2();
 }
