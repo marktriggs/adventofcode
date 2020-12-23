@@ -3118,6 +3118,82 @@ mod day20 {
     }
 }
 
+mod day21 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let line_with_allergens = Regex::new(r"^(.+) \(contains (.+)\)").unwrap();
+
+        let mut all_ingredients: Vec<String> = Vec::new();
+        let mut allergen_map: HashMap<String, HashSet<String>> = HashMap::new();
+
+        for line in input_lines("input_files/day21.txt") {
+            if let Some(cap) = line_with_allergens.captures(&line) {
+                let ingredients: HashSet<String> =
+                    HashSet::from_iter(cap[1].split(' ').map(str::to_owned));
+                let allergens: Vec<String> = cap[2].split(", ").map(str::to_owned).collect();
+
+                all_ingredients.extend(ingredients.clone());
+
+                for a in &allergens {
+                    if allergen_map.contains_key(a) {
+                        // merge our sets
+                        allergen_map
+                            .entry(a.to_string())
+                            .and_modify(|e| *e = e.intersection(&ingredients).cloned().collect());
+                    } else {
+                        allergen_map.insert(a.clone(), ingredients.clone());
+                    }
+                }
+            }
+        }
+
+        let mut allergen_ingredients = HashSet::new();
+
+        while !allergen_map.is_empty() {
+            let mut resolved_ingredients: Vec<String> = Vec::new();
+
+            for (allergen, ingredients) in &allergen_map {
+                if ingredients.len() == 1 {
+                    let ingredient = ingredients.iter().next().unwrap();
+                    println!("ingredient {} contains allergen {}", ingredient, allergen);
+                    resolved_ingredients.push(ingredient.clone());
+                    allergen_ingredients.insert(ingredient.clone());
+                }
+            }
+
+            if resolved_ingredients.is_empty() && !allergen_map.is_empty() {
+                panic!("Failed to make progress");
+            }
+
+            for i in resolved_ingredients {
+                for (_, ingredients) in allergen_map.iter_mut() {
+                    ingredients.remove(&i);
+                }
+            }
+
+            let allergens: Vec<String> = allergen_map.keys().cloned().collect();
+            for a in allergens {
+                if allergen_map.get(&a).unwrap().is_empty() {
+                    allergen_map.remove(&a);
+                }
+            }
+        }
+
+        println!(
+            "Pt1: {}",
+            all_ingredients
+                .iter()
+                .filter(|&i| !allergen_ingredients.contains(i))
+                .count()
+        );
+    }
+
+    pub fn part2() {
+        // Just rearranged my output using Emacs!  xgtj,ztdctgq,bdnrnx,cdvjp,jdggtft,mdbq,rmd,lgllb
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3183,8 +3259,10 @@ fn main() {
 
         day19::part1();
         day19::part2();
+
+        day20::part1();
+        day20::part2();
     }
 
-    day20::part1();
-    day20::part2();
+    day21::part1();
 }
