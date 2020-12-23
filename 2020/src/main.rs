@@ -3194,6 +3194,52 @@ mod day21 {
     }
 }
 
+mod day22 {
+    use crate::shared::*;
+
+    fn score_game(hand: &VecDeque<usize>) -> usize {
+        hand.iter().rev().enumerate().map(|(idx, value)| (idx + 1) * value).sum::<usize>()
+    }
+
+    pub fn part1() {
+        let mut p1: VecDeque<usize> = VecDeque::from_iter([17, 19, 30, 45, 25, 48, 8, 6, 39, 36, 28, 5, 47, 26, 46, 20, 18, 13, 7, 49, 34, 23, 43, 22, 4].iter().copied());
+        let mut p2: VecDeque<usize> = VecDeque::from_iter([44, 10, 27, 9, 14, 15, 24, 16, 3, 33, 21, 29, 11, 38, 1, 31, 50, 41, 40, 32, 42, 35, 37, 2, 12].iter().copied());
+
+        loop {
+            if p1.is_empty() && p2.is_empty() {
+                println!("Draw!");
+                break;
+            }
+
+            if p1.is_empty() {
+                println!("Player 2 wins with score {}", score_game(&p2));
+                break;
+            }
+
+            if p2.is_empty() {
+                println!("Player 1 wins with score {}", score_game(&p1));
+                break;
+            }
+
+            if p1[0] > p2[0] {
+                // p1 wins round
+                let p1_card = p1.pop_front().unwrap();
+                let p2_card = p2.pop_front().unwrap();
+                p1.push_back(p1_card);
+                p1.push_back(p2_card);
+            } else {
+                // p2 wins round
+                let p1_card = p1.pop_front().unwrap();
+                let p2_card = p2.pop_front().unwrap();
+                p2.push_back(p2_card);
+                p2.push_back(p1_card);
+            }
+        }
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3262,7 +3308,11 @@ fn main() {
 
         day20::part1();
         day20::part2();
+
+        day21::part1();
+        day21::part2();
     }
 
-    day21::part1();
+    day22::part1();
+    day22::part2();
 }
