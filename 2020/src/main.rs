@@ -3198,12 +3198,30 @@ mod day22 {
     use crate::shared::*;
 
     fn score_game(hand: &VecDeque<usize>) -> usize {
-        hand.iter().rev().enumerate().map(|(idx, value)| (idx + 1) * value).sum::<usize>()
+        hand.iter()
+            .rev()
+            .enumerate()
+            .map(|(idx, value)| (idx + 1) * value)
+            .sum::<usize>()
     }
 
     pub fn part1() {
-        let mut p1: VecDeque<usize> = VecDeque::from_iter([17, 19, 30, 45, 25, 48, 8, 6, 39, 36, 28, 5, 47, 26, 46, 20, 18, 13, 7, 49, 34, 23, 43, 22, 4].iter().copied());
-        let mut p2: VecDeque<usize> = VecDeque::from_iter([44, 10, 27, 9, 14, 15, 24, 16, 3, 33, 21, 29, 11, 38, 1, 31, 50, 41, 40, 32, 42, 35, 37, 2, 12].iter().copied());
+        let mut p1: VecDeque<usize> = VecDeque::from_iter(
+            [
+                17, 19, 30, 45, 25, 48, 8, 6, 39, 36, 28, 5, 47, 26, 46, 20, 18, 13, 7, 49, 34, 23,
+                43, 22, 4,
+            ]
+            .iter()
+            .copied(),
+        );
+        let mut p2: VecDeque<usize> = VecDeque::from_iter(
+            [
+                44, 10, 27, 9, 14, 15, 24, 16, 3, 33, 21, 29, 11, 38, 1, 31, 50, 41, 40, 32, 42,
+                35, 37, 2, 12,
+            ]
+            .iter()
+            .copied(),
+        );
 
         loop {
             if p1.is_empty() && p2.is_empty() {
@@ -3237,7 +3255,134 @@ mod day22 {
         }
     }
 
-    pub fn part2() {}
+    #[derive(Hash, Clone, PartialEq, Eq, Debug)]
+    struct GameState {
+        p1: VecDeque<usize>,
+        p2: VecDeque<usize>,
+    }
+
+    impl GameState {
+        fn new(p1: &[usize], p2: &[usize]) -> GameState {
+            GameState {
+                p1: VecDeque::from_iter(p1.iter().copied()),
+                p2: VecDeque::from_iter(p2.iter().copied()),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    enum RoundResult {
+        P1WinsRound,
+        P2WinsRound,
+    }
+
+    fn play_round(
+        mut state: GameState,
+        mut seen_states: HashSet<GameState>,
+        round: usize,
+        game: usize,
+    ) -> (RoundResult, GameState) {
+        println!("\n-- Round {} (Game {}) --", round, game);
+        println!(
+            "Player 1's deck: {}",
+            state
+                .p1
+                .iter()
+                .map(|n| format!("{}", n))
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        println!(
+            "Player 2's deck: {}",
+            state
+                .p2
+                .iter()
+                .map(|n| format!("{}", n))
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+
+        if state.p1.is_empty() && state.p2.is_empty() {
+            panic!("whoops");
+        }
+
+        if state.p1.is_empty() {
+            return (RoundResult::P2WinsRound, state);
+        }
+
+        if state.p2.is_empty() {
+            return (RoundResult::P1WinsRound, state);
+        }
+
+        if seen_states.contains(&state) {
+            return (RoundResult::P1WinsRound, state);
+        }
+
+        seen_states.insert(state.clone());
+
+        let p1_card = state.p1.pop_front().unwrap();
+        let p2_card = state.p2.pop_front().unwrap();
+
+        println!("Player 1 plays: {}", p1_card);
+        println!("Player 2 plays: {}", p2_card);
+
+        let result = if p1_card <= state.p1.len() && p2_card <= state.p2.len() {
+            // Each player has enough cards left.  Recursive subgame
+            let sub_state = GameState {
+                p1: state.p1.iter().take(p1_card).copied().collect(),
+                p2: state.p2.iter().take(p2_card).copied().collect(),
+            };
+
+            play_round(sub_state, HashSet::new(), 1, game + 1).0
+        } else if p1_card > p2_card {
+            RoundResult::P1WinsRound
+        } else {
+            RoundResult::P2WinsRound
+        };
+
+        match result {
+            RoundResult::P1WinsRound => {
+                println!("Player 1 wins round {} of game {}", round, game);
+
+                state.p1.push_back(p1_card);
+                state.p1.push_back(p2_card);
+                play_round(state, seen_states, round + 1, game)
+            }
+            RoundResult::P2WinsRound => {
+                println!("Player 2 wins round {} of game {}", round, game);
+
+                state.p2.push_back(p2_card);
+                state.p2.push_back(p1_card);
+                play_round(state, seen_states, round + 1, game)
+            }
+        }
+    }
+
+    // 7595 too low
+    // 9222 too low!
+    pub fn part2() {
+        let p1 = &[
+            17, 19, 30, 45, 25, 48, 8, 6, 39, 36, 28, 5, 47, 26, 46, 20, 18, 13, 7, 49, 34, 23, 43,
+            22, 4,
+        ];
+        let p2 = &[
+            44, 10, 27, 9, 14, 15, 24, 16, 3, 33, 21, 29, 11, 38, 1, 31, 50, 41, 40, 32, 42, 35,
+            37, 2, 12,
+        ];
+
+        let initial_state = GameState::new(p1, p2);
+
+        let (result, state) = play_round(initial_state, HashSet::new(), 1, 1);
+
+        match result {
+            RoundResult::P1WinsRound => {
+                println!("Player 1 wins with score {}", score_game(&state.p1))
+            }
+            RoundResult::P2WinsRound => {
+                println!("Player 2 wins with score {}", score_game(&state.p2))
+            }
+        }
+    }
 }
 
 mod dayn {
