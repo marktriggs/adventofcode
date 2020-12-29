@@ -4,6 +4,7 @@
 #![allow(unused_parens)]
 #![allow(dead_code)]
 #![feature(iterator_fold_self)]
+#![feature(linked_list_cursors)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,6 +16,7 @@ mod shared {
     // pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
     pub use std::cmp::{self, Ordering};
+    pub use std::collections::linked_list::CursorMut;
     pub use std::collections::BTreeMap;
     pub use std::collections::BTreeSet;
     pub use std::collections::HashMap;
@@ -3385,6 +3387,227 @@ mod day22 {
     }
 }
 
+mod day23 {
+    use crate::shared::*;
+
+    fn seek_forward_to_cup(cursor: &mut CursorMut<u32>, cup: u32) {
+        if cursor.index().is_none() {
+            cursor.move_next();
+        }
+
+        while *cursor.current().unwrap() != cup {
+            cursor.move_next();
+            if cursor.index().is_none() {
+                // Back to the beginning
+                cursor.move_next();
+            }
+        }
+    }
+
+    fn seek_back_to_cup(cursor: &mut CursorMut<u32>, cup: u32) {
+        if cursor.index().is_none() {
+            cursor.move_prev();
+        }
+
+        while *cursor.current().unwrap() != cup {
+            cursor.move_prev();
+            if cursor.index().is_none() {
+                // Back to the beginning
+                cursor.move_prev();
+            }
+        }
+    }
+
+    pub fn part1() {
+        let mut cups: LinkedList<u32> = "156794823"
+            .chars()
+            .map(|ch| ch.to_digit(10).unwrap())
+            .collect();
+
+        let lowest_cup = cups.iter().min().cloned().unwrap();
+        let highest_cup = cups.iter().max().cloned().unwrap();
+
+        let mut current_cup = cups.cursor_front_mut();
+
+        for _m in 0..100 {
+            let current_label = current_cup.current().cloned().unwrap();
+
+            current_cup.move_next();
+            let mut chosen_cups: Vec<u32> = (0..3)
+                .map(|_| {
+                    if current_cup.index().is_none() {
+                        current_cup.move_next();
+                    }
+                    current_cup.remove_current().unwrap()
+                })
+                .collect();
+
+            // The destination cup is the current cup's label minus one, unless that cup is
+            // in `chosen_cups`.  Then we repeatedly subtract one until we find on that
+            // isn't.
+            let mut destination_cup = current_label - 1;
+            loop {
+                if destination_cup < lowest_cup {
+                    destination_cup = highest_cup;
+                }
+
+                if !chosen_cups.contains(&destination_cup) {
+                    break destination_cup;
+                }
+
+                destination_cup -= 1;
+            }
+
+            // move our chosen cups to sit after the destination cup
+            seek_forward_to_cup(&mut current_cup, destination_cup);
+
+            while !chosen_cups.is_empty() {
+                current_cup.insert_after(chosen_cups.pop().unwrap());
+            }
+
+            // the current cup is one past the last current cup
+            seek_forward_to_cup(&mut current_cup, current_label);
+            loop {
+                current_cup.move_next();
+                if current_cup.index().is_some() {
+                    break;
+                }
+            }
+        }
+
+        seek_forward_to_cup(&mut current_cup, 1);
+        current_cup.move_next();
+        while current_cup.index().is_none() || current_cup.current().cloned().unwrap() != 1 {
+            if let Some(n) = current_cup.current() {
+                print!("{}", n);
+            }
+
+            current_cup.move_next();
+        }
+        println!();
+    }
+
+    struct Cups {
+        cups: HashMap<u64, NextCup>,
+        lowest: u64,
+        highest: u64,
+
+        current_cup: u64,
+    }
+
+    impl Cups {
+        fn new(init: &str, max_cup: usize) -> Cups {
+            let mut initial_cups: Vec<u64> = init
+                .chars()
+                .map(|ch| ch.to_digit(10).unwrap() as u64)
+                .collect();
+
+            for c in (init.len() + 1)..=max_cup {
+                initial_cups.push(c as u64);
+            }
+
+            let mut cups: HashMap<u64, NextCup> = HashMap::new();
+
+            for c in 0..(initial_cups.len() - 1) {
+                cups.insert(initial_cups[c], NextCup(initial_cups[c + 1]));
+            }
+
+            // circular!
+            cups.insert(
+                initial_cups[initial_cups.len() - 1],
+                NextCup(initial_cups[0]),
+            );
+
+            Cups {
+                cups,
+                lowest: 1,
+                highest: max_cup as u64,
+                current_cup: initial_cups[0],
+            }
+        }
+
+        fn remove_next(&mut self, n: usize) -> Vec<u64> {
+            let mut result = Vec::new();
+
+            let NextCup(mut next) = self.cups.remove(&self.current_cup).unwrap();
+
+            for _ in 0..n {
+                let NextCup(nextnext) = self.cups.remove(&next).unwrap();
+                result.push(next);
+                next = nextnext
+            }
+
+            self.cups.insert(self.current_cup, NextCup(next));
+
+            result
+        }
+
+        fn insert_after(&mut self, destination: u64, to_insert: Vec<u64>) {
+            let last = self.cups.remove(&destination).unwrap();
+
+            let mut c = destination;
+
+            for insert_me in to_insert {
+                self.cups.insert(c, NextCup(insert_me));
+                c = insert_me;
+            }
+
+            self.cups.insert(c, last);
+        }
+
+        fn move_next(&mut self) {
+            let NextCup(next) = self.cups.get(&self.current_cup).unwrap();
+
+            self.current_cup = *next;
+        }
+
+        fn seek_to(&mut self, value: u64) {
+            assert!(self.cups.contains_key(&value));
+            self.current_cup = value;
+        }
+    }
+
+    #[derive(Hash, Debug, Eq, PartialEq)]
+    struct NextCup(u64);
+
+    pub fn part2() {
+        let mut cups = Cups::new("156794823", 1_000_000);
+
+        for _m in 0..10_000_000 {
+            // remove the next three cups after this one
+            let chosen_cups: Vec<u64> = cups.remove_next(3);
+
+            // The destination cup is the current cup's label minus one, unless that cup is
+            // in `chosen_cups`.  Then we repeatedly subtract one until we find on that
+            // isn't.
+
+            let mut destination_cup = cups.current_cup - 1;
+            loop {
+                if destination_cup < cups.lowest {
+                    destination_cup = cups.highest;
+                }
+
+                if !chosen_cups.contains(&destination_cup) {
+                    break;
+                }
+
+                destination_cup -= 1;
+            }
+
+            // move our chosen cups to sit after the destination cup
+            cups.insert_after(destination_cup, chosen_cups);
+
+            // move to the next cup
+            cups.move_next();
+        }
+
+        cups.seek_to(1);
+        let next_two = cups.remove_next(2);
+        dbg!(&next_two);
+        println!("{}", next_two[0] * next_two[1]);
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3456,8 +3679,11 @@ fn main() {
 
         day21::part1();
         day21::part2();
+
+        day22::part1();
+        day22::part2();
     }
 
-    day22::part1();
-    day22::part2();
+    day23::part1();
+    day23::part2();
 }
