@@ -3452,7 +3452,7 @@ mod day23 {
                 }
 
                 if !chosen_cups.contains(&destination_cup) {
-                    break destination_cup;
+                    break;
                 }
 
                 destination_cup -= 1;
@@ -3608,6 +3608,150 @@ mod day23 {
     }
 }
 
+mod day24 {
+    use crate::shared::*;
+
+    #[derive(Hash, Eq, PartialEq, Clone, Copy, Debug)]
+    enum Direction {
+        East,
+        Southeast,
+        Southwest,
+        West,
+        Northwest,
+        Northeast,
+    }
+
+    #[derive(Hash, Eq, PartialEq, Debug, Copy, Clone)]
+    struct TileId {
+        x: u64,
+        y: u64,
+    }
+
+    impl TileId {
+        fn move_to(&self, direction: Direction) -> TileId {
+            match direction {
+                Direction::East => TileId {
+                    x: self.x + 2,
+                    y: self.y,
+                },
+                Direction::West => TileId {
+                    x: self.x - 2,
+                    y: self.y,
+                },
+                Direction::Northeast => TileId {
+                    x: self.x + 1,
+                    y: self.y - 1,
+                },
+                Direction::Northwest => TileId {
+                    x: self.x - 1,
+                    y: self.y - 1,
+                },
+                Direction::Southeast => TileId {
+                    x: self.x + 1,
+                    y: self.y + 1,
+                },
+                Direction::Southwest => TileId {
+                    x: self.x - 1,
+                    y: self.y + 1,
+                },
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    struct HexTile {
+        id: TileId,
+        flipped: bool,
+    }
+
+    #[derive(Debug)]
+    struct HexGrid {
+        tiles: HashMap<TileId, HexTile>,
+    }
+
+    impl HexGrid {
+        fn new() -> HexGrid {
+            let reference_tile = HexTile {
+                id: TileId { x: 0, y: 0 },
+                flipped: false,
+            };
+
+            let mut r = HexGrid {
+                tiles: HashMap::new(),
+            };
+
+            r.tiles.insert(reference_tile.id, reference_tile);
+
+            r
+        }
+
+        fn parse_path(&self, tile_path: &str) -> Vec<Direction> {
+            let mut chars: VecDeque<char> = tile_path.chars().collect();
+            let mut result = Vec::new();
+
+            while !chars.is_empty() {
+                let ch = chars.pop_front().unwrap();
+
+                let s = if ch == 'n' || ch == 's' {
+                    format!("{}{}", ch, chars.pop_front().unwrap())
+                } else {
+                    format!("{}", ch)
+                };
+
+                result.push(match s.as_str() {
+                    "e" => Direction::East,
+                    "w" => Direction::West,
+                    "ne" => Direction::Northeast,
+                    "nw" => Direction::Northwest,
+                    "se" => Direction::Southeast,
+                    "sw" => Direction::Southwest,
+                    _ => panic!("parse error"),
+                });
+            }
+
+            result
+        }
+
+        fn flip_tile(&mut self, tile_path: &str) {
+            let path = self.parse_path(tile_path);
+
+            // reference tile
+            let mut current_tile_id = TileId { x: 0, y: 0 };
+
+            for dir in path {
+                let next_tile_id = current_tile_id.move_to(dir);
+
+                self.tiles.entry(next_tile_id).or_insert(HexTile {
+                    id: next_tile_id,
+                    flipped: false,
+                });
+
+                current_tile_id = next_tile_id;
+            }
+
+            // Flip our destination tile
+            let destination = self.tiles.get_mut(&current_tile_id).unwrap();
+            destination.flipped = !destination.flipped;
+        }
+    }
+
+    pub fn part1() {
+        let mut grid = HexGrid::new();
+
+        for line in input_lines("input_files/day24.txt") {
+            grid.flip_tile(&line);
+        }
+
+        println!(
+            "Flipped tiles: {} of {}",
+            grid.tiles.values().filter(|tile| tile.flipped).count(),
+            grid.tiles.len()
+        );
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3682,8 +3826,10 @@ fn main() {
 
         day22::part1();
         day22::part2();
+
+        day23::part1();
+        day23::part2();
     }
 
-    day23::part1();
-    day23::part2();
+    day24::part1();
 }
