@@ -3850,6 +3850,50 @@ mod day24 {
     }
 }
 
+mod day25 {
+    use crate::shared::*;
+
+    fn transform(subject_number: usize, loop_size: usize) -> usize {
+        let mut result = 1;
+
+        for _ in 0..loop_size {
+            result *= subject_number;
+            result %= 20201227;
+        }
+
+        result
+    }
+
+    fn find_loop_size(key: usize) -> usize {
+        let mut loop_size = 1;
+
+        let mut value = 1;
+        loop {
+            value *= 7;
+            value %= 20201227;
+
+            if value == key {
+                return loop_size;
+            }
+
+            loop_size += 1;
+        }
+    }
+
+    pub fn part1() {
+        let pubkey1 = 12320657;
+        let pubkey2 = 9659666;
+
+        println!("Loop size 1: {}", find_loop_size(pubkey1));
+        println!("Loop size 2: {}", find_loop_size(pubkey2));
+
+        println!(
+            "Encryption key: {}",
+            transform(pubkey1, find_loop_size(pubkey2))
+        );
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3927,8 +3971,10 @@ fn main() {
 
         day23::part1();
         day23::part2();
+
+        day24::part1();
+        day24::part2();
     }
 
-    day24::part1();
-    day24::part2();
+    day25::part1();
 }
