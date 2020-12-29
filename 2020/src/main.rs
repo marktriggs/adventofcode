@@ -3661,7 +3661,7 @@ mod day24 {
     #[derive(Debug)]
     struct HexTile {
         id: TileId,
-        flipped: bool,
+        flipped_to_black: bool,
     }
 
     #[derive(Debug)]
@@ -3673,7 +3673,7 @@ mod day24 {
         fn new() -> HexGrid {
             let reference_tile = HexTile {
                 id: TileId { x: 0, y: 0 },
-                flipped: false,
+                flipped_to_black: false,
             };
 
             let mut r = HexGrid {
@@ -3723,7 +3723,7 @@ mod day24 {
 
                 self.tiles.entry(next_tile_id).or_insert(HexTile {
                     id: next_tile_id,
-                    flipped: false,
+                    flipped_to_black: false,
                 });
 
                 current_tile_id = next_tile_id;
@@ -3731,7 +3731,7 @@ mod day24 {
 
             // Flip our destination tile
             let destination = self.tiles.get_mut(&current_tile_id).unwrap();
-            destination.flipped = !destination.flipped;
+            destination.flipped_to_black = !destination.flipped_to_black;
         }
     }
 
@@ -3743,13 +3743,111 @@ mod day24 {
         }
 
         println!(
-            "Flipped tiles: {} of {}",
-            grid.tiles.values().filter(|tile| tile.flipped).count(),
+            "black tiles: {} of {}",
+            grid.tiles
+                .values()
+                .filter(|tile| tile.flipped_to_black)
+                .count(),
             grid.tiles.len()
         );
     }
 
-    pub fn part2() {}
+    fn neighbours_of(tile_id: TileId) -> Vec<TileId> {
+        vec![
+            TileId {
+                x: tile_id.x + 2,
+                y: tile_id.y,
+            },
+            TileId {
+                x: tile_id.x - 2,
+                y: tile_id.y,
+            },
+            TileId {
+                x: tile_id.x + 1,
+                y: tile_id.y - 1,
+            },
+            TileId {
+                x: tile_id.x - 1,
+                y: tile_id.y - 1,
+            },
+            TileId {
+                x: tile_id.x + 1,
+                y: tile_id.y + 1,
+            },
+            TileId {
+                x: tile_id.x - 1,
+                y: tile_id.y + 1,
+            },
+        ]
+    }
+
+    pub fn part2() {
+        let mut grid = HexGrid::new();
+
+        for line in input_lines("input_files/day24.txt") {
+            grid.flip_tile(&line);
+        }
+
+        println!(
+            "Day 0: {}",
+            grid.tiles.values().filter(|v| v.flipped_to_black).count()
+        );
+
+        for day in 1..=100 {
+            let mut flippers = Vec::new();
+
+            // fill out our grid a bit
+            for tile_id in grid
+                .tiles
+                .values()
+                .map(|tile| tile.id)
+                .collect::<Vec<TileId>>()
+            {
+                for neighbour_id in neighbours_of(tile_id) {
+                    grid.tiles.entry(neighbour_id).or_insert(HexTile {
+                        id: neighbour_id,
+                        flipped_to_black: false,
+                    });
+                }
+            }
+
+            for tile in grid.tiles.values() {
+                let flipped_to_black_neighbours = neighbours_of(tile.id)
+                    .iter()
+                    .filter(|neighbour_id| {
+                        if let Some(neighbour) = grid.tiles.get(&neighbour_id) {
+                            neighbour.flipped_to_black
+                        } else {
+                            false
+                        }
+                    })
+                    .count();
+
+                if tile.flipped_to_black {
+                    // black tile
+                    if flipped_to_black_neighbours == 0 || flipped_to_black_neighbours > 2 {
+                        flippers.push(tile.id);
+                    }
+                } else {
+                    // white tile
+                    if flipped_to_black_neighbours == 2 {
+                        flippers.push(tile.id);
+                    }
+                }
+            }
+
+            for flipper in flippers {
+                let entry = grid.tiles.get_mut(&flipper).unwrap();
+                entry.flipped_to_black = !entry.flipped_to_black;
+            }
+
+            println!(
+                "Day {}: {}",
+                day,
+                grid.tiles.values().filter(|v| v.flipped_to_black).count()
+            );
+        }
+    }
 }
 
 mod dayn {
@@ -3832,4 +3930,5 @@ fn main() {
     }
 
     day24::part1();
+    day24::part2();
 }
