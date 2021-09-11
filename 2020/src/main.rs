@@ -3,7 +3,6 @@
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 #![allow(dead_code)]
-#![feature(iterator_fold_self)]
 #![feature(linked_list_cursors)]
 
 #[macro_use]
@@ -574,7 +573,7 @@ mod day6 {
                 let yes_set = group_lines
                     .iter()
                     .map(|line| line.chars().collect::<HashSet<char>>())
-                    .fold_first(|s1, s2| s1.intersection(&s2).cloned().collect())
+                    .reduce(|s1, s2| s1.intersection(&s2).cloned().collect())
                     .unwrap();
 
                 yes_set.len()
@@ -2157,7 +2156,7 @@ mod day17 {
                 .grid
                 .keys()
                 .cloned()
-                .fold_first(|min, p| Point3D {
+                .reduce(|min, p| Point3D {
                     x: min.x.min(p.x),
                     y: min.y.min(p.y),
                     z: min.z.min(p.z),
@@ -2168,7 +2167,7 @@ mod day17 {
                 .grid
                 .keys()
                 .cloned()
-                .fold_first(|max, p| Point3D {
+                .reduce(|max, p| Point3D {
                     x: max.x.max(p.x),
                     y: max.y.max(p.y),
                     z: max.z.max(p.z),
@@ -2324,7 +2323,7 @@ mod day17 {
                 .grid
                 .keys()
                 .cloned()
-                .fold_first(|min, p| Point4D {
+                .reduce(|min, p| Point4D {
                     w: min.w.min(p.w),
                     x: min.x.min(p.x),
                     y: min.y.min(p.y),
@@ -2336,7 +2335,7 @@ mod day17 {
                 .grid
                 .keys()
                 .cloned()
-                .fold_first(|max, p| Point4D {
+                .reduce(|max, p| Point4D {
                     w: max.w.max(p.w),
                     x: max.x.max(p.x),
                     y: max.y.max(p.y),
