@@ -1,4 +1,4 @@
-// (cd ../; cargo run --release)
+// (cd ~/projects/adventofcode/2021 && cargo run)
 
 #![allow(unused_imports)]
 #![allow(unused_parens)]
@@ -102,9 +102,38 @@ mod day1 {
     use crate::shared::*;
 
     pub fn part1() {
+        let readings: Vec<usize> = input_lines("input_files/day1.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        let mut increases = 0;
+
+        for idx in 1..readings.len() {
+            if readings[idx] > readings[idx - 1] {
+                increases += 1;
+            }
+        }
+
+        println!("Increases: {}", increases);
     }
 
     pub fn part2() {
+        let readings: Vec<usize> = input_lines("input_files/day1.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        let window_sums: Vec<usize> = readings.iter().tuple_windows().map(|(a, b, c)| a + b + c).collect();
+
+
+        let mut increases = 0;
+
+        for idx in 1..window_sums.len() {
+            if window_sums[idx] > window_sums[idx - 1] {
+                increases += 1;
+            }
+        }
+
+        println!("Increases: {}", increases);
     }
 }
 
@@ -117,4 +146,5 @@ mod dayn {
 
 fn main() {
         day1::part1();
+        day1::part2();
 }
