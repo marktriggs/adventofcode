@@ -1,0 +1,10 @@
+[package]
+name = "adventofcode2021"
+version = "0.1.0"
+authors = ["Mark Triggs <mark@dishevelled.net>"]
+
+[dependencies]
+regex = "*"
+lazy_static = "*"
+rand = "*"
+itertools = "*"
