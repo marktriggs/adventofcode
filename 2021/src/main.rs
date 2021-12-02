@@ -4,12 +4,6 @@
 #![allow(unused_parens)]
 #![allow(dead_code)]
 
-#[macro_use]
-extern crate lazy_static;
-extern crate anyhow;
-extern crate regex;
-extern crate itertools;
-
 mod shared {
     pub use regex::Regex;
 
