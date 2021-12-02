@@ -25,7 +25,7 @@ mod shared {
     pub use std::str;
     pub use std::sync::{Arc, Mutex};
 
-    pub use anyhow::{bail, Error};
+    pub use anyhow::{anyhow, bail, Error};
 
     pub use itertools::Itertools;
 
@@ -155,16 +155,16 @@ mod day2 {
         type Err = Error;
 
         fn from_str(s: &str) -> Result<Command, Error> {
-            let words: Vec<&str> = s.split(' ').collect();
+            let mut it = s.split(' ');
 
             Ok(Command {
-                op: match words[0] {
+                op: match it.next().ok_or_else(|| anyhow!("empty line"))? {
                     "forward" => Op::Forward,
                     "down" => Op::Down,
                     "up" => Op::Up,
-                    _ => bail!("Parse error"),
+                    _ => bail!("unknown command"),
                 },
-                n: words[1].parse()?,
+                n: it.next().ok_or_else(|| anyhow!("missing second arg"))?.parse()?,
             })
         }
     }
