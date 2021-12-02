@@ -6,6 +6,7 @@
 
 #[macro_use]
 extern crate lazy_static;
+extern crate anyhow;
 extern crate regex;
 extern crate itertools;
 
@@ -29,6 +30,8 @@ mod shared {
     pub use std::rc::Rc;
     pub use std::str;
     pub use std::sync::{Arc, Mutex};
+
+    pub use anyhow::{bail, Error};
 
     pub use itertools::Itertools;
 
@@ -137,6 +140,84 @@ mod day1 {
     }
 }
 
+
+mod day2 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    enum Op {
+        Forward,
+        Down,
+        Up,
+    }
+
+    #[derive(Debug)]
+    struct Command {
+        op: Op,
+        n: i64,
+    }
+
+    impl std::str::FromStr for Command {
+        type Err = Error;
+
+        fn from_str(s: &str) -> Result<Command, Error> {
+            let words: Vec<&str> = s.split(' ').collect();
+
+            Ok(Command {
+                op: match words[0] {
+                    "forward" => Op::Forward,
+                    "down" => Op::Down,
+                    "up" => Op::Up,
+                    _ => bail!("Parse error"),
+                },
+                n: words[1].parse()?,
+            })
+        }
+    }
+
+    pub fn part1() {
+        let mut horizontal: i64 = 0;
+        let mut depth: i64 = 0;
+
+        let commands: Vec<Command> = input_lines("input_files/day2.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        for command in commands {
+            match command.op {
+                Op::Forward => horizontal += command.n,
+                Op::Down => depth += command.n,
+                Op::Up => depth -= command.n,
+            }
+        }
+
+        println!("Horizontal: {}, Depth: {}.  Product: {}", horizontal, depth, horizontal * depth);
+    }
+
+    pub fn part2() {
+        let mut horizontal: i64 = 0;
+        let mut depth: i64 = 0;
+        let mut aim: i64 = 0;
+
+        let commands: Vec<Command> = input_lines("input_files/day2.txt")
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        for command in commands {
+            match command.op {
+                Op::Forward => {
+                    horizontal += command.n;
+                    depth += (aim * command.n);
+                },
+                Op::Down => aim += command.n,
+                Op::Up => aim -= command.n,
+            }
+        }
+
+        println!("Horizontal: {}, Depth: {}.  Product: {}", horizontal, depth, horizontal * depth);
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -145,6 +226,11 @@ mod dayn {
 }
 
 fn main() {
+    if false {
         day1::part1();
         day1::part2();
+    }
+
+    day2::part1();
+    day2::part2();
 }
