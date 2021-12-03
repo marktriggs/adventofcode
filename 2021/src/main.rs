@@ -212,6 +212,92 @@ mod day2 {
     }
 }
 
+
+mod day3 {
+    use crate::shared::*;
+
+    fn to_decimal(bits: &[u32]) -> u64 {
+        let mut result: u64 = 0;
+
+        for bit in bits {
+            result *= 2;
+            result += (*bit as u64);
+        }
+
+        result
+    }
+
+
+    pub fn part1() {
+        let numbers: Vec<Vec<u32>> = input_lines("input_files/day3.txt")
+            .map(|s| {
+                s.chars().map(|ch| ch.to_digit(10).unwrap()).collect::<Vec<u32>>()
+            })
+            .collect();
+
+        let number_width = numbers[0].len();
+
+        let gamma: Vec<u32> = (0..number_width).map(|idx| {
+            let ones_count = numbers.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
+
+            if ones_count > numbers.len() / 2 {
+                1
+            } else {
+                0
+            }
+        }).collect();
+
+        let epsilon: Vec<u32> = gamma.iter().map(|&n| n ^ 1).collect();
+
+        println!("Gamma: {}; Epsilon: {}, Result: {}", to_decimal(&gamma), to_decimal(&epsilon), to_decimal(&gamma) * to_decimal(&epsilon));
+    }
+
+    pub fn part2() {
+        fn best_value(numbers: Vec<Vec<u32>>, bias_value: u32, target_value_transform: impl Fn(u32) -> u32) -> u64 {
+            let number_width = numbers[0].len();
+
+            let mut remaining = numbers;
+            for idx in 0..number_width {
+                if remaining.len() == 1 {
+                    break;
+                }
+
+                let ones_count = remaining.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
+                let zeroes_count = remaining.len() - ones_count;
+
+                let highest_frequency = if ones_count > zeroes_count {
+                    Some(1)
+                } else if zeroes_count > ones_count {
+                    Some(0)
+                } else {
+                    None
+                };
+
+                remaining = remaining.into_iter()
+                    .filter(|n| {
+                        let target_value = highest_frequency.map(|v| target_value_transform(v)).unwrap_or(bias_value);
+                        n[idx] == target_value
+                    })
+                    .collect();
+            }
+
+            to_decimal(&remaining[0])
+        }
+
+        let numbers: Vec<Vec<u32>> = input_lines("input_files/day3.txt")
+            .map(|s| {
+                s.chars().map(|ch| ch.to_digit(10).unwrap()).collect::<Vec<u32>>()
+            })
+            .collect();
+
+        let oxygen_value = best_value(numbers.clone(), 1, |most_frequent| most_frequent);
+        let co2_value = best_value(numbers, 0, |most_frequent| most_frequent ^ 1);
+
+        println!("{}", oxygen_value * co2_value);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -223,8 +309,12 @@ fn main() {
     if false {
         day1::part1();
         day1::part2();
+
+        day2::part1();
+        day2::part2();
     }
 
-    day2::part1();
-    day2::part2();
+    // day3::part1();
+    day3::part2();
+
 }
