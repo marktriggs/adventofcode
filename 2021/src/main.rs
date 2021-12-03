@@ -277,8 +277,7 @@ mod day3 {
     pub fn part2() {
         fn best_value(
             numbers: Vec<Vec<u32>>,
-            bias_value: u32,
-            target_value_transform: impl Fn(u32) -> u32,
+            target_value_from_highest_frequence: impl Fn(Option<u32>) -> u32,
         ) -> u64 {
             let number_width = numbers[0].len();
 
@@ -301,9 +300,7 @@ mod day3 {
                     Ordering::Equal => None,
                 };
 
-                let target_value = highest_frequency
-                    .map(|v| target_value_transform(v))
-                    .unwrap_or(bias_value);
+                let target_value = target_value_from_highest_frequence(highest_frequency);
 
                 remaining = remaining
                     .into_iter()
@@ -322,8 +319,8 @@ mod day3 {
             })
             .collect();
 
-        let oxygen_value = best_value(numbers.clone(), 1, |most_frequent| most_frequent);
-        let co2_value = best_value(numbers, 0, |most_frequent| most_frequent ^ 1);
+        let oxygen_value = best_value(numbers.clone(), |most_frequent| most_frequent.unwrap_or(1));
+        let co2_value = best_value(numbers, |most_frequent| most_frequent.map(|n| n ^ 1).unwrap_or(0));
 
         println!("{}", oxygen_value * co2_value);
     }
