@@ -119,8 +119,11 @@ mod day1 {
             .map(|s| s.parse().unwrap())
             .collect();
 
-        let window_sums: Vec<usize> = readings.iter().tuple_windows().map(|(a, b, c)| a + b + c).collect();
-
+        let window_sums: Vec<usize> = readings
+            .iter()
+            .tuple_windows()
+            .map(|(a, b, c)| a + b + c)
+            .collect();
 
         let mut increases = 0;
 
@@ -133,7 +136,6 @@ mod day1 {
         println!("Increases: {}", increases);
     }
 }
-
 
 mod day2 {
     use crate::shared::*;
@@ -164,7 +166,10 @@ mod day2 {
                     "up" => Op::Up,
                     _ => bail!("unknown command"),
                 },
-                n: it.next().ok_or_else(|| anyhow!("missing second arg"))?.parse()?,
+                n: it
+                    .next()
+                    .ok_or_else(|| anyhow!("missing second arg"))?
+                    .parse()?,
             })
         }
     }
@@ -185,7 +190,12 @@ mod day2 {
             }
         }
 
-        println!("Horizontal: {}, Depth: {}.  Product: {}", horizontal, depth, horizontal * depth);
+        println!(
+            "Horizontal: {}, Depth: {}.  Product: {}",
+            horizontal,
+            depth,
+            horizontal * depth
+        );
     }
 
     pub fn part2() {
@@ -202,16 +212,20 @@ mod day2 {
                 Op::Forward => {
                     horizontal += command.n;
                     depth += (aim * command.n);
-                },
+                }
                 Op::Down => aim += command.n,
                 Op::Up => aim -= command.n,
             }
         }
 
-        println!("Horizontal: {}, Depth: {}.  Product: {}", horizontal, depth, horizontal * depth);
+        println!(
+            "Horizontal: {}, Depth: {}.  Product: {}",
+            horizontal,
+            depth,
+            horizontal * depth
+        );
     }
 }
-
 
 mod day3 {
     use crate::shared::*;
@@ -227,33 +241,45 @@ mod day3 {
         result
     }
 
-
     pub fn part1() {
         let numbers: Vec<Vec<u32>> = input_lines("input_files/day3.txt")
             .map(|s| {
-                s.chars().map(|ch| ch.to_digit(10).unwrap()).collect::<Vec<u32>>()
+                s.chars()
+                    .map(|ch| ch.to_digit(10).unwrap())
+                    .collect::<Vec<u32>>()
             })
             .collect();
 
         let number_width = numbers[0].len();
 
-        let gamma: Vec<u32> = (0..number_width).map(|idx| {
-            let ones_count = numbers.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
+        let gamma: Vec<u32> = (0..number_width)
+            .map(|idx| {
+                let ones_count = numbers.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
 
-            if ones_count > numbers.len() / 2 {
-                1
-            } else {
-                0
-            }
-        }).collect();
+                if ones_count > numbers.len() / 2 {
+                    1
+                } else {
+                    0
+                }
+            })
+            .collect();
 
         let epsilon: Vec<u32> = gamma.iter().map(|&n| n ^ 1).collect();
 
-        println!("Gamma: {}; Epsilon: {}, Result: {}", to_decimal(&gamma), to_decimal(&epsilon), to_decimal(&gamma) * to_decimal(&epsilon));
+        println!(
+            "Gamma: {}; Epsilon: {}, Result: {}",
+            to_decimal(&gamma),
+            to_decimal(&epsilon),
+            to_decimal(&gamma) * to_decimal(&epsilon)
+        );
     }
 
     pub fn part2() {
-        fn best_value(numbers: Vec<Vec<u32>>, bias_value: u32, target_value_transform: impl Fn(u32) -> u32) -> u64 {
+        fn best_value(
+            numbers: Vec<Vec<u32>>,
+            bias_value: u32,
+            target_value_transform: impl Fn(u32) -> u32,
+        ) -> u64 {
             let number_width = numbers[0].len();
 
             let mut remaining = numbers;
@@ -262,7 +288,11 @@ mod day3 {
                     break;
                 }
 
-                let ones_count = remaining.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
+                let ones_count = remaining
+                    .iter()
+                    .map(|ns| ns[idx])
+                    .filter(|&n| n == 1)
+                    .count();
                 let zeroes_count = remaining.len() - ones_count;
 
                 let highest_frequency = match ones_count.cmp(&zeroes_count) {
@@ -271,12 +301,13 @@ mod day3 {
                     Ordering::Equal => None,
                 };
 
-                let target_value = highest_frequency.map(|v| target_value_transform(v)).unwrap_or(bias_value);
+                let target_value = highest_frequency
+                    .map(|v| target_value_transform(v))
+                    .unwrap_or(bias_value);
 
-                remaining = remaining.into_iter()
-                    .filter(|n| {
-                        n[idx] == target_value
-                    })
+                remaining = remaining
+                    .into_iter()
+                    .filter(|n| n[idx] == target_value)
                     .collect();
             }
 
@@ -285,7 +316,9 @@ mod day3 {
 
         let numbers: Vec<Vec<u32>> = input_lines("input_files/day3.txt")
             .map(|s| {
-                s.chars().map(|ch| ch.to_digit(10).unwrap()).collect::<Vec<u32>>()
+                s.chars()
+                    .map(|ch| ch.to_digit(10).unwrap())
+                    .collect::<Vec<u32>>()
             })
             .collect();
 
@@ -295,7 +328,6 @@ mod day3 {
         println!("{}", oxygen_value * co2_value);
     }
 }
-
 
 mod dayn {
     use crate::shared::*;
