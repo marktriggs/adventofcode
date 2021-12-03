@@ -271,9 +271,10 @@ mod day3 {
                     Ordering::Equal => None,
                 };
 
+                let target_value = highest_frequency.map(|v| target_value_transform(v)).unwrap_or(bias_value);
+
                 remaining = remaining.into_iter()
                     .filter(|n| {
-                        let target_value = highest_frequency.map(|v| target_value_transform(v)).unwrap_or(bias_value);
                         n[idx] == target_value
                     })
                     .collect();
