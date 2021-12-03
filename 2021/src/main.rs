@@ -265,12 +265,10 @@ mod day3 {
                 let ones_count = remaining.iter().map(|ns| ns[idx]).filter(|&n| n == 1).count();
                 let zeroes_count = remaining.len() - ones_count;
 
-                let highest_frequency = if ones_count > zeroes_count {
-                    Some(1)
-                } else if zeroes_count > ones_count {
-                    Some(0)
-                } else {
-                    None
+                let highest_frequency = match ones_count.cmp(&zeroes_count) {
+                    Ordering::Greater => Some(1),
+                    Ordering::Less => Some(0),
+                    Ordering::Equal => None,
                 };
 
                 remaining = remaining.into_iter()
@@ -314,7 +312,6 @@ fn main() {
         day2::part2();
     }
 
-    // day3::part1();
+    day3::part1();
     day3::part2();
-
 }
