@@ -326,6 +326,162 @@ mod day3 {
     }
 }
 
+mod day4 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Game {
+        called_numbers: Vec<usize>,
+        boards: Vec<Board>,
+    }
+
+    impl Game {
+        fn from_lines(mut lines: impl Iterator<Item = String>) -> Game {
+            let called_numbers: Vec<usize> = lines
+                .next()
+                .unwrap()
+                .split(',')
+                .map(|s| s.parse::<usize>().unwrap())
+                .collect();
+
+            // Eat blank
+            let _ = lines.next().unwrap();
+
+            let mut boards = Vec::new();
+            while let Some(board) = Board::from_lines(&mut lines) {
+                boards.push(board);
+            }
+
+            Game { called_numbers, boards }
+        }
+    }
+
+    #[derive(Debug)]
+    struct Board {
+        rows: Vec<Vec<Cell>>,
+    }
+
+
+    impl Board {
+        fn from_lines(lines: &mut impl Iterator<Item = String>) -> Option<Board> {
+            let board_delim = Regex::new(r" +").unwrap();
+
+            let mut rows = Vec::new();
+
+            for line in lines {
+                if line.is_empty() {
+                    break;
+                }
+
+                rows.push(board_delim.split(&line).filter(|s| !s.is_empty()).map(|s| Cell { value: s.parse().unwrap(), marked: false }).collect());
+            }
+
+            if rows.is_empty() {
+                None
+            } else {
+                Some(Board { rows })
+            }
+        }
+
+        fn mark_cells_with_value(&mut self, value: usize) {
+            for row in self.rows.iter_mut() {
+                for cell in row.iter_mut() {
+                    if cell.value == value {
+                        cell.marked = true;
+                    }
+                }
+            }
+        }
+
+        fn is_winner(&self) -> bool {
+            // Full row
+            for row in &self.rows {
+                if row.iter().all(|cell| cell.marked) {
+                    return true;
+                }
+            }
+
+            // Full column
+            for col_idx in 0..self.rows[0].len() {
+                if self.rows.iter().map(|row| row[col_idx].marked).all(|m| m) {
+                    return true;
+                }
+            }
+
+            // Bupkis
+            false
+        }
+
+        fn score(&self, last_number: usize) -> usize {
+            let mut sum = 0;
+            for row in &self.rows {
+                for cell in row {
+                    if !cell.marked {
+                        sum += cell.value;
+                    }
+                }
+            }
+
+            sum * last_number
+        }
+
+    }
+
+    #[derive(Debug)]
+    struct Cell {
+        value: usize,
+        marked: bool,
+    }
+
+    pub fn part1() {
+        let mut game = Game::from_lines(input_lines("input_files/day4.txt"));
+
+        for n in game.called_numbers {
+            for b in game.boards.iter_mut() {
+                b.mark_cells_with_value(n);
+            }
+
+            for b in &game.boards {
+                if b.is_winner() {
+                    println!("Winner with score: {}", b.score(n));
+                    return;
+                }
+            }
+        }
+    }
+
+
+    pub fn part2() {
+        let mut game = Game::from_lines(input_lines("input_files/day4.txt"));
+
+        let mut remaining_loser_positions: Vec<usize>;
+        let mut loser_idx = None;
+        let mut last_number = None;
+
+        for n in game.called_numbers {
+            for b in game.boards.iter_mut() {
+                b.mark_cells_with_value(n);
+            }
+
+            remaining_loser_positions = game.boards.iter().enumerate().filter(|(_, b)| !b.is_winner()).map(|(idx, _)| idx).collect();
+
+            if remaining_loser_positions.len() == 1 {
+                loser_idx = Some(remaining_loser_positions[0]);
+            } else if remaining_loser_positions.is_empty() {
+                // All done
+                last_number = Some(n);
+                break;
+            }
+        }
+
+        assert!(loser_idx.is_some());
+        assert!(last_number.is_some());
+
+        println!("Final winning board had a score of {}", game.boards[loser_idx.unwrap()].score(last_number.unwrap()));
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -340,8 +496,12 @@ fn main() {
 
         day2::part1();
         day2::part2();
+
+        day3::part1();
+        day3::part2();
+
     }
 
-    day3::part1();
-    day3::part2();
+    day4::part1();
+    day4::part2();
 }
