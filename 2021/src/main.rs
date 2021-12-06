@@ -22,8 +22,9 @@ mod shared {
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
     pub use std::rc::Rc;
-    pub use std::str;
+    pub use std::str::{self, FromStr};
     pub use std::sync::{Arc, Mutex};
+
 
     pub use anyhow::{anyhow, bail, Error};
 
@@ -482,6 +483,129 @@ mod day4 {
 }
 
 
+mod day5 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Line {
+        x1: usize,
+        y1: usize,
+        x2: usize,
+        y2: usize,
+    }
+
+    impl std::str::FromStr for Line {
+        type Err = Error;
+
+        fn from_str(s: &str) -> Result<Line, Error> {
+            let mut it = s.split(" -> ");
+
+            fn parse_point(s: &str) -> Result<(usize, usize), Error> {
+                let mut it = s.split(',');
+                Ok((
+                    it.next().unwrap().parse()?,
+                    it.next().unwrap().parse()?
+                ))
+            }
+
+            let (x1, y1) = parse_point(it.next().unwrap())?;
+            let (x2, y2) = parse_point(it.next().unwrap())?;
+
+            Ok(Line { x1, y1, x2, y2 })
+        }
+    }
+
+    fn range(a: usize, b: usize) -> Vec<usize> {
+        if a <= b {
+            (a..=b).collect()
+        } else {
+            let mut r = range(b, a);
+            r.reverse();
+            r
+        }
+    }
+
+    fn line_points(line: &Line) -> Vec<(usize, usize)> {
+        if line.x1 != line.x2 && line.y1 != line.y2 {
+            // not horizontal/vertical
+            return vec![];
+        }
+
+        let mut xs = range(line.x1, line.x2);
+        let mut ys = range(line.y1, line.y2);
+
+        let len = cmp::max(xs.len(), ys.len());
+
+        xs = xs.iter().cycle().take(len).copied().collect();
+        ys = ys.iter().cycle().take(len).copied().collect();
+
+        xs.into_iter().zip(ys.into_iter()).collect()
+    }
+
+    pub fn part1() {
+        let mut diagram: HashMap<(usize, usize), usize> = HashMap::new();
+
+        for linespec in input_lines("input_files/day5.txt") {
+            let line = Line::from_str(&linespec).expect("parse error");
+
+            for (x, y) in line_points(&line) {
+                let entry = diagram.entry((x, y)).or_insert(0);
+                *entry += 1;
+            }
+        }
+
+        let mut count = 0;
+        for (&k, &v) in diagram.iter() {
+            if v >= 2 {
+                println!("{:?}", k);
+                count += 1;
+            }
+        }
+
+        println!("Total overlaps: {}", count);
+    }
+
+    fn line_points_with_diagonals(line: &Line) -> Vec<(usize, usize)> {
+        let mut xs = range(line.x1, line.x2);
+        let mut ys = range(line.y1, line.y2);
+
+        if (line.x1 != line.x2 && line.y1 != line.y2) && xs.len() != ys.len() {
+            // not horizontal/vertical/45 degrees
+            return vec![];
+        }
+
+        let len = cmp::max(xs.len(), ys.len());
+
+        xs = xs.iter().cycle().take(len).copied().collect();
+        ys = ys.iter().cycle().take(len).copied().collect();
+
+        xs.into_iter().zip(ys.into_iter()).collect()
+    }
+
+    pub fn part2() {
+        let mut diagram: HashMap<(usize, usize), usize> = HashMap::new();
+
+        for linespec in input_lines("input_files/day5.txt") {
+            let line = Line::from_str(&linespec).expect("parse error");
+
+            for (x, y) in line_points_with_diagonals(&line) {
+                let entry = diagram.entry((x, y)).or_insert(0);
+                *entry += 1;
+            }
+        }
+
+        let mut count = 0;
+        for (&k, &v) in diagram.iter() {
+            if v >= 2 {
+                println!("{:?}", k);
+                count += 1;
+            }
+        }
+
+        println!("Total overlaps: {}", count);
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -500,8 +624,11 @@ fn main() {
         day3::part1();
         day3::part2();
 
+        day4::part1();
+        day4::part2();
     }
 
-    day4::part1();
-    day4::part2();
+    day5::part1();
+    day5::part2();
+
 }
