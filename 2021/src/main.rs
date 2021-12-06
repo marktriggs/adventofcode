@@ -25,7 +25,6 @@ mod shared {
     pub use std::str::{self, FromStr};
     pub use std::sync::{Arc, Mutex};
 
-
     pub use anyhow::{anyhow, bail, Error};
 
     pub use itertools::Itertools;
@@ -321,7 +320,9 @@ mod day3 {
             .collect();
 
         let oxygen_value = best_value(numbers.clone(), |most_frequent| most_frequent.unwrap_or(1));
-        let co2_value = best_value(numbers, |most_frequent| most_frequent.map(|n| n ^ 1).unwrap_or(0));
+        let co2_value = best_value(numbers, |most_frequent| {
+            most_frequent.map(|n| n ^ 1).unwrap_or(0)
+        });
 
         println!("{}", oxygen_value * co2_value);
     }
@@ -353,7 +354,10 @@ mod day4 {
                 boards.push(board);
             }
 
-            Game { called_numbers, boards }
+            Game {
+                called_numbers,
+                boards,
+            }
         }
     }
 
@@ -361,7 +365,6 @@ mod day4 {
     struct Board {
         rows: Vec<Vec<Cell>>,
     }
-
 
     impl Board {
         fn from_lines(lines: &mut impl Iterator<Item = String>) -> Option<Board> {
@@ -374,7 +377,16 @@ mod day4 {
                     break;
                 }
 
-                rows.push(board_delim.split(&line).filter(|s| !s.is_empty()).map(|s| Cell { value: s.parse().unwrap(), marked: false }).collect());
+                rows.push(
+                    board_delim
+                        .split(&line)
+                        .filter(|s| !s.is_empty())
+                        .map(|s| Cell {
+                            value: s.parse().unwrap(),
+                            marked: false,
+                        })
+                        .collect(),
+                );
             }
 
             if rows.is_empty() {
@@ -425,7 +437,6 @@ mod day4 {
 
             sum * last_number
         }
-
     }
 
     #[derive(Debug)]
@@ -451,7 +462,6 @@ mod day4 {
         }
     }
 
-
     pub fn part2() {
         let mut game = Game::from_lines(input_lines("input_files/day4.txt"));
 
@@ -464,7 +474,13 @@ mod day4 {
                 b.mark_cells_with_value(n);
             }
 
-            remaining_loser_positions = game.boards.iter().enumerate().filter(|(_, b)| !b.is_winner()).map(|(idx, _)| idx).collect();
+            remaining_loser_positions = game
+                .boards
+                .iter()
+                .enumerate()
+                .filter(|(_, b)| !b.is_winner())
+                .map(|(idx, _)| idx)
+                .collect();
 
             if remaining_loser_positions.len() == 1 {
                 loser_idx = Some(remaining_loser_positions[0]);
@@ -478,10 +494,12 @@ mod day4 {
         assert!(loser_idx.is_some());
         assert!(last_number.is_some());
 
-        println!("Final winning board had a score of {}", game.boards[loser_idx.unwrap()].score(last_number.unwrap()));
+        println!(
+            "Final winning board had a score of {}",
+            game.boards[loser_idx.unwrap()].score(last_number.unwrap())
+        );
     }
 }
-
 
 mod day5 {
     use crate::shared::*;
@@ -502,10 +520,7 @@ mod day5 {
 
             fn parse_point(s: &str) -> Result<(usize, usize), Error> {
                 let mut it = s.split(',');
-                Ok((
-                    it.next().unwrap().parse()?,
-                    it.next().unwrap().parse()?
-                ))
+                Ok((it.next().unwrap().parse()?, it.next().unwrap().parse()?))
             }
 
             let (x1, y1) = parse_point(it.next().unwrap())?;
@@ -606,6 +621,73 @@ mod day5 {
     }
 }
 
+mod day6 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let mut lantern_fish: Vec<i64> = input_lines("input_files/day6.txt")
+            .next()
+            .unwrap()
+            .split(',')
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        for _day in 1..=80 {
+            let mut spawn_count = 0;
+
+            for fish in lantern_fish.iter_mut() {
+                *fish -= 1;
+
+                if *fish < 0 {
+                    *fish = 6;
+                    spawn_count += 1;
+                }
+            }
+
+            if spawn_count > 0 {
+                lantern_fish.resize(spawn_count + lantern_fish.len(), 8);
+            }
+        }
+
+        println!("After 80 days: {}", lantern_fish.len());
+    }
+
+    pub fn part2() {
+        let mut lantern_fish: HashMap<u8, usize> = HashMap::new();
+
+        for fish in input_lines("input_files/day6.txt")
+            .next()
+            .unwrap()
+            .split(',')
+            .map(|s| s.parse().unwrap())
+        {
+            let entry = lantern_fish.entry(fish).or_insert(0);
+            *entry += 1;
+        }
+
+        for _day in 1..=256 {
+            // Spawners
+            let spawners = *(lantern_fish.get(&0).unwrap_or(&0));
+
+            for gen in 1..=8 {
+                let count = *(lantern_fish.get(&gen).unwrap_or(&0));
+                lantern_fish.insert(gen - 1, count);
+            }
+
+            // Spawners are reset
+            let entry = lantern_fish.entry(6).or_insert(0);
+            *entry += spawners;
+
+            // Spawners also spawn babbies
+            let entry = lantern_fish.entry(8).or_insert(0);
+            *entry = spawners;
+        }
+
+        // not 5846967653643182790
+        println!("After 256 days: {}", lantern_fish.values().sum::<usize>());
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -626,9 +708,11 @@ fn main() {
 
         day4::part1();
         day4::part2();
+
+        day5::part1();
+        day5::part2();
     }
 
-    day5::part1();
-    day5::part2();
-
+    day6::part1();
+    day6::part2();
 }
