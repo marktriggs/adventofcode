@@ -688,6 +688,67 @@ mod day6 {
     }
 }
 
+mod day7 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let crab_positions: Vec<i64> = input_lines("input_files/day7.txt")
+            .next()
+            .unwrap()
+            .split(',')
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        let min_crab = *crab_positions.iter().min().unwrap();
+        let max_crab = *crab_positions.iter().max().unwrap();
+
+        let mut best_position = -1;
+        let mut fuel_spend = i64::MAX;
+
+        for candidate_position in min_crab..=max_crab {
+            let cost = crab_positions.iter().map(|p| (p - candidate_position).abs()).sum();
+
+            if cost < fuel_spend {
+                best_position = candidate_position;
+                fuel_spend = cost;
+            }
+        }
+
+        println!("Position: {}; Cost: {}", best_position, fuel_spend);
+    }
+
+    fn weight(n: i64) -> i64 {
+        (1..=n).sum()
+    }
+
+    pub fn part2() {
+        let crab_positions: Vec<i64> = input_lines("input_files/day7.txt")
+            .next()
+            .unwrap()
+            .split(',')
+            .map(|s| s.parse().unwrap())
+            .collect();
+
+        let min_crab = *crab_positions.iter().min().unwrap();
+        let max_crab = *crab_positions.iter().max().unwrap();
+
+        let mut best_position = -1;
+        let mut fuel_spend = i64::MAX;
+
+        for candidate_position in min_crab..=max_crab {
+            let cost = crab_positions.iter().map(|p| weight((p - candidate_position).abs())).sum();
+
+            if cost < fuel_spend {
+                best_position = candidate_position;
+                fuel_spend = cost;
+            }
+        }
+
+        println!("Position: {}; Cost: {}", best_position, fuel_spend);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -711,8 +772,12 @@ fn main() {
 
         day5::part1();
         day5::part2();
+
+        day6::part1();
+        day6::part2();
     }
 
-    day6::part1();
-    day6::part2();
+    day7::part1();
+    day7::part2();
+
 }
