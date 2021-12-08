@@ -749,6 +749,176 @@ mod day7 {
 }
 
 
+mod day8 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let count: usize = input_lines("input_files/day8.txt")
+            .map(|line| {
+                 let words = line.split(" | ").nth(1).unwrap().split(' ');
+                words
+                    .filter(|w| matches!(w.len(), 2 | 3 | 4 | 7))
+                    .count()
+            }).sum();
+
+        println!("Output count: {}", count);
+    }
+
+    const WIRES: &[char] = &['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+
+
+
+//   0:      1:      2:      3:      4:
+//  aaaa    ....    aaaa    aaaa    ....
+// b    c  .    c  .    c  .    c  b    c
+// b    c  .    c  .    c  .    c  b    c
+//  ....    ....    dddd    dddd    dddd
+// e    f  .    f  e    .  .    f  .    f
+// e    f  .    f  e    .  .    f  .    f
+//  gggg    ....    gggg    gggg    ....
+//
+//   5:      6:      7:      8:      9:
+//  aaaa    aaaa    aaaa    aaaa    aaaa
+// b    .  b    .  .    c  b    c  b    c
+// b    .  b    .  .    c  b    c  b    c
+//  dddd    dddd    ....    dddd    dddd
+// .    f  e    f  .    f  e    f  .    f
+// .    f  e    f  .    f  e    f  .    f
+//  gggg    gggg    ....    gggg    gggg
+
+
+    fn merge_into_candidates(candidates: &mut HashMap<char, HashSet<char>>,
+                             letters: &[char],
+                             input: &str) {
+        let letter_set: HashSet<char> = letters.iter().copied().collect();
+        let input_set: HashSet<char> = input.chars().collect();
+
+        // Remove our input chars from other mappings
+        for (k, v) in candidates.iter_mut() {
+            if !letter_set.contains(k) {
+                *v = v.difference(&input_set).copied().collect();
+            }
+        }
+
+        // and intersect with the letters of interest
+        for l in letters.iter() {
+            let c = candidates.get_mut(l).unwrap();
+            *c = c.intersection(&input_set).copied().collect();
+        }
+    }
+
+    fn all_mappings(mut candidates: HashMap<char, HashSet<char>>) -> Vec<HashMap<char, char>> {
+        fn aux(remaining_candidates: &mut HashMap<char, HashSet<char>>,
+               current_mapping: &mut HashMap<char, char>,
+               used_values: &mut HashSet<char>,
+               results: &mut Vec<HashMap<char, char>>,
+               level: usize) {
+
+            if remaining_candidates.is_empty() {
+                results.push(current_mapping.clone());
+                return;
+            }
+
+            let next_key = *remaining_candidates.keys().next().unwrap();
+            let next_values = remaining_candidates.remove(&next_key).unwrap();
+
+            let possible_values: Vec<char> = next_values.difference(used_values).copied().collect();
+
+            for v in possible_values {
+                used_values.insert(v);
+                current_mapping.insert(next_key, v);
+                aux(remaining_candidates, current_mapping, used_values, results, level + 1);
+                used_values.remove(&v);
+            }
+
+            remaining_candidates.insert(next_key, next_values);
+        }
+
+        let mut results = Vec::new();
+        aux(&mut candidates, &mut HashMap::new(), &mut HashSet::new(), &mut results, 0);
+        results
+    }
+
+    fn unscramble(inputs: &[String], mapping: &HashMap<char, char>) -> Vec<String> {
+        let reverse_mapping: HashMap<char, char> = mapping.iter().map(|(&k, &v)| (v, k)).collect();
+
+        inputs.iter().map(|input| {
+            let mut chars: Vec<char> = input.chars().map(|ch| reverse_mapping.get(&ch).unwrap()).copied().collect();
+            chars.sort_unstable();
+            chars.into_iter().collect::<String>()
+        }).collect()
+    }
+
+    pub fn part2() {
+        let mut total = 0;
+
+        let mut correct_inputs_map: HashMap<String, usize> = HashMap::new();
+
+        correct_inputs_map.insert("abcefg".to_string(),  0);
+        correct_inputs_map.insert("cf".to_string(),      1);
+        correct_inputs_map.insert("acdeg".to_string(),   2);
+        correct_inputs_map.insert("acdfg".to_string(),   3);
+        correct_inputs_map.insert("bcdf".to_string(),    4);
+        correct_inputs_map.insert("abdfg".to_string(),   5);
+        correct_inputs_map.insert("abdefg".to_string(),  6);
+        correct_inputs_map.insert("acf".to_string(),     7);
+        correct_inputs_map.insert("abcdefg".to_string(), 8);
+        correct_inputs_map.insert("abcdfg".to_string(),  9);
+
+        let correct_inputs: HashSet<String> = correct_inputs_map.keys().cloned().collect();
+
+        for line in input_lines("input_files/day8.txt") {
+            let mut it = line.split(" | ");
+            let inputs: Vec<String> = it.next().unwrap().split(' ').map(|s| s.to_string()).collect();
+            let outputs: Vec<String> = it.next().unwrap().split(' ').map(|s| s.to_string()).collect();
+
+            // 'a' -> ['a', 'b', 'c'] reads "segment a might be represented by a, b or c"
+            let mut candidates: HashMap<char, HashSet<char>> = HashMap::new();
+
+            // Initially, anything is possible
+            for &ch in WIRES {
+                candidates.insert(ch, WIRES.iter().copied().collect::<HashSet<char>>());
+            }
+
+            // Cull the candidates for the unique-lengthed outputs
+            for input in inputs.iter() {
+                match input.len() {
+                    2 => {
+                        merge_into_candidates(&mut candidates, &['c', 'f'], input);
+                    }
+                    3 => {
+                        merge_into_candidates(&mut candidates, &['a', 'c', 'f'], input);
+                    }
+                    4 => {
+                        merge_into_candidates(&mut candidates, &['b', 'c', 'd', 'f'], input);
+                    }
+                    _ => {}
+                }
+            }
+
+            // Combinations should now be small enough to brute-force
+            for mapping in all_mappings(candidates) {
+                // Unscramble our incoming string and see if we match our correct inputs.
+                let candidate = unscramble(&inputs, &mapping);
+
+                if candidate.into_iter().collect::<HashSet<String>>() == correct_inputs {
+                    let mut subtotal = 0;
+                    for output in unscramble(&outputs, &mapping) {
+                        subtotal = (subtotal * 10) + correct_inputs_map.get(&output).unwrap();
+                    }
+
+                    total += subtotal;
+
+                    break;
+                }
+            }
+        }
+
+        println!("Output total: {}", total);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -775,9 +945,12 @@ fn main() {
 
         day6::part1();
         day6::part2();
+
+        day7::part1();
+        day7::part2();
     }
 
-    day7::part1();
-    day7::part2();
+    // day8::part1();
+    day8::part2();
 
 }
