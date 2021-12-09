@@ -919,6 +919,145 @@ mod day8 {
 }
 
 
+mod day9 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let height_map: Vec<Vec<usize>> =
+            input_lines("input_files/day9.txt")
+            .map(|s| s.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+            .collect();
+
+        let mut total_risk = 0;
+
+        for row in 0..height_map.len() {
+            for col in 0..height_map[0].len() {
+                let value = height_map[row][col];
+
+                let mut neighbours = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                    .into_iter()
+                    .map(|(x_off, y_off)| {
+                        let n_row = (row as i64 + y_off);
+                        let n_col = (col as i64 + x_off);
+
+                        if n_row >= 0 && n_row < height_map.len() as i64 && n_col >= 0 && n_col < height_map[0].len() as i64 {
+                            Some(height_map[n_row as usize][n_col as usize])
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten();
+
+                if neighbours.all(|v| v > value) {
+                    total_risk += (1 + value);
+                }
+            }
+        }
+
+        println!("Total risk: {}", total_risk);
+    }
+
+    #[derive(Debug)]
+    struct Basin {
+        size: usize,
+        extents: HashMap<usize, Vec<(usize, usize)>>,
+    }
+
+    fn extract_basins(row_idx: usize, row: &[usize]) -> Vec<Basin> {
+        let mut result = Vec::new();
+        let mut last_start_idx = None;
+
+        for (idx, &cell) in row.iter().enumerate() {
+            if cell == 9 {
+                if let Some(start_idx) = last_start_idx {
+                    // end of a basin
+                    result.push(Basin {
+                        size: (idx - start_idx),
+                        extents: [(row_idx, vec![(start_idx, idx - 1)])].into_iter().collect(),
+                    });
+
+                    last_start_idx = None;
+                }
+            } else if last_start_idx.is_none() {
+                // Start of the next basin
+                last_start_idx = Some(idx);
+            }
+        }
+
+        if let Some(last_start_idx) = last_start_idx {
+            let end_idx = row.len() - 1;
+
+            result.push(Basin {
+                size: (end_idx - last_start_idx + 1),
+                extents: [(row_idx, vec![(last_start_idx, end_idx)])].into_iter().collect(),
+            });
+        }
+
+        result
+    }
+
+    impl Basin {
+        fn overlaps(&self, target_idx: usize, other: &Basin) -> bool {
+            if let Some(last_row_extents) = self.extents.get(&target_idx) {
+                last_row_extents.iter().any(|(start_idx, end_idx)| {
+                    other.extents.get(&(target_idx + 1)).unwrap().iter().any(|(other_start_idx, other_end_idx)| {
+                        !(other_end_idx < start_idx || other_start_idx > end_idx)
+                    })
+                })
+            } else {
+                false
+            }
+        }
+
+        fn merge_row_basin(&mut self, row_idx: usize, other: &Basin) {
+            self.size += other.size;
+            let row_extents = self.extents.entry(row_idx).or_insert_with(Vec::new);
+            row_extents.extend(other.extents.get(&row_idx).unwrap());
+        }
+    }
+
+    pub fn part2() {
+        let height_map: Vec<Vec<usize>> =
+            input_lines("input_files/day9.txt")
+            .map(|s| s.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+            .collect();
+
+        let mut basins: Vec<Basin> = Vec::new();
+
+        for (row_idx, row) in height_map.iter().enumerate() {
+            for row_basin in extract_basins(row_idx, row) {
+                let mut overlapping_basin_indexes: Vec<usize> = (0..basins.len()).filter(|&i| {
+                    row_idx > 0 && basins[i].overlaps(row_idx - 1, &row_basin)
+                }).collect();
+
+                overlapping_basin_indexes.reverse();
+
+                if overlapping_basin_indexes.is_empty() {
+                    // If we didn't merge into an existing basin, we're the start of a new one
+                    basins.push(row_basin);
+                } else {
+                    // Merge our overlapping basins into one
+                    let mut merged_basin = basins.swap_remove(overlapping_basin_indexes[0]);
+
+                    for &remove_idx in &overlapping_basin_indexes[1..] {
+                        merged_basin.merge_row_basin(row_idx - 1, &basins.swap_remove(remove_idx));
+                    }
+
+                    // Merge our row basin too
+                    merged_basin.merge_row_basin(row_idx, &row_basin);
+
+                    basins.push(merged_basin);
+                }
+            }
+        }
+
+        basins.sort_by_key(|b| 0 - b.size as i64);
+        println!("Basin sizes multiplied: {}",
+                 basins.iter().take(3).map(|b| b.size).product::<usize>());
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -948,9 +1087,11 @@ fn main() {
 
         day7::part1();
         day7::part2();
+
+        day8::part1();
+        day8::part2();
     }
 
-    // day8::part1();
-    day8::part2();
-
+    // day9::part1();
+    day9::part2();
 }
