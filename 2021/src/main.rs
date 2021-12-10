@@ -1057,6 +1057,101 @@ mod day9 {
     }
 }
 
+mod day10 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let mut error_score = 0;
+
+        'input_loop:
+        for line in input_lines("input_files/day10.txt") {
+            let mut expected_closers = Vec::new();
+
+            for ch in line.chars() {
+                match ch {
+                    '[' => expected_closers.push(']'),
+                    '{' => expected_closers.push('}'),
+                    '<' => expected_closers.push('>'),
+                    '(' => expected_closers.push(')'),
+
+                    ']' | '}' | '>' | ')' => {
+                        let expected_closer = expected_closers.pop();
+
+                        if Some(ch) != expected_closer {
+                            println!("Unexpected closer: {} (expected {:?}", ch, expected_closer);
+
+                            error_score += match ch {
+                                ')' => 3,
+                                ']' => 57,
+                                '}' => 1197,
+                                '>' => 25137,
+                                _ => unreachable!()
+                            };
+
+                            continue 'input_loop
+                        }
+                    },
+                    _ => panic!("malformed input")
+                }
+            }
+
+            if !expected_closers.is_empty() {
+                println!("Warning: line truncated...");
+            }
+        }
+
+        println!("Total error score: {}", error_score);
+    }
+
+    pub fn part2() {
+        let mut line_scores = Vec::new();
+
+        // WRONG 312966863
+        'input_loop:
+        for line in input_lines("input_files/day10.txt") {
+            let mut expected_closers = Vec::new();
+
+            for ch in line.chars() {
+                match ch {
+                    '[' => expected_closers.push(']'),
+                    '{' => expected_closers.push('}'),
+                    '<' => expected_closers.push('>'),
+                    '(' => expected_closers.push(')'),
+
+                    ']' | '}' | '>' | ')' => {
+                        let expected_closer = expected_closers.pop();
+
+                        if Some(ch) != expected_closer {
+                            continue 'input_loop
+                        }
+                    },
+                    _ => panic!("malformed input")
+                }
+            }
+
+            if !expected_closers.is_empty() {
+                // An incomplete line... score it
+                let mut score: u64 = 0;
+                for closer in expected_closers.iter().rev() {
+                    score *= 5;
+                    score += match closer {
+                        ')' => 1,
+                        ']' => 2,
+                        '}' => 3,
+                        '>' => 4,
+                        _ => panic!("unexpected char"),
+                    }
+                }
+
+                line_scores.push(score);
+            }
+        }
+
+        line_scores.sort_unstable();
+        println!("Median score: {}", line_scores[line_scores.len() / 2]);
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -1090,8 +1185,12 @@ fn main() {
 
         day8::part1();
         day8::part2();
+
+        day9::part1();
+        day9::part2();
     }
 
-    // day9::part1();
-    day9::part2();
+    // day10::part1();
+    day10::part2();
+
 }
