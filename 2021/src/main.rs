@@ -1131,7 +1131,8 @@ mod day10 {
 
             if !expected_closers.is_empty() {
                 // An incomplete line... score it
-                let mut score: u64 = 0;
+                let mut score = 0;
+
                 for closer in expected_closers.iter().rev() {
                     score *= 5;
                     score += match closer {
@@ -1151,6 +1152,157 @@ mod day10 {
         println!("Median score: {}", line_scores[line_scores.len() / 2]);
     }
 }
+
+
+mod day11 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Grid {
+        grid: Vec<Vec<usize>>,
+        flashed_positions: Vec<Vec<bool>>,
+    }
+
+    impl Grid {
+        fn new(grid: Vec<Vec<usize>>) -> Grid {
+            let width = grid[0].len();
+            let height = grid.len();
+
+            Grid {
+                grid,
+                flashed_positions: (0..height).map(|_| vec![false; width]).collect(),
+            }
+        }
+
+        fn len(&self) -> usize {
+            self.grid.len() * self.grid[0].len()
+        }
+
+        fn increment_all(&mut self) {
+            for row in self.grid.iter_mut() {
+                for cell in row.iter_mut() {
+                    *cell += 1
+                }
+            }
+        }
+
+        fn find_flashes(&mut self) -> Vec<(usize, usize)> {
+            let mut result = Vec::new();
+
+            for row in 0..self.grid.len() {
+                for col in 0..self.grid[0].len() {
+                    if self.grid[row][col] > 9 && !self.flashed_positions[row][col] {
+                        result.push((row, col));
+                        self.flashed_positions[row][col] = true;
+                    }
+                }
+            }
+
+            result
+        }
+
+        fn increment_neighbours(&mut self, row: usize, col: usize) {
+            let width = self.grid[0].len() as i64;
+            let height = self.grid.len() as i64;
+
+            for &xoff in &[-1, 0, 1] {
+                for &yoff in &[-1, 0, 1] {
+                    let neighbour_row = row as i64 + xoff;
+                    let neighbour_col = col as i64 + yoff;
+
+                    if (neighbour_row >= 0 && neighbour_row < height) && (neighbour_col >= 0 && neighbour_col < width) {
+                        self.grid[neighbour_row as usize][neighbour_col as usize] += 1;
+                    }
+                }
+            }
+        }
+
+        fn adjust_energy_levels(&mut self) {
+            for row in self.grid.iter_mut() {
+                for cell in row.iter_mut() {
+                    if *cell > 9 {
+                        *cell = 0;
+                    }
+                }
+            }
+
+            for row in self.flashed_positions.iter_mut() {
+                for cell in row.iter_mut() {
+                    *cell = false;
+                }
+            }
+
+        }
+
+    }
+
+
+    pub fn part1() {
+        let mut grid = Grid::new(input_lines("input_files/day11.txt")
+                             .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+                             .collect());
+
+        let mut flash_count = 0;
+
+        for _step in 0..100 {
+            grid.increment_all();
+
+            loop {
+                let flashed_positions = grid.find_flashes();
+
+                if flashed_positions.is_empty() {
+                    break;
+                }
+
+                flash_count += flashed_positions.len();
+
+                for (row, col) in flashed_positions {
+                    grid.increment_neighbours(row, col);
+                }
+            }
+
+            grid.adjust_energy_levels();
+        }
+
+        println!("Flash count: {}", flash_count);
+    }
+
+    pub fn part2() {
+        let mut grid = Grid::new(input_lines("input_files/day11.txt")
+                             .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+                             .collect());
+
+        // 1000: the largest known number
+        for step in 0..1000 {
+            let mut flash_count = 0;
+
+            grid.increment_all();
+
+            loop {
+                let flashed_positions = grid.find_flashes();
+
+                if flashed_positions.is_empty() {
+                    break;
+                }
+
+                flash_count += flashed_positions.len();
+
+                for (row, col) in flashed_positions {
+                    grid.increment_neighbours(row, col);
+                }
+            }
+
+            grid.adjust_energy_levels();
+
+            if flash_count == grid.len() {
+                println!("All flashed at step {}", step + 1);
+                break;
+            }
+        }
+    }
+}
+
+
 
 
 mod dayn {
@@ -1188,9 +1340,12 @@ fn main() {
 
         day9::part1();
         day9::part2();
+
+        day10::part1();
+        day10::part2();
     }
 
-    // day10::part1();
-    day10::part2();
+    day11::part1();
+    day11::part2();
 
 }
