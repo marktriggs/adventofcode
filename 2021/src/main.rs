@@ -1303,6 +1303,192 @@ mod day11 {
 }
 
 
+mod day12 {
+    use crate::shared::*;
+
+    #[derive(Hash, Eq, PartialEq, Debug, Clone)]
+    struct Cave {
+        name: String,
+        is_big: bool,
+    }
+
+    impl Cave {
+        fn from_str(s: &str) -> Cave {
+            Cave {
+                name: s.to_owned(),
+                is_big: s.chars().next().unwrap().is_ascii_uppercase(),
+            }
+        }
+    }
+
+    fn count_paths(connections: &HashMap<Cave, Vec<Cave>>) -> usize {
+        fn aux(connections: &HashMap<Cave, Vec<Cave>>,
+               visited_caves: &mut HashSet<Cave>,
+               path: &mut Vec<Cave>,
+               current_cave: Cave) -> usize {
+
+            if current_cave.name == "end" {
+                return 1;
+            }
+
+            visited_caves.insert(current_cave.clone());
+
+            let subcount =
+                if let Some(candidates) = connections.get(&current_cave) {
+                    let mut total = 0;
+
+                    for candidate in candidates {
+                        if !candidate.is_big && visited_caves.contains(candidate) {
+                            continue;
+                        }
+
+                        path.push(current_cave.clone());
+                        total += aux(connections, visited_caves, path, candidate.clone());
+                        path.pop();
+                    }
+
+                    total
+                } else {
+                    0
+                };
+
+            visited_caves.remove(&current_cave);
+
+            subcount
+        }
+
+        let mut visited_caves = HashSet::new();
+        let mut path = Vec::new();
+
+        aux(connections,
+            &mut visited_caves,
+            &mut path,
+            Cave::from_str("start"))
+    }
+
+
+    pub fn part1() {
+        let mut cave_connections: HashMap<Cave, Vec<Cave>> = HashMap::new();
+
+        for line in input_lines("input_files/day12.txt") {
+            let mut it = line.split('-');
+            let from = Cave::from_str(it.next().unwrap());
+            let to = Cave::from_str(it.next().unwrap());
+
+            // a -> b
+            {
+                let entry = cave_connections.entry(from.clone()).or_insert_with(Vec::new);
+                entry.push(to.clone());
+            }
+
+            // b -> a
+            {
+                let entry = cave_connections.entry(to.clone()).or_insert_with(Vec::new);
+                entry.push(from.clone());
+            }
+        }
+
+        println!("Unique paths: {}", count_paths(&cave_connections));
+    }
+
+    fn count_paths_pt2(connections: &HashMap<Cave, Vec<Cave>>, blessed_small_cave: Cave, all_paths: &mut HashSet<Vec<Cave>>) -> usize {
+        fn aux(connections: &HashMap<Cave, Vec<Cave>>,
+               visited_caves: &mut HashSet<Cave>,
+               path: &mut Vec<Cave>,
+               current_cave: Cave,
+               blessed_small_cave: &mut Option<Cave>,
+               all_paths: &mut HashSet<Vec<Cave>>,
+        ) -> usize {
+
+            if current_cave.name == "end" {
+                all_paths.insert(path.clone());
+                return 1;
+            }
+
+            visited_caves.insert(current_cave.clone());
+
+            let subcount =
+                if let Some(candidates) = connections.get(&current_cave) {
+                    let mut total = 0;
+
+                    for candidate in candidates {
+                        let mut used_blessed = false;
+
+                        if !candidate.is_big && visited_caves.contains(candidate) {
+                            if Some(candidate) == blessed_small_cave.as_ref() {
+                                // OK, you get one repeat
+                                blessed_small_cave.take();
+                                used_blessed = true;
+                            } else {
+                                continue;
+                            }
+                        }
+
+                        path.push(current_cave.clone());
+                        total += aux(connections, visited_caves, path, candidate.clone(), blessed_small_cave, all_paths);
+                        path.pop();
+
+                        if used_blessed {
+                            let _ = blessed_small_cave.insert(candidate.clone());
+                            visited_caves.insert(candidate.clone());
+                        }
+                    }
+
+                    total
+                } else {
+                    0
+                };
+
+            visited_caves.remove(&current_cave);
+
+            subcount
+        }
+
+        let mut visited_caves = HashSet::new();
+        let mut path = Vec::new();
+        let mut blessed_small_cave = Some(blessed_small_cave);
+
+        aux(connections,
+            &mut visited_caves,
+            &mut path,
+            Cave::from_str("start"),
+            &mut blessed_small_cave,
+            all_paths);
+
+        all_paths.len()
+    }
+
+
+    pub fn part2() {
+        let mut cave_connections: HashMap<Cave, Vec<Cave>> = HashMap::new();
+
+        for line in input_lines("input_files/day12.txt") {
+            let mut it = line.split('-');
+            let from = Cave::from_str(it.next().unwrap());
+            let to = Cave::from_str(it.next().unwrap());
+
+            // a -> b
+            {
+                let entry = cave_connections.entry(from.clone()).or_insert_with(Vec::new);
+                entry.push(to.clone());
+            }
+
+            // b -> a
+            {
+                let entry = cave_connections.entry(to.clone()).or_insert_with(Vec::new);
+                entry.push(from.clone());
+            }
+        }
+
+        let mut all_paths = HashSet::new();
+
+        for blessed_cave in cave_connections.keys().filter(|&cave| !cave.is_big && (cave.name != "start" && cave.name != "end")) {
+            count_paths_pt2(&cave_connections, blessed_cave.clone(), &mut all_paths);
+        }
+
+        println!("Total: {}", all_paths.len());
+    }
+}
 
 
 mod dayn {
@@ -1343,9 +1529,12 @@ fn main() {
 
         day10::part1();
         day10::part2();
+
+        day11::part1();
+        day11::part2();
     }
 
-    day11::part1();
-    day11::part2();
+    // day12::part1();
+    day12::part2();
 
 }
