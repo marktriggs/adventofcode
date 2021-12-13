@@ -1490,6 +1490,149 @@ mod day12 {
     }
 }
 
+mod day13 {
+    use crate::shared::*;
+
+    fn print_grid(grid: &HashSet<(usize, usize)>) {
+        let max_row = *grid.iter().map(|(_, row)| row).max().unwrap();
+        let max_col = *grid.iter().map(|(col, _)| col).max().unwrap();
+
+        for row in 0..=max_row {
+            for col in 0..=max_col {
+                if grid.contains(&(col, row)) {
+                    print!("#");
+                } else {
+                    print!(".");
+                }
+            }
+            println!("");
+        }
+    }
+
+    pub fn part1() {
+        let mut lines = input_lines("input_files/day13.txt");
+
+        let mut grid: HashSet<(usize, usize)> = HashSet::new();
+
+        // Parse the grid
+        while let Some(line) = lines.next() {
+            if line == "" {
+                break;
+            }
+
+            let mut it = line.split(',');
+            let x = it.next().unwrap().parse().unwrap();
+            let y = it.next().unwrap().parse().unwrap();
+
+            grid.insert((x, y));
+        }
+
+        let fold_instruction = Regex::new(r"fold along ([xy])=([0-9]+)").unwrap();
+
+        // apply our first fold
+        if let Some(line) = lines.next() {
+            let mut it = fold_instruction.captures_iter(&line);
+            let caps = it.next().unwrap();
+
+            let fold_orientation = &caps[1];
+            let fold_offset: usize = caps[2].parse().unwrap();
+
+            if fold_orientation == "y" {
+                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+
+                for (x, y) in grid {
+                    if y > fold_offset {
+                        let new_y = fold_offset - (y - fold_offset);
+                        new_grid.insert((x, new_y));
+                    } else {
+                        new_grid.insert((x, y));
+                    }
+                }
+
+                grid = new_grid;
+            } else {
+                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+
+                for (x, y) in grid {
+                    if x > fold_offset {
+                        let new_x = fold_offset - (x - fold_offset);
+                        new_grid.insert((new_x, y));
+                    } else {
+                        new_grid.insert((x, y));
+                    }
+                }
+
+                grid = new_grid;
+            }
+        }
+
+        println!("There are {} visible dots", grid.len());
+    }
+
+    pub fn part2() {
+        let mut lines = input_lines("input_files/day13.txt");
+
+        let mut grid: HashSet<(usize, usize)> = HashSet::new();
+
+        // Parse the grid
+        while let Some(line) = lines.next() {
+            if line == "" {
+                break;
+            }
+
+            let mut it = line.split(',');
+            let x = it.next().unwrap().parse().unwrap();
+            let y = it.next().unwrap().parse().unwrap();
+
+            grid.insert((x, y));
+        }
+
+        let fold_instruction = Regex::new(r"fold along ([xy])=([0-9]+)").unwrap();
+
+        // apply our first fold
+        while let Some(line) = lines.next() {
+            let mut it = fold_instruction.captures_iter(&line);
+            let caps = it.next().unwrap();
+
+            let fold_orientation = &caps[1];
+            let fold_offset: usize = caps[2].parse().unwrap();
+
+            if fold_orientation == "y" {
+                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+
+                for (x, y) in grid {
+                    if y > fold_offset {
+                        let new_y = fold_offset - (y - fold_offset);
+                        new_grid.insert((x, new_y));
+                    } else {
+                        new_grid.insert((x, y));
+                    }
+                }
+
+                grid = new_grid;
+            } else {
+                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+
+                for (x, y) in grid {
+                    if x > fold_offset {
+                        let new_x = fold_offset - (x - fold_offset);
+                        new_grid.insert((new_x, y));
+                    } else {
+                        new_grid.insert((x, y));
+                    }
+                }
+
+                grid = new_grid;
+            }
+        }
+
+        print_grid(&grid);
+    }
+
+
+}
+
+
 
 mod dayn {
     use crate::shared::*;
@@ -1532,9 +1675,11 @@ fn main() {
 
         day11::part1();
         day11::part2();
+
+        day12::part1();
+        day12::part2();
     }
 
-    // day12::part1();
-    day12::part2();
-
+    day13::part1();
+    day13::part2();
 }
