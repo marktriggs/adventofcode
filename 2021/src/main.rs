@@ -1505,7 +1505,7 @@ mod day13 {
                     print!(".");
                 }
             }
-            println!("");
+            println!();
         }
     }
 
@@ -1515,8 +1515,8 @@ mod day13 {
         let mut grid: HashSet<(usize, usize)> = HashSet::new();
 
         // Parse the grid
-        while let Some(line) = lines.next() {
-            if line == "" {
+        for line in &mut lines {
+            if line.is_empty() {
                 break;
             }
 
@@ -1537,9 +1537,9 @@ mod day13 {
             let fold_orientation = &caps[1];
             let fold_offset: usize = caps[2].parse().unwrap();
 
-            if fold_orientation == "y" {
-                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+            let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
 
+            if fold_orientation == "y" {
                 for (x, y) in grid {
                     if y > fold_offset {
                         let new_y = fold_offset - (y - fold_offset);
@@ -1548,11 +1548,7 @@ mod day13 {
                         new_grid.insert((x, y));
                     }
                 }
-
-                grid = new_grid;
             } else {
-                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
-
                 for (x, y) in grid {
                     if x > fold_offset {
                         let new_x = fold_offset - (x - fold_offset);
@@ -1561,9 +1557,9 @@ mod day13 {
                         new_grid.insert((x, y));
                     }
                 }
-
-                grid = new_grid;
             }
+
+            grid = new_grid;
         }
 
         println!("There are {} visible dots", grid.len());
@@ -1575,8 +1571,8 @@ mod day13 {
         let mut grid: HashSet<(usize, usize)> = HashSet::new();
 
         // Parse the grid
-        while let Some(line) = lines.next() {
-            if line == "" {
+        for line in &mut lines {
+            if line.is_empty() {
                 break;
             }
 
@@ -1590,16 +1586,16 @@ mod day13 {
         let fold_instruction = Regex::new(r"fold along ([xy])=([0-9]+)").unwrap();
 
         // apply our first fold
-        while let Some(line) = lines.next() {
+        for line in &mut lines {
             let mut it = fold_instruction.captures_iter(&line);
             let caps = it.next().unwrap();
 
             let fold_orientation = &caps[1];
             let fold_offset: usize = caps[2].parse().unwrap();
 
-            if fold_orientation == "y" {
-                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
+            let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
 
+            if fold_orientation == "y" {
                 for (x, y) in grid {
                     if y > fold_offset {
                         let new_y = fold_offset - (y - fold_offset);
@@ -1608,11 +1604,7 @@ mod day13 {
                         new_grid.insert((x, y));
                     }
                 }
-
-                grid = new_grid;
             } else {
-                let mut new_grid: HashSet<(usize, usize)> = HashSet::new();
-
                 for (x, y) in grid {
                     if x > fold_offset {
                         let new_x = fold_offset - (x - fold_offset);
@@ -1621,9 +1613,9 @@ mod day13 {
                         new_grid.insert((x, y));
                     }
                 }
-
-                grid = new_grid;
             }
+
+            grid = new_grid;
         }
 
         print_grid(&grid);
