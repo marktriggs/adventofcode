@@ -9,7 +9,8 @@ mod shared {
 
     // pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
-    pub use std::cmp::{self, Ordering};
+    pub use std::cmp::{self, Ordering, Reverse};
+    pub use std::collections::BinaryHeap;
     pub use std::collections::BTreeMap;
     pub use std::collections::BTreeSet;
     pub use std::collections::HashMap;
@@ -1743,6 +1744,225 @@ mod day14 {
     }
 }
 
+mod day15 {
+    use crate::shared::*;
+
+    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
+    struct Vertex {
+        row: usize,
+        col: usize,
+    }
+
+    impl Vertex {
+        fn neighbours(&self, width: usize, height: usize) -> Vec<Vertex> {
+            let mut result = Vec::with_capacity(4);
+
+            if self.col > 0 {
+                result.push(Vertex { row: self.row, col: self.col - 1 });
+            }
+
+            if self.col < width - 1 {
+                result.push(Vertex { row: self.row, col: self.col + 1 });
+            }
+
+            if self.row > 0 {
+                result.push(Vertex { row: self.row - 1, col: self.col });
+            }
+
+            if self.row < height - 1 {
+                result.push(Vertex { row: self.row + 1, col: self.col });
+            }
+
+            result
+        }
+    }
+
+    pub fn part1() {
+        let lines = input_lines("input_files/day15.txt");
+        let grid: Vec<Vec<_>> = lines.map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()).collect();
+
+        let source = Vertex { row: 0, col: 0 };
+
+        let width = grid[0].len();
+        let height = grid.len();
+
+        let mut queue: HashSet<Vertex> = HashSet::new();
+        let mut dist: HashMap<Vertex, usize> = HashMap::new();
+        let mut prev: HashMap<Vertex, Option<Vertex>> = HashMap::new();
+
+        for row in 0..height {
+            for col in 0..width {
+                let v = Vertex { row, col };
+                queue.insert(v);
+                prev.insert(v, None);
+                dist.insert(v, usize::MAX);
+            }
+        }
+
+        dist.insert(source, 0);
+
+        while !queue.is_empty() {
+            let u = *queue.iter().min_by_key(|v| dist.get(v)).unwrap();
+
+            queue.remove(&u);
+
+            for neighbour in u.neighbours(width, height) {
+                if !queue.contains(&neighbour) {
+                    continue;
+                }
+
+                let alt = dist.get(&u).unwrap().saturating_add(grid[neighbour.row][neighbour.col]);
+                if alt < *dist.get(&neighbour).unwrap() {
+                    dist.insert(neighbour, alt);
+                    prev.insert(neighbour, Some(u));
+                }
+            }
+        }
+
+        let mut total_risk: usize = 0;
+
+        let mut u = Vertex { row: height - 1, col: width - 1 };
+        if prev.get(&u).is_some() || u == source {
+            loop {
+                total_risk += grid[u.row][u.col];
+                if let Some(p) = prev.get(&u).unwrap() {
+                    u = *p;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        println!("Risk: {}", total_risk - grid[0][0]);
+    }
+
+    fn project_grid(grid: Vec<Vec<usize>>) -> Vec<Vec<usize>> {
+        let width = grid[0].len();
+        let height = grid.len();
+
+        let projected_width = width * 5;
+        let projected_height = height * 5;
+
+        let mut result: Vec<Vec<usize>> = (0..projected_height).map(|_| vec![0; projected_width]).collect();
+
+        for row in 0..projected_height {
+            for col in 0..projected_width {
+                let adjustment = (row / height) + (col / width);
+
+                result[row][col] = (((grid[row % height][col % width] - 1) + adjustment) % 9) + 1;
+            }
+        }
+
+        result
+    }
+
+    #[derive(Eq, PartialEq, Copy, Clone)]
+    struct WeightedVertex {
+        dist: usize,
+        vertex: Vertex,
+    }
+
+    impl PartialOrd for WeightedVertex {
+        fn partial_cmp(&self, other: &WeightedVertex) -> Option<std::cmp::Ordering> {
+            if self.dist == other.dist {
+                self.vertex.partial_cmp(&other.vertex)
+            } else {
+                self.dist.partial_cmp(&other.dist)
+            }
+        }
+    }
+
+    impl Ord for WeightedVertex {
+        fn cmp(&self, other: &WeightedVertex) -> std::cmp::Ordering {
+            if self.dist == other.dist {
+                self.vertex.cmp(&other.vertex)
+            } else {
+                self.dist.cmp(&other.dist)
+            }
+        }
+    }
+
+
+
+    pub fn part2() {
+        let lines = input_lines("input_files/day15.txt");
+        let grid: Vec<Vec<_>> = project_grid(lines.map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()).collect());
+
+        let width = grid[0].len();
+        let height = grid.len();
+
+        let source = Vertex { row: 0, col: 0 };
+        let target = Vertex { row: height - 1, col: width - 1 };
+
+        let mut queue: HashSet<Vertex> = HashSet::new();
+        let mut heap: BTreeMap<WeightedVertex, usize> = BTreeMap::new();
+
+        let mut dist: HashMap<Vertex, usize> = HashMap::new();
+        let mut prev: HashMap<Vertex, Option<Vertex>> = HashMap::new();
+
+        for row in 0..height {
+            for col in 0..width {
+                let v = Vertex { row, col };
+                prev.insert(v, None);
+
+                queue.insert(v);
+
+                if v == source {
+                    heap.insert(WeightedVertex { dist: 0, vertex: v }, 0);
+                    dist.insert(v, 0);
+                } else {
+                    heap.insert(WeightedVertex { dist: usize::MAX, vertex: v }, usize::MAX);
+                    dist.insert(v, usize::MAX);
+                }
+            }
+        }
+
+        while !queue.is_empty() {
+            let entry = *heap.keys().next().unwrap();
+            let u = entry.vertex;
+
+            heap.remove(&entry);
+            queue.remove(&u);
+
+            if u == target {
+                break;
+            }
+
+            for neighbour in u.neighbours(width, height) {
+                if !queue.contains(&neighbour) {
+                    continue;
+                }
+
+                let alt = dist.get(&u).unwrap().saturating_add(grid[neighbour.row][neighbour.col]);
+                let old_dist = *dist.get(&neighbour).unwrap();
+                if alt < old_dist {
+                    heap.remove(&WeightedVertex { vertex: neighbour, dist: old_dist });
+                    dist.insert(neighbour, alt);
+                    prev.insert(neighbour, Some(u));
+                    heap.insert(WeightedVertex { vertex: neighbour, dist: alt }, alt);
+                }
+            }
+        }
+
+        let mut total_risk: usize = 0;
+
+        let mut u = target;
+        if prev.get(&u).is_some() || u == source {
+            loop {
+                total_risk += grid[u.row][u.col];
+                if let Some(p) = prev.get(&u).unwrap() {
+                    u = *p;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        println!("Risk: {}", total_risk - grid[0][0]);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -1790,8 +2010,11 @@ fn main() {
 
         day13::part1();
         day13::part2();
+
+        day14::part1();
+        day14::part2();
     }
 
-    day14::part1();
-    day14::part2();
+    day15::part1();
+    day15::part2();
 }
