@@ -1624,7 +1624,124 @@ mod day13 {
 
 }
 
+mod day14 {
+    use crate::shared::*;
 
+    struct Insertion {
+        s: String,
+        idx: usize,
+    }
+
+    pub fn part1() {
+        let mut lines = input_lines("input_files/day14.txt");
+
+        let mut template: String = lines.next().unwrap();
+
+        // Eat the blank line
+        let _ = lines.next().unwrap();
+
+        let rule_pattern = Regex::new(r"(.+) -> (.+)").unwrap();
+        let mut substitutions: HashMap<String, String> = HashMap::new();
+
+        for rule in &mut lines {
+            let mut it = rule_pattern.captures_iter(&rule);
+            let caps = it.next().unwrap();
+
+            let from = &caps[1];
+            let to = &caps[2];
+
+            substitutions.insert(from.to_string(), to.to_string());
+        }
+
+        for _ in 0..10 {
+            // Find the chars to insert
+            let mut to_insert = Vec::new();
+            for idx in 0..(template.len() - 1) {
+                if let Some(s) = substitutions.get(&template[idx..idx+2]) {
+                    to_insert.push(Insertion { s: s.clone(), idx: idx + 1});
+                }
+            }
+
+            if to_insert.is_empty() {
+                break;
+            }
+
+            for insert in to_insert.into_iter().rev() {
+                template.insert_str(insert.idx, &insert.s);
+            }
+        }
+
+        let mut freqs: HashMap<char, usize> = HashMap::new();
+        for ch in template.chars() {
+            *freqs.entry(ch).or_insert(0) += 1;
+        }
+
+        let min = freqs.iter().map(|(_, v)| v).min().unwrap();
+        let max = freqs.iter().map(|(_, v)| v).max().unwrap();
+
+        println!("Difference: {}", max - min);
+    }
+
+    pub fn part2() {
+        let mut lines = input_lines("input_files/day14.txt");
+
+        let template: String = lines.next().unwrap();
+
+        // Eat the blank line
+        let _ = lines.next().unwrap();
+
+        let rule_pattern = Regex::new(r"(.+) -> (.+)").unwrap();
+        let mut substitutions: HashMap<String, String> = HashMap::new();
+
+        for rule in &mut lines {
+            let mut it = rule_pattern.captures_iter(&rule);
+            let caps = it.next().unwrap();
+
+            let from = &caps[1];
+            let to = &caps[2];
+
+            substitutions.insert(from.to_string(), to.to_string());
+        }
+
+        let mut pairs: HashMap<String, usize> = HashMap::new();
+
+        for idx in 0..(template.len() - 1) {
+            *pairs.entry(template[idx..idx + 2].to_string()).or_insert(0) += 1;
+        }
+
+        for _ in 0..40 {
+            let mut new_pairs: HashMap<String, usize> = HashMap::new();
+
+            for (pair, to_insert) in substitutions.iter() {
+                if let Some(freq) = pairs.remove(pair) {
+                    *new_pairs.entry(format!("{}{}", pair.chars().next().unwrap(), to_insert)).or_insert(0) += freq;
+                    *new_pairs.entry(format!("{}{}", to_insert, pair.chars().nth(1).unwrap())).or_insert(0) += freq;
+                }
+            }
+
+            new_pairs.extend(pairs);
+            pairs = new_pairs;
+        }
+
+
+        let mut freqs: HashMap<char, usize> = HashMap::new();
+        for k in pairs.keys() {
+            for ch in k.chars().take(1) {
+                *freqs.entry(ch).or_insert(0) += pairs[k];
+            }
+        }
+
+        // Since we only counted the first of each pair (to avoid duplication), we need
+        // to manually add the last character from the original template.  Fortunately,
+        // the first and last characters of the template cannot be changed by our rules.
+        *freqs.entry(template.chars().last().unwrap()).or_insert(0) += 1;
+
+        let min = freqs.iter().map(|(_, v)| v).min().unwrap();
+        let max = freqs.iter().map(|(_, v)| v).max().unwrap();
+
+        println!("Difference: {}", max - min);
+    }
+}
 
 mod dayn {
     use crate::shared::*;
@@ -1670,8 +1787,11 @@ fn main() {
 
         day12::part1();
         day12::part2();
+
+        day13::part1();
+        day13::part2();
     }
 
-    day13::part1();
-    day13::part2();
+    day14::part1();
+    day14::part2();
 }
