@@ -1963,6 +1963,195 @@ mod day15 {
 }
 
 
+mod day16 {
+    use crate::shared::*;
+
+    struct BitStream {
+        bytes: Vec<u8>,
+        bit_offset: usize,
+    }
+
+    impl BitStream {
+        fn from_hex(s: &str) -> BitStream {
+            BitStream {
+                bytes: (0..s.len()).step_by(2).map(|idx| u8::from_str_radix(&s[idx..idx+2], 16).unwrap()).collect(),
+                bit_offset: 0,
+            }
+        }
+
+        fn read_usize(&mut self, bitcount: usize) -> usize {
+            let mut result: usize = 0;
+
+            for _ in 0..bitcount {
+                let current_byte_offset = self.bit_offset / 8;
+
+                result *= 2;
+                result |= ((self.bytes[current_byte_offset] >> (7 - (self.bit_offset % 8))) & 0x01) as usize;
+                self.bit_offset += 1;
+            }
+
+            result
+        }
+    }
+
+
+    #[derive(Debug)]
+    enum Packet {
+        Literal {
+            version: usize,
+            type_id: usize,
+            value: usize,
+        },
+        Operator {
+            version: usize,
+            type_id: usize,
+            subpackets: Vec<Packet>,
+        }
+    }
+
+    fn read_packet(stream: &mut BitStream) -> Packet {
+        let version = stream.read_usize(3);
+        let type_id = stream.read_usize(3);
+
+        if type_id == 4 {
+            // literal value
+            let mut value = 0;
+
+            loop {
+                let segment = stream.read_usize(5);
+                value <<= 4;
+                value |= (segment & 0xF);
+
+                if (segment >> 4) & 0x1 == 0x0 {
+                    break;
+                }
+            }
+
+            Packet::Literal {
+                version,
+                type_id,
+                value
+            }
+        } else {
+            // Operator packet
+            let length_type_id = stream.read_usize(1);
+
+            match length_type_id {
+                0 => {
+                    let length_of_subpackets_in_bits = stream.read_usize(15);
+
+                    let starting_position = stream.bit_offset;
+
+                    let mut subpackets = Vec::new();
+
+                    while (stream.bit_offset - starting_position) < length_of_subpackets_in_bits {
+                        subpackets.push(read_packet(stream));
+                    }
+
+                    Packet::Operator {
+                        version,
+                        type_id,
+                        subpackets,
+                    }
+                },
+                1 => {
+                    let number_of_subpackets = stream.read_usize(11);
+
+                    Packet::Operator {
+                        version,
+                        type_id,
+                        subpackets: (0..number_of_subpackets).map(|_| read_packet(stream)).collect(),
+                    }
+                },
+                _ => panic!("Invalid length type id: {}", length_type_id),
+            }
+        }
+    }
+
+    fn sum_versions(packet: &Packet) -> usize {
+        match packet {
+            Packet::Literal { version, .. } => *version,
+            Packet::Operator { version, subpackets, .. } => {
+                *version + subpackets.iter().map(|p| sum_versions(p)).sum::<usize>()
+            }
+        }
+    }
+
+    pub fn part1() {
+        let mut lines = input_lines("input_files/day16.txt");
+        let mut stream = BitStream::from_hex(&lines.next().unwrap());
+
+        let packet = read_packet(&mut stream);
+
+        println!("Sum of version numbers: {}", sum_versions(&packet));
+    }
+
+    fn evaluate(packet: &Packet) -> usize {
+        match packet {
+            Packet::Literal { value, .. } => *value,
+            Packet::Operator { type_id, subpackets, .. } => {
+                match type_id {
+                    0 => {
+                        // Sum packet
+                        subpackets.iter().map(|p| evaluate(p)).sum::<usize>()
+                    }
+                    1 => {
+                        // Product packet
+                        subpackets.iter().map(|p| evaluate(p)).product::<usize>()
+                    }
+                    2 => {
+                        // Minimum packet
+                        subpackets.iter().map(|p| evaluate(p)).min().unwrap()
+                    }
+                    3 => {
+                        // Maximum packet
+                        subpackets.iter().map(|p| evaluate(p)).max().unwrap()
+                    }
+                    5 => {
+                        // Greater than packet
+                        if evaluate(&subpackets[0]) > evaluate(&subpackets[1]) {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    6 => {
+                        // Less than packet
+                        if evaluate(&subpackets[0]) < evaluate(&subpackets[1]) {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    7 => {
+                        // Equal packet
+                        if evaluate(&subpackets[0]) == evaluate(&subpackets[1]) {
+                            1
+                        } else {
+                            0
+                        }
+
+                    }
+                    _ => panic!("Invalid packet type: {}", type_id),
+                }
+            }
+        }
+
+    }
+
+    pub fn part2() {
+        let mut lines = input_lines("input_files/day16.txt");
+        let mut stream = BitStream::from_hex(&lines.next().unwrap());
+
+        let packet = read_packet(&mut stream);
+
+        println!("Packet result: {}", evaluate(&packet));
+    }
+
+}
+
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -2013,8 +2202,11 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        day15::part1();
+        day15::part2();
     }
 
-    day15::part1();
-    day15::part2();
+    day16::part1();
+    day16::part2();
 }
