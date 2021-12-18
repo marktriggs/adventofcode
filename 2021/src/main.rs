@@ -9,6 +9,7 @@ mod shared {
 
     // pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
+    pub use std::cell::RefMut;
     pub use std::cmp::{self, Ordering, Reverse};
     pub use std::collections::BinaryHeap;
     pub use std::collections::BTreeMap;
@@ -2274,6 +2275,211 @@ mod day17 {
 
 }
 
+mod day18 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Clone)]
+    enum Token {
+        StartPair,
+        EndPair,
+        Number(usize),
+    }
+
+    fn tokenise_tree(s: &str) -> Vec<Token> {
+        let mut result = Vec::new();
+        let mut it = s.chars().peekable();
+
+        while let Some(ch) = it.next() {
+            match ch {
+                '[' => result.push(Token::StartPair),
+                ']' => result.push(Token::EndPair),
+                '0'..='9' => {
+                    let mut n = ch.to_digit(10).unwrap() as usize;
+                    while let Some(&next_ch) = it.peek() {
+                        if let Some(digit) = next_ch.to_digit(10) {
+                            let _ = it.next();
+                            n *= 10;
+                            n += digit as usize;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    result.push(Token::Number(n))
+                },
+                _ => {},
+            }
+        }
+
+        result
+    }
+
+    fn explode(tokens: &mut Vec<Token>) -> bool {
+        let mut depth = 0;
+
+        for idx in 0..tokens.len() {
+            let token = &tokens[idx];
+
+            match token {
+                Token::StartPair => {
+                    if depth == 4 {
+                        // This pair should always consist of two regular numbers, so sayeth the
+                        // problem.
+                        assert_eq!(tokens[idx], Token::StartPair);
+                        assert!(matches!(tokens[idx + 1], Token::Number(_n)));
+                        assert!(matches!(tokens[idx + 2], Token::Number(_n)));
+                        assert_eq!(tokens[idx + 3], Token::EndPair);
+
+                        // Scan left for our number to add to
+                        if let Token::Number(lhs) = tokens[idx + 1] {
+                            for n_idx in (0..idx).rev() {
+                                if let Token::Number(n) = tokens[n_idx] {
+                                    tokens[n_idx] = Token::Number(n + lhs);
+                                    break;
+                                }
+                            }
+                        } else {
+                            unreachable!();
+                        }
+
+                        // Scan right for our number to add to
+                        if let Token::Number(rhs) = tokens[idx + 2] {
+                            for token in tokens.iter_mut().skip(idx + 4) {
+                                if let Token::Number(n) = token {
+                                    *token = Token::Number(*n + rhs);
+                                    break;
+                                }
+                            }
+                        } else {
+                            unreachable!();
+                        }
+
+                        // Replace our pair with a zero
+                        for _ in 0..4 {
+                            tokens.remove(idx);
+                        }
+
+                        tokens.insert(idx, Token::Number(0));
+
+                        return true;
+                    } else {
+                        depth += 1;
+                    }
+                }
+                Token::EndPair => depth -= 1,
+                _ => {}
+            }
+        }
+
+        false
+    }
+
+    fn split(tokens: &mut Vec<Token>) -> bool {
+        for idx in 0..tokens.len() {
+            if let Token::Number(n) = tokens[idx] {
+                if n >= 10 {
+                    tokens.remove(idx);
+                    tokens.insert(idx, Token::EndPair);
+                    tokens.insert(idx, Token::Number((n as f64 / 2.0_f64).ceil() as usize));
+                    tokens.insert(idx, Token::Number((n as f64 / 2.0_f64).floor() as usize));
+                    tokens.insert(idx, Token::StartPair);
+
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+
+    #[allow(clippy::vec_init_then_push)]
+    fn sum_snailfish(n1: &[Token], n2: &[Token]) -> Vec<Token> {
+        let mut result: Vec<Token> = Vec::new();
+
+        result.push(Token::StartPair);
+        result.extend(n1.iter().cloned());
+        result.extend(n2.iter().cloned());
+        result.push(Token::EndPair);
+
+        loop {
+            if explode(&mut result) || split(&mut result) {
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        result
+    }
+
+    #[derive(Debug)]
+    enum SnailfishNumber {
+        Pair {
+            lhs: Box<SnailfishNumber>,
+            rhs: Box<SnailfishNumber>,
+        },
+        Number(usize)
+    }
+
+    fn parse_tree(tokens: Vec<Token>) -> SnailfishNumber {
+        fn parse_next(tokens: &[Token], offset: usize) -> (SnailfishNumber, usize) {
+            match tokens[offset] {
+                Token::StartPair => {
+                    let (lhs, next_offset) = parse_next(tokens, offset + 1);
+                    let (rhs, next_offset) = parse_next(tokens, next_offset);
+
+                    // Eat the EndPair
+                    assert_eq!(tokens[next_offset], Token::EndPair);
+
+                    (SnailfishNumber::Pair { lhs: Box::new(lhs), rhs: Box::new(rhs) }, next_offset + 1)
+                }
+                Token::Number(n) => (SnailfishNumber::Number(n), offset + 1),
+                _ => panic!("Parse error"),
+            }
+        }
+
+        parse_next(&tokens, 0).0
+    }
+
+    fn magnitude(tree: &SnailfishNumber) -> usize {
+        match tree {
+            SnailfishNumber::Number(n) => *n,
+            SnailfishNumber::Pair { lhs, rhs } => {
+                3 * magnitude(lhs) + 2 * magnitude(rhs)
+            }
+        }
+    }
+
+    pub fn part1() {
+        let numbers = input_lines("input_files/day18_sample.txt").map(|s| tokenise_tree(&s));
+        let sum = numbers.reduce(|result, n| sum_snailfish(&result, &n)).unwrap();
+
+        println!("Magnitude: {}", magnitude(&parse_tree(sum)));
+    }
+
+    pub fn part2() {
+        let numbers: Vec<Vec<Token>> = input_lines("input_files/day18.txt").map(|s| tokenise_tree(&s)).collect();
+
+        let mut best_magnitude = usize::MIN;
+
+        for i in 0..numbers.len() {
+            for j in 0..numbers.len() {
+                if i == j {
+                    continue;
+                }
+
+                let sum = sum_snailfish(&numbers[i], &numbers[j]);
+                best_magnitude = std::cmp::max(best_magnitude, magnitude(&parse_tree(sum)));
+            }
+        }
+
+        println!("Best magnitude: {}", best_magnitude);
+    }
+
+}
+
+
 
 mod dayn {
     use crate::shared::*;
@@ -2331,8 +2537,11 @@ fn main() {
 
         day16::part1();
         day16::part2();
+
+        day17::part1();
+        day17::part2();
     }
 
-    // day17::part1();
-    day17::part2();
+    day18::part1();
+    day18::part2();
 }
