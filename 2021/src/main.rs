@@ -2151,6 +2151,129 @@ mod day16 {
 }
 
 
+mod day17 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        // let target_xmin: i64 = 20;
+        // let target_xmax: i64 = 30;
+
+        // let target_ymin: i64 = -10;
+        // let target_ymax: i64 = -5;
+
+        let target_xmin: i64 = 185;
+        let target_xmax: i64 = 221;
+
+        let target_ymin: i64 = -122;
+        let target_ymax: i64 = -74;
+
+        let mut best_y: i64 = i64::MIN;
+
+        for start_x_velocity in -1000..1000 {
+            for start_y_velocity in -1000..1000 {
+
+                let mut x_velocity = start_x_velocity;
+                let mut y_velocity = start_y_velocity;
+
+                let mut x: i64 = 0;
+                let mut y: i64 = 0;
+
+                let mut best_y_this_round: i64 = i64::MIN;
+
+                // let mut step: usize = 0;
+                loop {
+                    if (x >= target_xmin && x <= target_xmax) && (y >= target_ymin && y <= target_ymax) {
+                        // println!("Hit on step {}", step);
+
+                        if best_y_this_round > best_y {
+                            best_y = best_y_this_round;
+                        }
+
+                        break;
+                    }
+
+                    if x_velocity == 0 && y_velocity < 0 && y < target_ymin {
+                        break;
+                    }
+
+                    x += x_velocity;
+                    y += y_velocity;
+
+                    if y > best_y_this_round {
+                        best_y_this_round = y;
+                    }
+
+                    if x_velocity != 0 {
+                        x_velocity -= (x_velocity.abs() / x_velocity);
+                    }
+
+                    y_velocity -= 1;
+
+                    // step += 1;
+                    // println!("After step {}: x = {}; y = {}", step, x, y);
+                }
+            }
+        }
+
+        println!("Best y: {}", best_y);
+    }
+
+    pub fn part2() {
+        // let target_xmin: i64 = 20;
+        // let target_xmax: i64 = 30;
+        //
+        // let target_ymin: i64 = -10;
+        // let target_ymax: i64 = -5;
+
+        let target_xmin: i64 = 185;
+        let target_xmax: i64 = 221;
+
+        let target_ymin: i64 = -122;
+        let target_ymax: i64 = -74;
+
+        let mut target_hit: HashSet<(i64, i64)> = HashSet::new();
+
+        for start_x_velocity in -1000..1000 {
+            for start_y_velocity in -1000..1000 {
+
+                let mut x_velocity = start_x_velocity;
+                let mut y_velocity = start_y_velocity;
+
+                let mut x: i64 = 0;
+                let mut y: i64 = 0;
+
+                // let mut step: usize = 0;
+                loop {
+                    if (x >= target_xmin && x <= target_xmax) && (y >= target_ymin && y <= target_ymax) {
+                        // println!("Hit on step {}", step);
+                        target_hit.insert((start_x_velocity, start_y_velocity));
+                        break;
+                    }
+
+                    if x_velocity == 0 && y_velocity < 0 && y < target_ymin {
+                        break;
+                    }
+
+                    x += x_velocity;
+                    y += y_velocity;
+
+                    if x_velocity != 0 {
+                        x_velocity -= (x_velocity.abs() / x_velocity);
+                    }
+
+                    y_velocity -= 1;
+
+                    // step += 1;
+                    // println!("After step {}: x = {}; y = {}", step, x, y);
+                }
+            }
+        }
+
+        println!("Unique values: {}", target_hit.len());
+    }
+
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -2205,8 +2328,11 @@ fn main() {
 
         day15::part1();
         day15::part2();
+
+        day16::part1();
+        day16::part2();
     }
 
-    day16::part1();
-    day16::part2();
+    // day17::part1();
+    day17::part2();
 }
