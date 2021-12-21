@@ -2480,6 +2480,291 @@ mod day18 {
 }
 
 
+mod day19 {
+    use crate::shared::*;
+
+    // Well, this was a bit of a maths refresher...
+    //
+    // There are 24 possible rotations of our collection of beacon coordinates,
+    // corresponding to the sensor facing one of six ways, while being rotated
+    // (rolled) in one of four orientations.
+    //
+    // A straightforward way of generating rotations for our points is to enumerate
+    // every possible permutation of (x, y, z) along with every possible sign flip
+    // of each coordinate.  That would yield (6 * 4 * 2) = 48 different rotations.
+    //
+    // However, half of those are reflections rather than pure rotations, so half of
+    // those aren't applicable.  But which ones?!
+    //
+    // Instead of thinking in terms of permutations, we can use a rotation matrices
+    // (https://en.wikipedia.org/wiki/Rotation_matrix).  For rotations 90 degree
+    // multiples of three dimensions, our rotation matrix will consist of three rows
+    // and three columns, with a single 1 or -1) in each row and each column.
+    //
+    // As with the permutations approach, this gives you 48 possible rotation
+    // matrices, with 24 reflections.  But One Weird Trick the Internet tells me is
+    // that a "proper rotation" (i.e. non-reflected) will have a rotation matrix
+    // whose determinant is 1.
+    //
+    // So, the plan is: build our 24 proper rotation matrices.  Apply every rotation
+    // to every set of beacons, then brute force to find where the sensors overlap.
+
+    fn determinant_3x3(matrix: &[[i64; 3]]) -> i64 {
+        (matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) -
+         matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]) +
+         matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]))
+    }
+
+
+    fn build_rotation_matrices() -> Vec<Vec<[i64; 3]>> {
+        // Starting with a nice trick from Knuth TAOCP 4a.  You can generate all
+        // possible rotation matrices (with exactly one 1 in each row and column) by
+        // taking all permutations of (e.g.) 012, writing the permutation alongside the
+        // ordered digits like:
+        //
+        //    012
+        //    210  <- permutation
+        //
+        // then pairing them off and setting the bits at those positions (0,2), (1,1),
+        // (2,0).
+        //
+        // Since I want all permutations of 1's and -1's, I'm combining this with a
+        // bit-wrangling trick to generate those variants too.
+
+        let mut matrices = Vec::new();
+
+        for perm in (0..=2).permutations(3) {
+            for sign_mask in (0..=7) {
+                let mut matrix = vec![[0, 0, 0],
+                                      [0, 0, 0],
+                                      [0, 0, 0]];
+
+                for (x, &y) in (0..=3).zip(&perm) {
+                    if sign_mask & (1 << x) == 0 {
+                        matrix[x][y] = 1;
+                    } else {
+                        matrix[x][y] = -1;
+                    }
+                }
+
+                if (determinant_3x3(&matrix) == 1) {
+                    matrices.push(matrix);
+                }
+            }
+        }
+
+        matrices
+    }
+
+
+    #[derive(Debug, Hash, Eq, PartialEq, Clone)]
+    #[allow(clippy::upper_case_acronyms)]
+    struct XYZ {
+        x: i64,
+        y: i64,
+        z: i64,
+    }
+
+    impl XYZ {
+        fn subtract(&self, other: &XYZ) -> XYZ {
+            XYZ {
+                x: self.x - other.x,
+                y: self.y - other.y,
+                z: self.z - other.z,
+            }
+        }
+
+        fn manhattan_distance(&self, other: &XYZ) -> i64 {
+            (other.x - self.x).abs() +
+            (other.y - self.y).abs() +
+            (other.z - self.z).abs()
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Scanner {
+        number: usize,
+        beacons: HashSet<XYZ>,
+    }
+
+    struct ScannerRotations {
+        scanner: Scanner,
+        rotations: Vec<Scanner>,
+    }
+
+    fn parse_scanners(it: impl Iterator<Item=String>) -> Vec<Scanner> {
+        let mut result: Vec<Scanner> = Vec::new();
+
+        let mut current_scanner = None;
+
+        for line in it {
+            if line.starts_with("---") {
+                if current_scanner.is_some() { result.push(current_scanner.take().unwrap()); }
+
+                let number = line.split(' ').nth(2).map(|s| s.parse::<usize>().ok()).flatten().unwrap();
+                current_scanner = Some(Scanner { number, beacons: HashSet::new() });
+            } else if line.is_empty() {
+                continue;
+            } else {
+                let coords: Vec<i64> = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect();
+
+                if let Some(s) = current_scanner.as_mut() {
+                    s.beacons.insert(XYZ {
+                        x: coords[0],
+                        y: coords[1],
+                        z: coords[2],
+                    });
+                }
+            }
+        }
+
+        if current_scanner.is_some() { result.push(current_scanner.take().unwrap()); }
+
+        result
+    }
+
+    fn matrix_multiply(coord: &XYZ, rotation: &[[i64; 3]]) -> XYZ {
+        XYZ {
+            x: (coord.x * rotation[0][0]) + (coord.y * rotation[1][0]) + (coord.z * rotation[2][0]),
+            y: (coord.x * rotation[0][1]) + (coord.y * rotation[1][1]) + (coord.z * rotation[2][1]),
+            z: (coord.x * rotation[0][2]) + (coord.y * rotation[1][2]) + (coord.z * rotation[2][2]),
+        }
+    }
+
+    fn generate_rotations(scanners: Vec<Scanner>, rotations: &[Vec<[i64; 3]>]) -> Vec<ScannerRotations> {
+        let mut result = Vec::new();
+
+        for scanner in scanners {
+            let base = scanner.clone();
+            let mut scanner_rotations = ScannerRotations {
+                scanner,
+                rotations: Vec::new(),
+            };
+
+            for rotation in rotations {
+                scanner_rotations.rotations.push(Scanner {
+                    number: base.number,
+                    beacons: base.beacons.iter().map(|coord| matrix_multiply(coord, rotation)).collect()
+                });
+            }
+
+            result.push(scanner_rotations);
+        }
+
+        result
+    }
+
+    struct AlignmentResult {
+        mapped_beacons: HashSet<XYZ>,
+        offset: XYZ,
+    }
+
+    fn attempt_scanner_alignment(target: &Scanner, candidate: &Scanner) -> Option<AlignmentResult> {
+        for target_point in target.beacons.iter() {
+            for candidate_point in candidate.beacons.iter() {
+                let offset = candidate_point.subtract(target_point);
+
+                let offset_candidates: HashSet<XYZ> = candidate.beacons.iter().map(|XYZ { x, y, z }| XYZ {
+                    x: x - offset.x,
+                    y: y - offset.y,
+                    z: z - offset.z,
+                }).collect();
+
+                let len = offset_candidates.intersection(&target.beacons).count();
+
+                if len >= 12 {
+                    return Some(AlignmentResult {
+                        mapped_beacons: offset_candidates,
+                        offset,
+                    });
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn part1() {
+        let three_by_three_rotation_matrices = build_rotation_matrices();
+        let scanners: Vec<Scanner> = parse_scanners(input_lines("input_files/day19.txt"));
+
+        let mut all_rotations: VecDeque<ScannerRotations> = generate_rotations(scanners, &three_by_three_rotation_matrices).into_iter().collect();
+
+        // Arbitrarily pick a scanner as our starting point and required orientation
+        let mut merged_scanner = all_rotations.pop_front().unwrap().scanner;
+
+        // Find a scanner that overlaps with our requisite 12 beacons in one of its orientations
+        while !all_rotations.is_empty() {
+            let candidate_scanner_rotations = all_rotations.pop_front().unwrap();
+
+            let mut success = false;
+            for rotation in &candidate_scanner_rotations.rotations {
+                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation) {
+                    success = true;
+                    merged_scanner.beacons.extend(alignment_result.mapped_beacons);
+                    break;
+                }
+            }
+
+            if !success {
+                // Back you go for next time
+                all_rotations.push_back(candidate_scanner_rotations);
+            }
+        }
+
+        println!("We found {} beacons", merged_scanner.beacons.len());
+    }
+
+    pub fn part2() {
+        let three_by_three_rotation_matrices = build_rotation_matrices();
+        let scanners: Vec<Scanner> = parse_scanners(input_lines("input_files/day19.txt"));
+
+        let mut all_rotations: VecDeque<ScannerRotations> = generate_rotations(scanners, &three_by_three_rotation_matrices).into_iter().collect();
+
+        // Arbitrarily pick a scanner as our starting point and required orientation
+        let mut merged_scanner = all_rotations.pop_front().unwrap().scanner;
+
+        let mut offsets = Vec::new();
+
+        // Find a scanner that overlaps with our requisite 12 beacons in one of its orientations
+        while !all_rotations.is_empty() {
+            let candidate_scanner_rotations = all_rotations.pop_front().unwrap();
+
+            let mut success = false;
+            for rotation in &candidate_scanner_rotations.rotations {
+                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation) {
+                    success = true;
+                    merged_scanner.beacons.extend(alignment_result.mapped_beacons);
+                    offsets.push(alignment_result.offset);
+                    break;
+                }
+            }
+
+            if !success {
+                // Back you go for next time
+                all_rotations.push_back(candidate_scanner_rotations);
+            }
+        }
+
+        let mut max_distance: i64 = 0;
+
+        for i in 0..offsets.len() {
+            for j in (i + 1)..offsets.len() {
+                let offset_a = &offsets[i];
+                let offset_b = &offsets[j];
+
+                let distance = offset_a.manhattan_distance(offset_b);
+
+                if distance > max_distance {
+                    max_distance = distance;
+                }
+            }
+        }
+
+        println!("Max distance between scanners: {}", max_distance);
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -2540,8 +2825,11 @@ fn main() {
 
         day17::part1();
         day17::part2();
+
+        day18::part1();
+        day18::part2();
     }
 
-    day18::part1();
-    day18::part2();
+    day19::part1();
+    day19::part2();
 }
