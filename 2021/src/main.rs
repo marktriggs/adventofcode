@@ -2452,7 +2452,7 @@ mod day18 {
     }
 
     pub fn part1() {
-        let numbers = input_lines("input_files/day18_sample.txt").map(|s| tokenise_tree(&s));
+        let numbers = input_lines("input_files/day18.txt").map(|s| tokenise_tree(&s));
         let sum = numbers.reduce(|result, n| sum_snailfish(&result, &n)).unwrap();
 
         println!("Magnitude: {}", magnitude(&parse_tree(sum)));
