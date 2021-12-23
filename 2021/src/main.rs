@@ -2765,6 +2765,163 @@ mod day19 {
     }
 }
 
+mod day20 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
+    struct Position (i64, i64);
+
+    #[derive(Debug, Default)]
+    struct Image {
+        pixels: HashMap<Position, char>,
+        top_left_row: i64,
+        top_left_col: i64,
+        bottom_right_row: i64,
+        bottom_right_col: i64,
+    }
+
+    impl Image {
+        fn new() -> Image {
+            Default::default()
+        }
+
+        fn set_pixel(&mut self,
+                     position: Position,
+                     ch: char) {
+            self.top_left_row = std::cmp::min(self.top_left_row, position.0);
+            self.top_left_col = std::cmp::min(self.top_left_col, position.1);
+            self.bottom_right_row = std::cmp::max(self.bottom_right_row, position.0);
+            self.bottom_right_col = std::cmp::max(self.bottom_right_col, position.1);
+
+            self.pixels.insert(position, ch);
+        }
+
+        fn positions(&self) -> Vec<Position> {
+            let mut result = Vec::new();
+
+            let margin = 10;
+
+            for row in ((self.top_left_row - margin)..=(self.bottom_right_row + margin)) {
+                for col in ((self.top_left_col - margin)..=(self.bottom_right_col + margin)) {
+                    result.push(Position(row, col));
+                }
+            }
+
+            result
+        }
+
+        fn count_lit(&self) -> usize {
+            self.pixels.values().filter(|&&ch| ch == '#').count()
+        }
+
+        fn read_value(&self, position: Position, default_value: usize) -> usize {
+            let mut result = 0;
+
+            for &(offset_row, offset_col) in &[
+                (-1, -1),  (-1, 0),  (-1, 1),
+                (0,  -1),  (0,  0),  (0,  1),
+                (1,  -1),  (1,  0),  (1,  1),
+            ] {
+                let p = Position((position.0 + offset_row), (position.1 + offset_col));
+
+                let bit = match self.pixels.get(&p) {
+                    Some('#') => 1,
+                    Some('.') => 0,
+                    _ => default_value,
+                };
+
+
+                result *= 2;
+                result += bit;
+            }
+
+            result
+        }
+
+        fn print(&self) {
+            let margin = 0;
+
+            for row in ((self.top_left_row - margin)..=(self.bottom_right_row + margin)) {
+                for col in ((self.top_left_col - margin)..=(self.bottom_right_col + margin)) {
+                    let p = Position(row, col);
+
+                    print!("{}",
+                           match self.pixels.get(&p) {
+                               Some(ch) => *ch,
+                               _ => '.'
+                           });
+                }
+                println!();
+            }
+        }
+    }
+
+    fn parse_image(lines: Vec<String>) -> Image {
+        let mut result = Image::new();
+
+        for row in 0..lines.len() {
+            for (col, ch) in lines[row].chars().enumerate() {
+                result.set_pixel(Position(row as i64, col as i64), ch)
+            }
+        }
+
+        result
+    }
+
+    pub fn part1() {
+        let mut it = input_lines("input_files/day20.txt");
+
+        let enhancement_algorithm: Vec<char> = it.next().unwrap().chars().collect();
+        let _ = it.next();
+
+        let mut image = parse_image(it.collect());
+
+        for round in 0..2 {
+            let default_value = (round % 2) as usize;
+
+            let mut next_image = Image::new();
+
+            for position in image.positions() {
+                let ch = enhancement_algorithm[image.read_value(position, default_value)];
+
+                next_image.set_pixel(position, ch);
+            }
+
+            image = next_image;
+        }
+
+        image.print();
+
+        println!("Pixels are LIT: {}", image.count_lit());
+    }
+
+    pub fn part2() {
+        let mut it = input_lines("input_files/day20.txt");
+
+        let enhancement_algorithm: Vec<char> = it.next().unwrap().chars().collect();
+        let _ = it.next();
+
+        let mut image = parse_image(it.collect());
+
+        for round in 0..50 {
+            let default_value = (round % 2) as usize;
+
+            let mut next_image = Image::new();
+
+            for position in image.positions() {
+                let ch = enhancement_algorithm[image.read_value(position, default_value)];
+
+                next_image.set_pixel(position, ch);
+            }
+
+            image = next_image;
+        }
+
+        println!("Pixels are LIT: {}", image.count_lit());
+    }
+}
+
+
 
 mod dayn {
     use crate::shared::*;
@@ -2828,8 +2985,11 @@ fn main() {
 
         day18::part1();
         day18::part2();
+
+        day19::part1();
+        day19::part2();
     }
 
-    day19::part1();
-    day19::part2();
+    day20::part1();
+    day20::part2();
 }
