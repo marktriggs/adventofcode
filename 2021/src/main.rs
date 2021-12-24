@@ -2917,10 +2917,130 @@ mod day20 {
             image = next_image;
         }
 
+        image.print();
+
         println!("Pixels are LIT: {}", image.count_lit());
     }
 }
 
+mod day21 {
+    use crate::shared::*;
+
+    #[derive(Debug, Default, Clone)]
+    struct Player {
+        position: usize,
+        score: usize
+    }
+
+    pub fn part1() {
+        let mut player: Vec<Player> = vec![Default::default(); 2];
+
+        player[0].position = 10;
+        player[1].position = 6;
+
+        let mut dice = 0;
+
+        let mut rolls = 0;
+
+        loop {
+            for &i in &[0, 1] {
+                let roll1 = { dice += 1; dice};
+                rolls += 1;
+                let roll2 = { dice += 1; dice};
+                rolls += 1;
+                let roll3 = { dice += 1; dice};
+                rolls += 1;
+
+                player[i].position += (roll1 + roll2 + roll3);
+
+                if player[i].position > 10 {
+                    player[i].position = ((player[i].position - 1) % 10) + 1;
+                }
+
+                player[i].score += player[i].position;
+
+                if player[i].score >= 1000 {
+                    println!("Player {} wins after {} rolls", i + 1, rolls);
+                    println!("Result: {}", player[(i + 1) % 2].score * rolls);
+                    return;
+                }
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    struct Universe {
+        positions: [usize; 2],
+        scores: [usize; 2],
+        universes_created: usize,
+        next_player: usize,
+    }
+
+    pub fn part2() {
+        let target_score = 21;
+
+        let mut p1_win_count: usize = 0;
+        let mut p2_win_count: usize = 0;
+
+        let roll_sum_frequencies = {
+            let mut map = HashMap::new();
+
+            for roll1 in (1..=3) {
+                for roll2 in (1..=3) {
+                    for roll3 in (1..=3) {
+                        *map.entry(roll1 + roll2 + roll3).or_insert(0) += 1
+                    }
+                }
+            }
+
+            map
+        };
+
+        let mut active_universes = vec!(Universe {
+            positions: [10, 6],
+            scores: [0, 0],
+            universes_created: 1,
+            next_player: 0,
+        });
+
+        while !active_universes.is_empty() {
+            let mut next_universes = Vec::new();
+
+            for universe in active_universes {
+                let player = universe.next_player;
+
+                for roll_total in (3..=9) {
+                    let mut next_universe = universe.clone();
+                    next_universe.positions[player] += roll_total;
+
+                    if next_universe.positions[player] > 10 {
+                        next_universe.positions[player] -= 10;
+                    }
+
+                    next_universe.scores[player] += next_universe.positions[player];
+
+                    next_universe.universes_created *= *roll_sum_frequencies.get(&roll_total).unwrap();
+
+                    next_universe.next_player = (player + 1) % 2;
+
+                    if next_universe.scores[player] >= target_score {
+                        if player == 0 {
+                            p1_win_count += next_universe.universes_created;
+                        } else {
+                            p2_win_count += next_universe.universes_created;
+                        }
+                    } else {
+                        next_universes.push(next_universe);
+                    }
+                }
+            }
+
+            active_universes = next_universes;
+        }
+
+        println!("Player 1: {}; Player 2: {}", p1_win_count, p2_win_count);
+    }
+}
 
 
 mod dayn {
@@ -2988,8 +3108,12 @@ fn main() {
 
         day19::part1();
         day19::part2();
+
+        day20::part1();
+        day20::part2();
     }
 
-    day20::part1();
-    day20::part2();
+    day21::part1();
+    day21::part2();
 }
+
