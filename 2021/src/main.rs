@@ -26,6 +26,7 @@ mod shared {
     pub use std::rc::Rc;
     pub use std::str::{self, FromStr};
     pub use std::sync::{Arc, Mutex};
+    pub use std::ops::RangeInclusive;
 
     pub use anyhow::{anyhow, bail, Error};
 
@@ -757,7 +758,7 @@ mod day8 {
     pub fn part1() {
         let count: usize = input_lines("input_files/day8.txt")
             .map(|line| {
-                 let words = line.split(" | ").nth(1).unwrap().split(' ');
+                let words = line.split(" | ").nth(1).unwrap().split(' ');
                 words
                     .filter(|w| matches!(w.len(), 2 | 3 | 4 | 7))
                     .count()
@@ -770,23 +771,23 @@ mod day8 {
 
 
 
-//   0:      1:      2:      3:      4:
-//  aaaa    ....    aaaa    aaaa    ....
-// b    c  .    c  .    c  .    c  b    c
-// b    c  .    c  .    c  .    c  b    c
-//  ....    ....    dddd    dddd    dddd
-// e    f  .    f  e    .  .    f  .    f
-// e    f  .    f  e    .  .    f  .    f
-//  gggg    ....    gggg    gggg    ....
-//
-//   5:      6:      7:      8:      9:
-//  aaaa    aaaa    aaaa    aaaa    aaaa
-// b    .  b    .  .    c  b    c  b    c
-// b    .  b    .  .    c  b    c  b    c
-//  dddd    dddd    ....    dddd    dddd
-// .    f  e    f  .    f  e    f  .    f
-// .    f  e    f  .    f  e    f  .    f
-//  gggg    gggg    ....    gggg    gggg
+    //   0:      1:      2:      3:      4:
+    //  aaaa    ....    aaaa    aaaa    ....
+    // b    c  .    c  .    c  .    c  b    c
+    // b    c  .    c  .    c  .    c  b    c
+    //  ....    ....    dddd    dddd    dddd
+    // e    f  .    f  e    .  .    f  .    f
+    // e    f  .    f  e    .  .    f  .    f
+    //  gggg    ....    gggg    gggg    ....
+    //
+    //   5:      6:      7:      8:      9:
+    //  aaaa    aaaa    aaaa    aaaa    aaaa
+    // b    .  b    .  .    c  b    c  b    c
+    // b    .  b    .  .    c  b    c  b    c
+    //  dddd    dddd    ....    dddd    dddd
+    // .    f  e    f  .    f  e    f  .    f
+    // .    f  e    f  .    f  e    f  .    f
+    //  gggg    gggg    ....    gggg    gggg
 
 
     fn merge_into_candidates(candidates: &mut HashMap<char, HashSet<char>>,
@@ -1241,8 +1242,8 @@ mod day11 {
 
     pub fn part1() {
         let mut grid = Grid::new(input_lines("input_files/day11.txt")
-                             .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
-                             .collect());
+                                 .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+                                 .collect());
 
         let mut flash_count = 0;
 
@@ -1271,8 +1272,8 @@ mod day11 {
 
     pub fn part2() {
         let mut grid = Grid::new(input_lines("input_files/day11.txt")
-                             .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
-                             .collect());
+                                 .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+                                 .collect());
 
         // 1000: the largest known number
         for step in 0..1000 {
@@ -2576,8 +2577,8 @@ mod day19 {
 
         fn manhattan_distance(&self, other: &XYZ) -> i64 {
             (other.x - self.x).abs() +
-            (other.y - self.y).abs() +
-            (other.z - self.z).abs()
+                (other.y - self.y).abs() +
+                (other.z - self.z).abs()
         }
     }
 
@@ -3043,6 +3044,275 @@ mod day21 {
 }
 
 
+mod day22 {
+    use crate::shared::*;
+
+    fn parse_range(start: &str, end: &str) -> std::ops::RangeInclusive<i64> {
+        start.parse().unwrap()..=end.parse().unwrap()
+    }
+
+    pub fn part1() {
+        let mut world: HashSet<(i64, i64, i64)> = HashSet::new();
+
+        let rule_pattern = Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
+
+        for line in input_lines("input_files/day22.txt") {
+            let mut it = line.split(' ');
+
+            let cmd = it.next();
+
+            let mut it = rule_pattern.captures_iter(it.next().unwrap());
+            let caps = it.next().unwrap();
+
+            let xrange = parse_range(&caps[1], &caps[2]);
+            let yrange = parse_range(&caps[3], &caps[4]);
+            let zrange = parse_range(&caps[5], &caps[6]);
+
+            if cmd == Some("on") {
+                for x in xrange.clone() {
+                    if x >= -50 && x <= 50 {
+                        for y in yrange.clone() {
+                            if y >= -50 && y <= 50 {
+                                for z in zrange.clone() {
+                                    if z >= -50 && z <= 50 {
+                                        world.insert((x, y, z));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                for x in xrange.clone() {
+                    if x >= -50 && x <= 50 {
+                        for y in yrange.clone() {
+                            if y >= -50 && y <= 50 {
+                                for z in zrange.clone() {
+                                    if z >= -50 && z <= 50 {
+                                        world.remove(&(x, y, z));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("Active cubes: {}", world.len());
+    }
+
+    #[derive(Debug, Clone)]
+    struct Cube {
+        top_x: i64,
+        top_y: i64,
+        top_z: i64,
+        bot_x: i64,
+        bot_y: i64,
+        bot_z: i64,
+        split_type: SplitType,
+    }
+
+    #[derive(Debug, Clone)]
+    enum SplitType {
+        None,
+        Left,
+        Right,
+        Front,
+        Back,
+        Top,
+        Bottom,
+    }
+
+    impl Cube {
+
+        // Coordinate system I'm using here
+        //
+        //        z+
+        //      /
+        //    /
+        //  /
+        // ----------x+
+        // |
+        // |
+        // |
+        // |
+        // y+
+
+        fn clip_to(&self, other: &Cube) -> Cube {
+            let mut result = self.clone();
+
+            if result.top_x < other.top_x { result.top_x = other.top_x; }
+            if result.bot_x > other.bot_x { result.bot_x = other.bot_x; }
+
+            if result.top_y < other.top_y { result.top_y = other.top_y; }
+            if result.bot_y > other.bot_y { result.bot_y = other.bot_y; }
+
+            if result.top_z < other.top_z { result.top_z = other.top_z; }
+            if result.bot_z > other.bot_z { result.bot_z = other.bot_z; }
+
+            result
+        }
+
+        fn split(&self, other: &Cube) -> Vec<Cube> {
+            let other = other.clip_to(self);
+
+            let result: Vec<Cube> = vec!(
+                // Left of other
+                Cube {
+                    top_x: self.top_x,
+                    top_y: self.top_y,
+                    top_z: self.top_z,
+                    bot_x: other.top_x - 1,
+                    bot_y: self.bot_y,
+                    bot_z: self.bot_z,
+                    split_type: SplitType::Left,
+                },
+
+                // Right of other
+                Cube {
+                    top_x: other.bot_x + 1,
+                    top_y: self.top_y,
+                    top_z: self.top_z,
+                    bot_x: self.bot_x,
+                    bot_y: self.bot_y,
+                    bot_z: self.bot_z,
+                    split_type: SplitType::Right,
+                },
+
+                // Front of other
+                Cube {
+                    top_x: other.top_x,
+                    top_y: self.top_y,
+                    top_z: self.top_z,
+                    bot_x: other.bot_x,
+                    bot_y: self.bot_y,
+                    bot_z: other.top_z - 1,
+                    split_type: SplitType::Front,
+                },
+
+                // Back of other
+                Cube {
+                    top_x: other.top_x,
+                    top_y: self.top_y,
+                    top_z: other.bot_z + 1,
+                    bot_x: other.bot_x,
+                    bot_y: self.bot_y,
+                    bot_z: self.bot_z,
+                    split_type: SplitType::Back,
+                },
+
+                // Top of other
+                Cube {
+                    top_x: other.top_x,
+                    top_y: self.top_y,
+                    top_z: other.top_z,
+                    bot_x: other.bot_x,
+                    bot_y: other.top_y - 1,
+                    bot_z: other.bot_z,
+                    split_type: SplitType::Top,
+                },
+
+                // Bottom of other
+                Cube {
+                    top_x: other.top_x,
+                    top_y: other.bot_y + 1,
+                    top_z: other.top_z,
+                    bot_x: other.bot_x,
+                    bot_y: self.bot_y,
+                    bot_z: other.bot_z,
+                    split_type: SplitType::Bottom,
+                },
+            ).into_iter().filter(|c| !c.is_empty()).collect();
+
+            for i in 0..result.len() {
+                for j in i+1..result.len() {
+                    assert!(!result[i].overlaps(&result[j]));
+                }
+            }
+
+            result
+        }
+
+        fn is_empty(&self) -> bool {
+            self.top_x > self.bot_x || self.top_y > self.bot_y || self.top_z > self.bot_z
+        }
+
+        fn overlaps(&self, other: &Cube) -> bool {
+            !(self.bot_x < other.top_x ||
+              self.top_x > other.bot_x ||
+              self.bot_y < other.top_y ||
+              self.top_y > other.bot_y ||
+              self.bot_z < other.top_z ||
+              self.top_z > other.bot_z)
+        }
+
+        fn area(&self) -> i64 {
+            (((self.bot_x + 1) - self.top_x) * ((self.bot_y + 1) - self.top_y) * ((self.bot_z + 1) - self.top_z))
+        }
+    }
+
+    pub fn part2() {
+        let rule_pattern = Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
+
+        let mut world = Vec::new();
+
+        for line in input_lines("input_files/day22.txt") {
+            let mut it = line.split(' ');
+
+            let cmd = it.next().unwrap();
+
+            let mut it = rule_pattern.captures_iter(it.next().unwrap());
+            let caps = it.next().unwrap();
+
+            let mut new_world: Vec<Cube> = Vec::new();
+
+            let rule_cube = Cube {
+                top_x: caps[1].parse().unwrap(),
+                top_y: caps[3].parse().unwrap(),
+                top_z: caps[5].parse().unwrap(),
+                bot_x: caps[2].parse().unwrap(),
+                bot_y: caps[4].parse().unwrap(),
+                bot_z: caps[6].parse().unwrap(),
+                split_type: SplitType::None,
+            };
+
+            assert!(!rule_cube.is_empty());
+
+            for cube in world.into_iter() {
+                if rule_cube.overlaps(&cube) {
+                    let splits = cube.split(&rule_cube);
+
+                    if (cube.area() < splits.iter().map(|s| s.area()).sum()) {
+                        dbg!(&cube);
+                        dbg!(&rule_cube);
+
+                        dbg!(cube.area(), splits.iter().map(|s| s.area()).sum::<i64>());
+
+                        dbg!(&splits);
+                    }
+
+
+                    assert!(cube.area() > splits.iter().map(|s| s.area()).sum());
+
+                    new_world.extend(cube.split(&rule_cube));
+                } else {
+                    new_world.push(cube);
+                }
+            }
+
+            if cmd == "on" {
+                new_world.push(rule_cube);
+            }
+
+            world = new_world;
+        }
+
+        println!("{} cubes are on", world.iter().map(|cube| cube.area()).sum::<i64>());
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -3111,9 +3381,12 @@ fn main() {
 
         day20::part1();
         day20::part2();
+
+        day21::part1();
+        day21::part2();
     }
 
-    day21::part1();
-    day21::part2();
+    // day22::part1();
+    day22::part2();
 }
 
