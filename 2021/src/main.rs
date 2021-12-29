@@ -3312,6 +3312,9 @@ mod day22 {
     }
 }
 
+// My first not-very-good attempt.  Good enough for Part 1 but not Part 2.  The
+// Part 2 version does a better job of representing the problem space and as a
+// result was much simpler and more performant.
 mod day23_pt1 {
     use crate::shared::*;
     use Amphipod::*;
@@ -3646,23 +3649,6 @@ mod day23_pt1 {
 mod day23_pt2 {
     use crate::shared::*;
     use Amphipod::*;
-    use Tile::*;
-
-
-    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-    enum Tile {
-        Hallway {
-            idx: usize,
-            occupant: Option<Amphipod>,
-        },
-        Room {
-            idx: usize,
-            upper_occupant: Option<Amphipod>,
-            upmid_occupant: Option<Amphipod>,
-            lowmid_occupant: Option<Amphipod>,
-            lower_occupant: Option<Amphipod>,
-        }
-    }
 
     #[derive(Eq, PartialEq, Debug, Clone, Hash, Copy)]
     enum Amphipod {
@@ -3692,170 +3678,6 @@ mod day23_pt2 {
         }
     }
 
-    type World = Vec<Tile>;
-
-    fn is_complete(world: &World) -> bool {
-        world.iter().all(|t| {
-            match t {
-                Hallway { .. } => true,
-                Room { upper_occupant, upmid_occupant, lowmid_occupant, lower_occupant, .. } => {
-                    upper_occupant == upmid_occupant && upmid_occupant == lowmid_occupant && lowmid_occupant == lower_occupant && upper_occupant.is_some()
-                }
-            }
-        })
-    }
-
-    fn possible_moves(world: &World) -> Vec<(World, usize)> {
-        if is_complete(&world) {
-            return vec!();
-        }
-
-        let mut result = Vec::new();
-
-        // If any amphipod is on a transitory square, it must move.  This constrains the
-        // possible moves.
-        let in_transitory = world.iter().any(|t| {
-            match t {
-                Hallway { idx, occupant: Some(_) } => (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8),
-                _ => false,
-            }
-        });
-
-        for world_idx in 0..world.len() {
-            let tile = &world[world_idx];
-
-            match tile {
-                Hallway { occupant: None, .. } => {}
-                Hallway { occupant: Some(amphipod), idx } => {
-                    // FIXME: missed a rule here.  An amphipod that stops moving in a hallway is
-                    // frozen until it can move into its room.
-
-                    if idx > &0 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
-                        if let Some(target_idx) = world.iter().position(|t| {
-                            match t {
-                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx - 1,
-                                _ => false,
-                            }
-                        }) {
-                            // move it left
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx - 1 };
-                            result.push((new_world, amphipod.energy()));
-                        }
-                    }
-
-                    if idx < &10 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
-                        if let Some(target_idx) = world.iter().position(|t| {
-                            match t {
-                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx + 1,
-                                _ => false,
-                            }
-                        }) {
-                            // move it right
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx + 1 };
-                            result.push((new_world, amphipod.energy()));
-                        }
-                    }
-
-                    if *idx == 2 || *idx == 4 || *idx == 6 || *idx == 8 {
-                        // Outside of a room.  Can enter if we're brave.
-                        let room_idx = (idx / 2) - 1;
-
-                        if amphipod.target_room() == room_idx {
-                            if let Some(target_idx) = world.iter().position(|t| {
-                                match t {
-                                    Room { upper_occupant: None, idx: tile_idx, .. } => *tile_idx == room_idx,
-                                    _ => false,
-                                }
-                            }) {
-                                if let Room { upper_occupant: None, upmid_occupant, lowmid_occupant, lower_occupant, .. } = &world[target_idx] {
-                                    if lower_occupant.is_none() || lower_occupant == &Some(*amphipod) {
-                                        let mut new_world = world.clone();
-                                        new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                                        new_world[target_idx] = Room { upper_occupant: Some(*amphipod),
-                                                                       upmid_occupant: upmid_occupant.clone(),
-                                                                       lowmid_occupant: lowmid_occupant.clone(),
-                                                                       lower_occupant: lower_occupant.clone(),
-                                                                       idx: room_idx };
-                                        result.push((new_world, amphipod.energy()));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Room { .. } => {
-                    if !in_transitory {
-                        if let Room { idx, lower_occupant, lowmid_occupant, upmid_occupant: Some(upmid_occupant), upper_occupant: None } = tile {
-                            // Move upmid to upper
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: lower_occupant.clone(), lowmid_occupant: lowmid_occupant.clone(), upmid_occupant: None, upper_occupant: Some(*upmid_occupant) };
-                            result.push((new_world, upmid_occupant.energy()));
-                        }
-
-                        if let Room { idx, lower_occupant, lowmid_occupant: Some(lowmid_occupant), upmid_occupant: None, upper_occupant } = tile {
-                            // Move lowmid to upmid
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: lower_occupant.clone(), lowmid_occupant: None, upmid_occupant: Some(*lowmid_occupant), upper_occupant: upper_occupant.clone() };
-                            result.push((new_world, lowmid_occupant.energy()));
-                        }
-
-                        if let Room { idx, lower_occupant: Some(lower_occupant), lowmid_occupant: None, upmid_occupant, upper_occupant } = tile {
-                            // Move lower to lowmid
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: None, lowmid_occupant: Some(*lower_occupant), upmid_occupant: upmid_occupant.clone(), upper_occupant: upper_occupant.clone() };
-                            result.push((new_world, lower_occupant.energy()));
-                        }
-
-
-                        if let Room { idx, lower_occupant, lowmid_occupant, upmid_occupant: None, upper_occupant: Some(upper_occupant) } = tile {
-                            // Move upper to upmid
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: lower_occupant.clone(), lowmid_occupant: lowmid_occupant.clone(), upmid_occupant: Some(*upper_occupant), upper_occupant: None };
-                            result.push((new_world, upper_occupant.energy()));
-                        }
-
-                        if let Room { idx, lower_occupant, lowmid_occupant: None, upmid_occupant: Some(upmid_occupant), upper_occupant } = tile {
-                            // Move upmid to lowmid
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: lower_occupant.clone(), lowmid_occupant: Some(*upmid_occupant), upmid_occupant: None, upper_occupant: upper_occupant.clone() };
-                            result.push((new_world, upmid_occupant.energy()));
-                        }
-
-                        if let Room { idx, lower_occupant: None, lowmid_occupant: Some(lowmid_occupant), upmid_occupant, upper_occupant } = tile {
-                            // Move lowmid to lower
-                            let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: Some(*lowmid_occupant), lowmid_occupant: None, upmid_occupant: upmid_occupant.clone(), upper_occupant: upper_occupant.clone() };
-                            result.push((new_world, lowmid_occupant.energy()));
-                        }
-
-                        if let Room { idx, upper_occupant: Some(upper_occupant), upmid_occupant, lowmid_occupant, lower_occupant } = tile {
-                            let hallway_idx = (idx * 2) + 2;
-
-                            if let Some(target_hallway_idx) =  world.iter().position(|t| {
-                                match t {
-                                    Hallway { occupant: None, idx: tile_idx } => *tile_idx == hallway_idx,
-                                    _ => false,
-                                }
-                            }) {
-                                // Move upper into the hallway
-                                let mut new_world = world.clone();
-                                new_world[target_hallway_idx] = Hallway { occupant: Some(*upper_occupant), idx: hallway_idx };
-                                new_world[world_idx] = Room { idx: *idx, upper_occupant: None, upmid_occupant: upmid_occupant.clone(), lowmid_occupant: lowmid_occupant.clone(), lower_occupant: lower_occupant.clone() };
-                                result.push((new_world, upper_occupant.energy()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        result
-    }
-
     #[derive(Clone, Eq, PartialEq)]
     struct Entry {
         world: World,
@@ -3876,115 +3698,296 @@ mod day23_pt2 {
         }
     }
 
-    fn print(world: &World) {
-        let hallways: Vec<String> = (0..=10).map(|idx| {
-            world.iter().find(|t| match t {
-                Hallway { idx: hallway_idx, .. } => *hallway_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|hallway| {
-            match hallway {
-                Hallway { occupant: Some(a), .. } => format!("{:?}", a),
-                _ => ".".to_string(),
+    #[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
+    struct World {
+        hallway: [Option<Amphipod>; 11],
+        rooms: [[Option<Amphipod>; 4]; 4],
+    }
+
+    #[derive(Debug)]
+    struct WorldPosition {
+        x: usize,
+        y: usize,
+    }
+
+    impl WorldPosition {
+        fn distance(&self, other: &Self) -> usize {
+            ((self.x as i64 - other.x as i64).abs() + (self.y as i64 - other.y as i64).abs()) as usize
+        }
+
+        fn to_room(&self) -> (usize, usize) {
+            assert!(self.y > 0);
+            assert!(self.x >= 2 && self.x <= 8 && (self.x & 1) == 0);
+
+            let room_idx = (self.x - 2) / 2;
+            let room_slot = self.y - 1;
+
+            (room_idx, room_slot)
+        }
+    }
+
+    #[derive(Debug)]
+    struct AmphipodPosition {
+        amphipod: Amphipod,
+        position: WorldPosition,
+    }
+
+    impl World {
+        fn is_complete(&self) -> bool {
+            self.hallway.iter().all(|h| {
+                h.is_none() && self.rooms.iter().enumerate().all(|(room_idx, room)| {
+                    room.iter().all(|amphipod| amphipod.map(|a| a.target_room() == room_idx).unwrap_or(false))
+                })
+            })
+        }
+
+        fn unmoved_amphipods(&self) -> Vec<AmphipodPosition> {
+            // Our set of Amphipods that need to get out of the way.  That's anyone who is
+            // at the top of the wrong room, or at the top of the right room but blocking
+            // someone from getting out.
+            let mut result = Vec::new();
+
+            let room_count = self.rooms.len();
+
+            let unfinished_rooms: Vec<usize> = (0..room_count).filter(|&room_idx| {
+                self.rooms[room_idx].iter().any(|a| a.map(|a| a.target_room() != room_idx).unwrap_or(false))
+            }).collect();
+
+            for room_idx in unfinished_rooms {
+                let to_move_slot = self.rooms[room_idx].iter().enumerate().find(|(_slot_idx, a)| a.is_some()).unwrap().0;
+
+                result.push(AmphipodPosition {
+                    amphipod: self.rooms[room_idx][to_move_slot].unwrap(),
+                    position: WorldPosition { x: (room_idx * 2 + 2), y: to_move_slot + 1 },
+                });
             }
-        }).collect();
 
-        let upper_room: Vec<String> = (0..=3).map(|idx| {
-            world.iter().find(|t| match t {
-                Room { idx: room_idx, .. } => *room_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|room| {
-            match room {
-                Room { upper_occupant: Some(a), .. } => format!("{:?}", a),
-                _ => ".".to_string(),
+            result
+        }
+
+        fn free_hallway_positions(&self) -> Vec<WorldPosition> {
+            let mut result = Vec::new();
+
+            for x in 0..self.hallway.len() {
+                if self.hallway[x].is_none() && (x != 2 && x != 4 && x != 6 && x != 8)  {
+                    result.push(WorldPosition { x, y: 0 });
+                }
             }
-        }).collect();
 
-        let lower_room: Vec<String> = (0..=3).map(|idx| {
-            world.iter().find(|t| match t {
-                Room { idx: room_idx, .. } => *room_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|room| {
-            match room {
-                Room { lower_occupant: Some(a), .. } => format!("{:?}", a),
-                _ => ".".to_string(),
+            result
+        }
+
+        fn move_amphipod_to_hallway(&self, a: &AmphipodPosition, h: &WorldPosition) -> (World, usize) {
+            let cost = a.position.distance(h) * a.amphipod.energy();
+
+            let mut next_world: World = self.clone();
+            let (room_idx, room_slot) = a.position.to_room();
+
+            next_world.rooms[room_idx][room_slot] = None;
+            next_world.hallway[h.x] = Some(a.amphipod);
+
+            (next_world, cost)
+        }
+
+        fn waiting_amphipods(&self) -> Vec<AmphipodPosition> {
+            self.hallway.iter()
+                .enumerate().map(|(x, h)|
+                                 h.map(|a| AmphipodPosition {
+                                     amphipod: a,
+                                     position: WorldPosition { x, y: 0 }
+                                 }))
+                .flatten()
+                .collect()
+        }
+
+        fn room_ready_for(&self, amphipod: &Amphipod) -> Option<WorldPosition> {
+            let room_idx = amphipod.target_room();
+
+            let slot_count = self.rooms[0].len();
+
+            if self.rooms[room_idx].iter().all(|slot| slot.is_none() || slot.as_ref() == Some(amphipod)) {
+                // We can put our amphipod in the highest available room slot
+                return Some(WorldPosition {
+                    x: (room_idx * 2) + 2,
+                    y: (0..slot_count).rev().find(|&slot_idx| self.rooms[room_idx][slot_idx].is_none()).unwrap() + 1,
+                });
             }
-        }).collect();
 
+            None
+        }
 
-        println!("
+        fn move_amphimod_to_room(&self, a: &AmphipodPosition, room: &WorldPosition) -> (World, usize) {
+            let cost = a.position.distance(room) * a.amphipod.energy();
+
+            let mut next_world: World = self.clone();
+            let (room_idx, room_slot) = room.to_room();
+
+            next_world.rooms[room_idx][room_slot] = Some(a.amphipod);
+            next_world.hallway[a.position.x] = None;
+
+            (next_world, cost)
+        }
+
+        fn can_move(&self, source: &WorldPosition, target: &WorldPosition) -> bool {
+            if source.y == 0 {
+                // Moving from hallway to a room
+                if source.x < target.x {
+                    // Moving right
+                    ((source.x + 1)..=target.x).all(|p| self.hallway[p].is_none())
+                } else {
+                    // Moving left
+                    (target.x..=(source.x - 1)).all(|p| self.hallway[p].is_none())
+                }
+            } else {
+                // Moving from a room to a hallway
+                if source.x < target.x {
+                    // Moving right
+                    (source.x..=target.x).all(|p| self.hallway[p].is_none())
+                } else {
+                    // Moving left
+                    (target.x..=source.x).all(|p| self.hallway[p].is_none())
+                }
+            }
+        }
+
+        fn possible_moves(&self) -> Vec<(World, usize)> {
+            if self.is_complete() {
+                return vec!();
+            }
+
+            let mut result = Vec::new();
+
+            // Amphipods that are still in their starting room can be moved out
+            for a in self.unmoved_amphipods() {
+                for h in self.free_hallway_positions() {
+                    if self.can_move(&a.position, &h) {
+                        let (next_world, cost) = self.move_amphipod_to_hallway(&a, &h);
+                        result.push((next_world, cost));
+                    }
+                }
+            }
+
+            // Amphipods that are waiting in the hallway can be moved into their finishing room
+            for a in self.waiting_amphipods() {
+                if let Some(room) = self.room_ready_for(&a.amphipod) {
+                    // If the hallway is blocked by another amphipod, we can't make the move
+                    if self.can_move(&a.position, &room) {
+                        let (next_world, cost) = self.move_amphimod_to_room(&a, &room);
+                        result.push((next_world, cost));
+                    }
+                }
+            }
+
+            result
+        }
+
+        fn print(&self) {
+            println!("
+#############
+#{}{}{}{}{}{}{}{}{}{}{}#
+###{}#{}#{}#{}###
+  #{}#{}#{}#{}#
+  #{}#{}#{}#{}#
+  #{}#{}#{}#{}#
+  #########
+",
+                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+            );
+        }
+
+        fn print_2(&self) {
+            println!("
 #############
 #{}{}{}{}{}{}{}{}{}{}{}#
 ###{}#{}#{}#{}###
   #{}#{}#{}#{}#
   #########
 ",
-                 hallways[0],
-                 hallways[1],
-                 hallways[2],
-                 hallways[3],
-                 hallways[4],
-                 hallways[5],
-                 hallways[6],
-                 hallways[7],
-                 hallways[8],
-                 hallways[9],
-                 hallways[10],
-                 upper_room[0],
-                 upper_room[1],
-                 upper_room[2],
-                 upper_room[3],
-                 lower_room[0],
-                 lower_room[1],
-                 lower_room[2],
-                 lower_room[3],
-                 );
+                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+            );
+        }
+
     }
 
-    // The horror! (pt 2)
+
     pub fn part2() {
-        let world = vec!(
-            Hallway { idx: 0, occupant: None },
-            Hallway { idx: 1, occupant: None },
-            Hallway { idx: 2, occupant: None },
-            Hallway { idx: 3, occupant: None },
-            Hallway { idx: 4, occupant: None },
-            Hallway { idx: 5, occupant: None },
-            Hallway { idx: 6, occupant: None },
-            Hallway { idx: 7, occupant: None },
-            Hallway { idx: 8, occupant: None },
-            Hallway { idx: 9, occupant: None },
-            Hallway { idx: 10, occupant: None },
-            Room { idx: 0, upper_occupant: Some(C), upmid_occupant: Some(D), lowmid_occupant: Some(D), lower_occupant: Some(B) },
-            Room { idx: 1, upper_occupant: Some(D), upmid_occupant: Some(C), lowmid_occupant: Some(B), lower_occupant: Some(A) },
-            Room { idx: 2, upper_occupant: Some(A), upmid_occupant: Some(B), lowmid_occupant: Some(A), lower_occupant: Some(D) },
-            Room { idx: 3, upper_occupant: Some(B), upmid_occupant: Some(A), lowmid_occupant: Some(C), lower_occupant: Some(C) },
-        );
+        let mut first_world = World::default();
+
+        first_world.rooms = [
+            [Some(C), Some(D), Some(D), Some(B)],
+            [Some(D), Some(C), Some(B), Some(A)],
+            [Some(A), Some(B), Some(A), Some(D)],
+            [Some(B), Some(A), Some(C), Some(C)],
+        ];
 
         let mut queue = BinaryHeap::new();
 
         queue.push(Entry {
-            world: world.clone(),
+            world: first_world.clone(),
             cost: 0,
             position: 0,
         });
 
         let mut seen_states: HashMap<World, usize> = HashMap::new();
-        seen_states.insert(world, 0);
+        seen_states.insert(first_world.clone(), 0);
 
         let mut position = 1;
         let mut checked: usize = 0;
 
         while let Some(entry) = queue.pop() {
             checked += 1;
-            if is_complete(&entry.world) {
+            if entry.world.is_complete() {
                 println!("Completed with cost: {}", seen_states.get(&entry.world).unwrap());
                 break;
             }
 
-            let next_moves = possible_moves(&entry.world);
+            // entry.world.print();
+
+            let next_moves = entry.world.possible_moves();
 
             for (next_move, cost) in next_moves {
                 if let Some(best_cost) = seen_states.get(&next_move) {
@@ -4088,5 +4091,12 @@ fn main() {
 
     // day23_pt1::part1();
     day23_pt2::part2();
+
+    // New approach:
+    //
+    // Each amphipod is moved directly from their start position to their stopping location in the hallway, then directly from their hallway location to their final room
+    // We can skip the positions in the hallways in front of doors because they never stop there
+    // but we'll generate a lot more possible moves in each step.
+    // Treat the whole thing more like a graph...
 }
 
