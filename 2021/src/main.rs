@@ -3312,6 +3312,337 @@ mod day22 {
     }
 }
 
+mod day23 {
+    use crate::shared::*;
+    use Amphipod::*;
+    use Tile::*;
+
+
+    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+    enum Tile {
+        Hallway {
+            idx: usize,
+            occupant: Option<Amphipod>,
+        },
+        Room {
+            idx: usize,
+            upper_occupant: Option<Amphipod>,
+            lower_occupant: Option<Amphipod>,
+        }
+    }
+
+    #[derive(Eq, PartialEq, Debug, Clone, Hash, Copy)]
+    enum Amphipod {
+        A,
+        B,
+        C,
+        D
+    }
+
+    impl Amphipod {
+        fn energy(&self) -> usize {
+            match *self {
+                A => 1,
+                B => 10,
+                C => 100,
+                D => 1000,
+            }
+        }
+
+        fn target_room(&self) -> usize {
+            match *self {
+                A => 0,
+                B => 1,
+                C => 2,
+                D => 3,
+            }
+        }
+    }
+
+    type World = Vec<Tile>;
+
+    fn is_complete(world: &World) -> bool {
+        world.iter().all(|t| {
+            match t {
+                Hallway { .. } => true,
+                Room { upper_occupant, lower_occupant, .. } => {
+                    upper_occupant == lower_occupant && upper_occupant.is_some()
+                }
+            }
+        })
+    }
+
+    fn possible_moves(world: &World) -> Vec<(World, usize)> {
+        if is_complete(&world) {
+            return vec!();
+        }
+
+        let mut result = Vec::new();
+
+        // If any amphipod is on a transitory square, it must move.  This constrains the
+        // possible moves.
+        let in_transitory = world.iter().any(|t| {
+            match t {
+                Hallway { idx, occupant: Some(_) } => (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8),
+                _ => false,
+            }
+        });
+
+        for world_idx in 0..world.len() {
+            let tile = &world[world_idx];
+
+            match tile {
+                Hallway { occupant: None, .. } => {}
+                Hallway { occupant: Some(amphipod), idx } => {
+                    // FIXME: missed a rule here.  An amphipod that stops moving in a hallway is
+                    // frozen until it can move into its room.
+
+                    if idx > &0 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
+                        if let Some(target_idx) = world.iter().position(|t| {
+                            match t {
+                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx - 1,
+                                _ => false,
+                            }
+                        }) {
+                            // move it left
+                            let mut new_world = world.clone();
+                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
+                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx - 1 };
+                            result.push((new_world, amphipod.energy()));
+                        }
+                    }
+
+                    if idx < &10 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
+                        if let Some(target_idx) = world.iter().position(|t| {
+                            match t {
+                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx + 1,
+                                _ => false,
+                            }
+                        }) {
+                            // move it right
+                            let mut new_world = world.clone();
+                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
+                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx + 1 };
+                            result.push((new_world, amphipod.energy()));
+                        }
+                    }
+
+                    if *idx == 2 || *idx == 4 || *idx == 6 || *idx == 8 {
+                        // Outside of a room.  Can enter if we're brave.
+                        let room_idx = (idx / 2) - 1;
+
+                        if amphipod.target_room() == room_idx {
+                            if let Some(target_idx) = world.iter().position(|t| {
+                                match t {
+                                    Room { upper_occupant: None, idx: tile_idx, .. } => *tile_idx == room_idx,
+                                    _ => false,
+                                }
+                            }) {
+                                if let Room { upper_occupant: None, lower_occupant, .. } = &world[target_idx] {
+                                    if lower_occupant.is_none() || lower_occupant == &Some(*amphipod) {
+                                        let mut new_world = world.clone();
+                                        new_world[world_idx] = Hallway { occupant: None, idx: *idx };
+                                        new_world[target_idx] = Room { upper_occupant: Some(*amphipod), lower_occupant: lower_occupant.clone(), idx: room_idx };
+                                        result.push((new_world, amphipod.energy()));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Room { .. } => {
+                    if !in_transitory {
+                        if let Room { idx, lower_occupant: Some(lower_occupant), upper_occupant: None } = tile {
+                            // Move lower to upper
+                            let mut new_world = world.clone();
+                            new_world[world_idx] = Room { idx: *idx, lower_occupant: None, upper_occupant: Some(*lower_occupant) };
+                            result.push((new_world, lower_occupant.energy()));
+                        }
+
+                        if let Room { idx, lower_occupant: None, upper_occupant: Some(upper_occupant) } = tile {
+                            // Move upper to lower
+                            let mut new_world = world.clone();
+                            new_world[world_idx] = Room { idx: *idx, lower_occupant: Some(*upper_occupant), upper_occupant: None };
+                            result.push((new_world, upper_occupant.energy()));
+                        }
+
+                        if let Room { idx, upper_occupant: Some(upper_occupant), lower_occupant } = tile {
+                            let hallway_idx = (idx * 2) + 2;
+
+                            if let Some(target_hallway_idx) =  world.iter().position(|t| {
+                                match t {
+                                    Hallway { occupant: None, idx: tile_idx } => *tile_idx == hallway_idx,
+                                    _ => false,
+                                }
+                            }) {
+                                // Move them up into the hallway
+                                let mut new_world = world.clone();
+                                new_world[target_hallway_idx] = Hallway { occupant: Some(*upper_occupant), idx: hallway_idx };
+                                new_world[world_idx] = Room { idx: *idx, upper_occupant: None, lower_occupant: lower_occupant.clone() };
+                                result.push((new_world, upper_occupant.energy()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    #[derive(Clone, Eq, PartialEq)]
+    struct Entry {
+        world: World,
+        cost: usize,
+        position: usize,
+    }
+
+    impl Ord for Entry {
+        fn cmp(&self, other: &Self) -> Ordering {
+            other.cost.cmp(&(self.cost))
+                .then_with(|| self.position.cmp(&other.position))
+        }
+    }
+
+    impl PartialOrd for Entry {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    fn print(world: &World) {
+        let hallways: Vec<String> = (0..=10).map(|idx| {
+            world.iter().find(|t| match t {
+                Hallway { idx: hallway_idx, .. } => *hallway_idx == idx,
+                _ => false,
+            }).unwrap()
+        }).map(|hallway| {
+            match hallway {
+                Hallway { occupant: Some(a), .. } => format!("{:?}", a),
+                _ => ".".to_string(),
+            }
+        }).collect();
+
+        let upper_room: Vec<String> = (0..=3).map(|idx| {
+            world.iter().find(|t| match t {
+                Room { idx: room_idx, .. } => *room_idx == idx,
+                _ => false,
+            }).unwrap()
+        }).map(|room| {
+            match room {
+                Room { upper_occupant: Some(a), .. } => format!("{:?}", a),
+                _ => ".".to_string(),
+            }
+        }).collect();
+
+        let lower_room: Vec<String> = (0..=3).map(|idx| {
+            world.iter().find(|t| match t {
+                Room { idx: room_idx, .. } => *room_idx == idx,
+                _ => false,
+            }).unwrap()
+        }).map(|room| {
+            match room {
+                Room { lower_occupant: Some(a), .. } => format!("{:?}", a),
+                _ => ".".to_string(),
+            }
+        }).collect();
+
+
+        println!("
+#############
+#{}{}{}{}{}{}{}{}{}{}{}#
+###{}#{}#{}#{}###
+  #{}#{}#{}#{}#
+  #########
+",
+                 hallways[0],
+                 hallways[1],
+                 hallways[2],
+                 hallways[3],
+                 hallways[4],
+                 hallways[5],
+                 hallways[6],
+                 hallways[7],
+                 hallways[8],
+                 hallways[9],
+                 hallways[10],
+                 upper_room[0],
+                 upper_room[1],
+                 upper_room[2],
+                 upper_room[3],
+                 lower_room[0],
+                 lower_room[1],
+                 lower_room[2],
+                 lower_room[3],
+                 );
+    }
+
+    // The horror!
+    pub fn part1() {
+        let world = vec!(
+            Hallway { idx: 0, occupant: None },
+            Hallway { idx: 1, occupant: None },
+            Hallway { idx: 2, occupant: None },
+            Hallway { idx: 3, occupant: None },
+            Hallway { idx: 4, occupant: None },
+            Hallway { idx: 5, occupant: None },
+            Hallway { idx: 6, occupant: None },
+            Hallway { idx: 7, occupant: None },
+            Hallway { idx: 8, occupant: None },
+            Hallway { idx: 9, occupant: None },
+            Hallway { idx: 10, occupant: None },
+            Room { idx: 0, upper_occupant: Some(C), lower_occupant: Some(B) },
+            Room { idx: 1, upper_occupant: Some(D), lower_occupant: Some(A) },
+            Room { idx: 2, upper_occupant: Some(A), lower_occupant: Some(D) },
+            Room { idx: 3, upper_occupant: Some(B), lower_occupant: Some(C) },
+        );
+
+        let mut queue = BinaryHeap::new();
+
+        queue.push(Entry {
+            world: world.clone(),
+            cost: 0,
+            position: 0,
+        });
+
+        let mut seen_states: HashMap<World, usize> = HashMap::new();
+        seen_states.insert(world, 0);
+
+        let mut position = 1;
+        let mut checked: usize = 0;
+
+        while let Some(entry) = queue.pop() {
+            checked += 1;
+            if is_complete(&entry.world) {
+                println!("Completed with cost: {}", seen_states.get(&entry.world).unwrap());
+                break;
+            }
+
+            let next_moves = possible_moves(&entry.world);
+
+            for (next_move, cost) in next_moves {
+                if let Some(best_cost) = seen_states.get(&next_move) {
+                    if *best_cost <= entry.cost + cost {
+                        continue;
+                    }
+                }
+
+                seen_states.insert(next_move.clone(), entry.cost + cost);
+
+                queue.push(Entry {
+                    world: next_move,
+                    cost: entry.cost + cost,
+                    position,
+                });
+
+                position += 1;
+            }
+        }
+
+        println!("Checked {} combinations", checked);
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -3384,9 +3715,11 @@ fn main() {
 
         day21::part1();
         day21::part2();
+
+        day22::part1();
+        day22::part2();
     }
 
-    // day22::part1();
-    day22::part2();
+    day23::part1();
 }
 
