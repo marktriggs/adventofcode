@@ -28,6 +28,8 @@ mod shared {
     pub use std::sync::{Arc, Mutex};
     pub use std::ops::RangeInclusive;
 
+    pub use rand::Rng;
+
     pub use anyhow::{anyhow, bail, Error};
 
     pub use itertools::Itertools;
@@ -4013,6 +4015,632 @@ mod day23_pt2 {
 }
 
 
+mod day24 {
+    use crate::shared::*;
+
+    #[derive(Debug, Default)]
+    struct State {
+        input: Vec<i64>,
+        input_idx: usize,
+        w: i64,
+        x: i64,
+        y: i64,
+        z: i64,
+    }
+
+    impl State {
+        fn next_input(&mut self) -> i64 {
+            let r = self.input[self.input_idx];
+            self.input_idx += 1;
+            r
+        }
+    }
+
+    pub fn part1() {
+
+        fn check_2_3(input_2: i64, input_3: i64) -> bool {
+            (((input_2 + 3) % 26) + -11) == input_3
+        }
+
+        fn check_4_5(input_4: i64, input_5: i64) -> bool {
+            (((input_4 + 9) % 26) + -4) == input_5
+        }
+
+        fn check_8_9(input_8: i64, input_9: i64) -> bool {
+            (((input_8 + 0) % 26) + -2) == input_9
+        }
+
+
+        fn combined(input: &[i64]) -> bool {
+            if (((input[2] + 3) % 26) + -11) != input[3] { return false; }
+            if (((input[4] + 9) % 26) + -4) != input[5] { return false; }
+            if (((input[8] + 0) % 26) + -2) != input[9] { return false; }
+
+            let mut z = (input[0] + 13);
+
+            z = (z * 26) + (input[1] + 10);
+            z = (z * 26) + (input[2] + 3);
+
+            // DONE
+            if ((z % 26) + -11) != input[3] { return false; }
+            z = (z / 26);
+
+            z = (z * 26) + (input[4] + 9);
+
+            // DONE
+            if ((z % 26) + -4) != input[5] { return false; };
+            z = (z / 26);
+
+            z = (z * 26) + (input[6] + 5);
+            z = (z * 26) + (input[7] + 1);
+            z = (z * 26) + input[8];
+
+            // DONE
+            if ((z % 26) + -2) != input[9] { return false; };
+            z = (z / 26);
+
+            if ((z % 26) + -5) != input[10] { return false; };
+            z = (z / 26);
+
+            if ((z % 26) + -11) != input[11] { return false; };
+            z = (z / 26);
+
+            if ((z % 26) + -13) != input[12] { return false; };
+            z = (z / 26);
+
+            if ((z % 26) + -10) != input[13] { return false; };
+            // z = (z / 26);
+
+            true
+        }
+
+
+        fn digit_1(w: i64, _z: i64) -> i64 {
+            (w + 13)
+        }
+
+        fn digit_2(w: i64, z: i64) -> i64 {
+            (z * 26) + (w + 10)
+        }
+
+        fn digit_3(w: i64, z: i64) -> i64 {
+            (z * 26) + (w + 3)
+        }
+
+        fn digit_4(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -11) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 1) * x)
+        }
+
+        fn digit_5(w: i64, z: i64) -> i64 {
+            (z * 26) + (w + 9)
+        }
+
+        fn digit_6(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -4) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 3) * x)
+        }
+
+        fn digit_7(w: i64, z: i64) -> i64 {
+            (z * 26) + (w + 5)
+        }
+        fn digit_8(w: i64, z: i64) -> i64 {
+            (z * 26) + (w + 1)
+        }
+
+        fn digit_9(w: i64, z: i64) -> i64 {
+            (z * 26) + w
+        }
+
+        fn digit_10(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -2) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 13) * x)
+        }
+
+        fn digit_11(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -5) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 7) * x)
+        }
+
+        fn digit_12(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -11) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 15) * x)
+        }
+
+
+        fn digit_13(w: i64, z: i64) -> i64 {
+            // 14 <= (z % 26) <= 22
+            // z >= 0 && z <= 672
+            let x = if ((z % 26) + -13) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 12) * x)
+        }
+
+        // 11 <= (z % 26) <= 19
+        // z < 26
+        fn digit_14(w: i64, z: i64) -> i64 {
+            let x = if ((z % 26) + -10) == w { 0 } else { 1 };
+            ((z / 26) * ((25 * x) + 1)) + ((w + 8) * x)
+        }
+
+
+
+        fn solve(digit_fns: &mut Vec<Box<dyn Fn(i64, i64) -> i64>>,
+                 target_digit: usize,
+                 target_z: i64,
+                 number: Vec<i64>,
+        ) {
+            for z in 0..500 {
+                for w in (1..=9).rev() {
+                    dbg!(&z, &w);
+                    if digit_fns[target_digit](w, z) == target_z {
+                        let mut number = number.clone();
+                        number.push(w);
+
+                        if target_digit == 0 {
+                            number.reverse();
+                            println!("{:?}", &number);
+                        } else {
+                            println!("Hit: z={}, w={}", z, w);
+                            solve(digit_fns, target_digit - 1, z, number);
+                        }
+                    }
+                }
+            }
+        }
+
+        fn digit_1_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 10;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 13;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_2_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 13;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 10;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_3_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 13;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 3;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_4_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -11;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 1;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_5_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 11;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 9;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_6_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -4;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 3;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_7_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 12;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 5;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_8_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 12;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 1;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_9_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 1;
+            x = x + 15;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 0;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_10_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -2;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 13;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_11_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -5;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 7;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_12_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -11;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 15;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_13_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -13;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 12;
+            y = y * x;
+            z = z + y;
+            z
+        }
+        fn digit_14_orig(w: i64, mut z: i64) -> i64 {
+            let mut x: i64 = 0;
+            let mut y: i64 = 0;
+            x = x * 0;
+            x = x + z;
+            x = x % 26;
+            z = z / 26;
+            x = x + -10;
+            x = if x == w { 1 } else { 0 };
+            x = if x == 0 { 1 } else { 0 };
+            y = y * 0;
+            y = y + 25;
+            y = y * x;
+            y = y + 1;
+            z = z * y;
+            y = y * 0;
+            y = y + w;
+            y = y + 8;
+            y = y * x;
+            z = z + y;
+            z
+        }
+
+        // Checking my refactoring
+        if combined(&[2, 5, 9, 1, 4, 9, 9, 6, 8, 6, 2, 3, 2, 5]) {
+            println!("STILL GOT IT");
+        } else {
+            println!("FAILCAKE");
+        }
+
+        'outer1:
+        for a in (1..=9).rev() {
+            for b in (1..=9).rev() {
+                if (check_2_3(a, b)) {
+                    println!("Highest 2/3: {} {}", a, b);
+                    break 'outer1;
+                }
+            }
+        }
+
+        'outer2:
+        for a in (1..=9).rev() {
+            for b in (1..=9).rev() {
+                if (check_4_5(a, b)) {
+                    println!("Highest 4/5: {} {}", a, b);
+                    break 'outer2;
+                }
+            }
+        }
+
+        'outer3:
+        for a in (1..=9).rev() {
+            for b in (1..=9).rev() {
+                if (check_8_9(a, b)) {
+                    println!("Highest 8/9: {} {}", a, b);
+                    break 'outer3;
+                }
+            }
+        }
+
+        'outer1a:
+        for a in (1..=9) {
+            for b in (1..=9) {
+                if (check_2_3(a, b)) {
+                    println!("Lowest 2/3: {} {}", a, b);
+                    break 'outer1a;
+                }
+            }
+        }
+
+        'outer2a:
+        for a in (1..=9) {
+            for b in (1..=9) {
+                if (check_4_5(a, b)) {
+                    println!("Lowest 4/5: {} {}", a, b);
+                    break 'outer2a;
+                }
+            }
+        }
+
+        'outer3a:
+        for a in (1..=9) {
+            for b in (1..=9) {
+                if (check_8_9(a, b)) {
+                    println!("Lowest 8/9: {} {}", a, b);
+                    break 'outer3a;
+                }
+            }
+        }
+
+
+        {
+            // LARGEST (pt1): 69914999975369
+
+            // Highest 2/3: 9 1
+            // Highest 4/5: 4 9
+            // Highest 8/9: 9 7
+            let mut input = [1, 1, 9, 1, 4, 9, 1, 1, 9, 7, 1, 1, 1, 1];
+
+            let mut best = input.clone();
+
+            'outer_highest:
+            loop {
+                if combined(&input) {
+                    best = input.clone();
+                }
+
+                // Next tick
+                for i in (0..=13).rev() {
+                    if i == 2 || i == 3 || i == 4 || i == 5 || i == 8 || i == 9 {
+                        // Already optimised...
+                        continue;
+                    }
+
+                    if input[i] == 9 {
+                        if i == 0 {
+                            break 'outer_highest;
+                        }
+
+                        input[i] = 1;
+                    } else {
+                        input[i] += 1;
+                        break;
+                    }
+                }
+            }
+
+            dbg!(&best);
+        }
+
+        {
+            // Lowest 2/3: 9 1
+            // Lowest 4/5: 1 6
+            // Lowest 8/9: 3 1
+
+            // LOWEST: pt 2: 14911675311114
+
+            let mut input = [1, 1, 9, 1, 1, 6, 1, 1, 3, 1, 1, 1, 1, 1];
+
+            'outer_lowest:
+            loop {
+                if combined(&input) {
+                    dbg!(input.clone());
+                    break;
+                }
+
+                // Next tick... move from left to right this time.
+                for i in (0..=13) {
+                    if i == 2 || i == 3 || i == 4 || i == 5 || i == 8 || i == 9 {
+                        // Already optimised...
+                        continue;
+                    }
+
+                    if input[i] == 9 {
+                        input[i] = 1;
+                    } else {
+                        input[i] += 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -4087,16 +4715,11 @@ fn main() {
 
         day22::part1();
         day22::part2();
+
+        day23_pt1::part1();
+        day23_pt2::part2();
     }
 
-    // day23_pt1::part1();
-    day23_pt2::part2();
-
-    // New approach:
-    //
-    // Each amphipod is moved directly from their start position to their stopping location in the hallway, then directly from their hallway location to their final room
-    // We can skip the positions in the hallways in front of doors because they never stop there
-    // but we'll generate a lot more possible moves in each step.
-    // Treat the whole thing more like a graph...
+    day24::part1();
 }
 
