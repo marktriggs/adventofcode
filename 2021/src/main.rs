@@ -4613,7 +4613,6 @@ mod day24 {
 
             let mut input = [1, 1, 9, 1, 1, 6, 1, 1, 3, 1, 1, 1, 1, 1];
 
-            'outer_lowest:
             loop {
                 if combined(&input) {
                     dbg!(input.clone());
@@ -4640,6 +4639,101 @@ mod day24 {
     }
 }
 
+
+mod day25 {
+    use crate::shared::*;
+    use Tile::*;
+
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    enum Tile {
+        East,
+        South,
+        Empty,
+    }
+
+    #[derive(Debug)]
+    struct Move {
+        row: usize,
+        col: usize,
+        mover: Tile,
+    }
+
+    #[derive(Debug)]
+    struct Grid {
+        rows: Vec<Vec<Tile>>,
+        width: usize,
+        height: usize,
+    }
+
+    impl Grid {
+        fn parse(it: impl Iterator<Item=String>) -> Grid {
+            let rows: Vec<Vec<Tile>> = it.map(|line| {
+                line.chars().map(|ch| match ch {
+                    '>' => East,
+                    'v' => South,
+                    _ => Empty
+                }).collect()
+            }).collect();
+
+            let width = rows[0].len();
+            let height = rows.len();
+
+            Grid { rows, width, height }
+        }
+
+        fn advance(&self, row: usize, col: usize, mover: Tile) -> (usize, usize) {
+            match mover {
+                East => (row, (col + 1) % self.width),
+                South => ((row + 1) % self.height, col),
+                Empty => panic!("can't move an empty tile"),
+            }
+        }
+
+        fn step(&mut self) -> bool {
+            let mut moved = false;
+
+            for mover in &[East, South] {
+                let mut moves = Vec::new();
+
+                for row in 0..self.height {
+                    for col in 0..self.width {
+                        if self.rows[row][col] == *mover {
+                            let (next_row, next_col) = self.advance(row, col, *mover);
+                            if self.rows[next_row][next_col] == Empty {
+                                moves.push(Move { row, col, mover: *mover });
+                            }
+                        }
+                    }
+                }
+
+                // Apply our moves
+                for m in moves {
+                    self.rows[m.row][m.col] = Empty;
+                    let (next_row, next_col) = self.advance(m.row, m.col, m.mover);
+                    self.rows[next_row][next_col] = m.mover;
+
+                    moved = true;
+                }
+            }
+
+            moved
+        }
+    }
+
+    pub fn part1() {
+        let mut grid = Grid::parse(input_lines("input_files/day25.txt"));
+
+        let mut step = 1;
+
+        while grid.step() {
+            step += 1;
+        }
+
+        println!("Cucumbers settled after {} steps", step);
+    }
+
+    pub fn part2() {}
+}
 
 mod dayn {
     use crate::shared::*;
@@ -4718,8 +4812,12 @@ fn main() {
 
         day23_pt1::part1();
         day23_pt2::part2();
+
+        day24::part1();
     }
 
-    day24::part1();
+    day25::part1();
+
+
 }
 
