@@ -2862,8 +2862,8 @@ mod day20 {
     fn parse_image(lines: Vec<String>) -> Image {
         let mut result = Image::new();
 
-        for row in 0..lines.len() {
-            for (col, ch) in lines[row].chars().enumerate() {
+        for (row, line) in lines.iter().enumerate() {
+            for (col, ch) in line.chars().enumerate() {
                 result.set_pixel(Position(row as i64, col as i64), ch)
             }
         }
@@ -3317,6 +3317,7 @@ mod day22 {
 // My first not-very-good attempt.  Good enough for Part 1 but not Part 2.  The
 // Part 2 version does a better job of representing the problem space and as a
 // result was much simpler and more performant.
+#[allow(clippy::ptr_arg)]
 mod day23_pt1 {
     use crate::shared::*;
     use Amphipod::*;
@@ -3378,7 +3379,7 @@ mod day23_pt1 {
     }
 
     fn possible_moves(world: &World) -> Vec<(World, usize)> {
-        if is_complete(&world) {
+        if is_complete(world) {
             return vec!();
         }
 
@@ -3447,7 +3448,7 @@ mod day23_pt1 {
                                     if lower_occupant.is_none() || lower_occupant == &Some(*amphipod) {
                                         let mut new_world = world.clone();
                                         new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                                        new_world[target_idx] = Room { upper_occupant: Some(*amphipod), lower_occupant: lower_occupant.clone(), idx: room_idx };
+                                        new_world[target_idx] = Room { upper_occupant: Some(*amphipod), lower_occupant: *lower_occupant, idx: room_idx };
                                         result.push((new_world, amphipod.energy()));
                                     }
                                 }
@@ -3483,7 +3484,7 @@ mod day23_pt1 {
                                 // Move them up into the hallway
                                 let mut new_world = world.clone();
                                 new_world[target_hallway_idx] = Hallway { occupant: Some(*upper_occupant), idx: hallway_idx };
-                                new_world[world_idx] = Room { idx: *idx, upper_occupant: None, lower_occupant: lower_occupant.clone() };
+                                new_world[world_idx] = Room { idx: *idx, upper_occupant: None, lower_occupant: *lower_occupant };
                                 result.push((new_world, upper_occupant.energy()));
                             }
                         }
@@ -3893,33 +3894,33 @@ mod day23_pt2 {
   #{}#{}#{}#{}#
   #########
 ",
-                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
             );
         }
 
@@ -3931,25 +3932,25 @@ mod day23_pt2 {
   #{}#{}#{}#{}#
   #########
 ",
-                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
-                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or(".".to_string()),
+                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
             );
         }
 
@@ -3957,14 +3958,15 @@ mod day23_pt2 {
 
 
     pub fn part2() {
-        let mut first_world = World::default();
-
-        first_world.rooms = [
-            [Some(C), Some(D), Some(D), Some(B)],
-            [Some(D), Some(C), Some(B), Some(A)],
-            [Some(A), Some(B), Some(A), Some(D)],
-            [Some(B), Some(A), Some(C), Some(C)],
-        ];
+        let first_world = World {
+            rooms: [
+                [Some(C), Some(D), Some(D), Some(B)],
+                [Some(D), Some(C), Some(B), Some(A)],
+                [Some(A), Some(B), Some(A), Some(D)],
+                [Some(B), Some(A), Some(C), Some(C)],
+            ],
+            .. Default::default()
+        };
 
         let mut queue = BinaryHeap::new();
 
@@ -3975,7 +3977,7 @@ mod day23_pt2 {
         });
 
         let mut seen_states: HashMap<World, usize> = HashMap::new();
-        seen_states.insert(first_world.clone(), 0);
+        seen_states.insert(first_world, 0);
 
         let mut position = 1;
         let mut checked: usize = 0;
@@ -4047,14 +4049,14 @@ mod day24 {
         }
 
         fn check_8_9(input_8: i64, input_9: i64) -> bool {
-            (((input_8 + 0) % 26) + -2) == input_9
+            ((input_8 % 26) + -2) == input_9
         }
 
 
         fn combined(input: &[i64]) -> bool {
             if (((input[2] + 3) % 26) + -11) != input[3] { return false; }
             if (((input[4] + 9) % 26) + -4) != input[5] { return false; }
-            if (((input[8] + 0) % 26) + -2) != input[9] { return false; }
+            if ((input[8] % 26) + -2) != input[9] { return false; }
 
             let mut z = (input[0] + 13);
 
@@ -4063,13 +4065,13 @@ mod day24 {
 
             // DONE
             if ((z % 26) + -11) != input[3] { return false; }
-            z = (z / 26);
+            z /= 26;
 
             z = (z * 26) + (input[4] + 9);
 
             // DONE
             if ((z % 26) + -4) != input[5] { return false; };
-            z = (z / 26);
+            z /= 26;
 
             z = (z * 26) + (input[6] + 5);
             z = (z * 26) + (input[7] + 1);
@@ -4077,16 +4079,16 @@ mod day24 {
 
             // DONE
             if ((z % 26) + -2) != input[9] { return false; };
-            z = (z / 26);
+            z /= 26;
 
             if ((z % 26) + -5) != input[10] { return false; };
-            z = (z / 26);
+            z /= 26;
 
             if ((z % 26) + -11) != input[11] { return false; };
-            z = (z / 26);
+            z /= 26;
 
             if ((z % 26) + -13) != input[12] { return false; };
-            z = (z / 26);
+            z /= 26;
 
             if ((z % 26) + -10) != input[13] { return false; };
             // z = (z / 26);
@@ -4191,309 +4193,309 @@ mod day24 {
         fn digit_1_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 10;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 10;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 13;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 13;
+            y *= x;
+            z += y;
             z
         }
         fn digit_2_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 13;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 13;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 10;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 10;
+            y *= x;
+            z += y;
             z
         }
         fn digit_3_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 13;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 13;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 3;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 3;
+            y *= x;
+            z += y;
             z
         }
         fn digit_4_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -11;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -11;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 1;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 1;
+            y *= x;
+            z += y;
             z
         }
         fn digit_5_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 11;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 11;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 9;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 9;
+            y *= x;
+            z += y;
             z
         }
         fn digit_6_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -4;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -4;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 3;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 3;
+            y *= x;
+            z += y;
             z
         }
         fn digit_7_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 12;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 12;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 5;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 5;
+            y *= x;
+            z += y;
             z
         }
         fn digit_8_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 12;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 12;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 1;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 1;
+            y *= x;
+            z += y;
             z
         }
         fn digit_9_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 1;
-            x = x + 15;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 1;
+            x += 15;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 0;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 0;
+            y *= x;
+            z += y;
             z
         }
         fn digit_10_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -2;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -2;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 13;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 13;
+            y *= x;
+            z += y;
             z
         }
         fn digit_11_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -5;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -5;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 7;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 7;
+            y *= x;
+            z += y;
             z
         }
         fn digit_12_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -11;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -11;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 15;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 15;
+            y *= x;
+            z += y;
             z
         }
         fn digit_13_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -13;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -13;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 12;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 12;
+            y *= x;
+            z += y;
             z
         }
         fn digit_14_orig(w: i64, mut z: i64) -> i64 {
             let mut x: i64 = 0;
             let mut y: i64 = 0;
-            x = x * 0;
-            x = x + z;
-            x = x % 26;
-            z = z / 26;
-            x = x + -10;
+            x *= 0;
+            x += z;
+            x %= 26;
+            z /= 26;
+            x += -10;
             x = if x == w { 1 } else { 0 };
             x = if x == 0 { 1 } else { 0 };
-            y = y * 0;
-            y = y + 25;
-            y = y * x;
-            y = y + 1;
-            z = z * y;
-            y = y * 0;
-            y = y + w;
-            y = y + 8;
-            y = y * x;
-            z = z + y;
+            y *= 0;
+            y += 25;
+            y *= x;
+            y += 1;
+            z *= y;
+            y *= 0;
+            y += w;
+            y += 8;
+            y *= x;
+            z += y;
             z
         }
 
@@ -4573,12 +4575,12 @@ mod day24 {
             // Highest 8/9: 9 7
             let mut input = [1, 1, 9, 1, 4, 9, 1, 1, 9, 7, 1, 1, 1, 1];
 
-            let mut best = input.clone();
+            let mut best = input;
 
             'outer_highest:
             loop {
                 if combined(&input) {
-                    best = input.clone();
+                    best = input;
                 }
 
                 // Next tick
@@ -4615,21 +4617,21 @@ mod day24 {
 
             loop {
                 if combined(&input) {
-                    dbg!(input.clone());
+                    dbg!(input);
                     break;
                 }
 
                 // Next tick... move from left to right this time.
-                for i in (0..=13) {
+                for (i, value) in input.iter_mut().enumerate() {
                     if i == 2 || i == 3 || i == 4 || i == 5 || i == 8 || i == 9 {
                         // Already optimised...
                         continue;
                     }
 
-                    if input[i] == 9 {
-                        input[i] = 1;
+                    if *value == 9 {
+                        *value = 1;
                     } else {
-                        input[i] += 1;
+                        *value += 1;
                         break;
                     }
                 }
@@ -4814,10 +4816,9 @@ fn main() {
         day23_pt2::part2();
 
         day24::part1();
+
+        day25::part1();
     }
-
-    day25::part1();
-
 
 }
 
