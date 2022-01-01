@@ -11,9 +11,9 @@ mod shared {
     pub use std::cell::RefCell;
     pub use std::cell::RefMut;
     pub use std::cmp::{self, Ordering, Reverse};
-    pub use std::collections::BinaryHeap;
     pub use std::collections::BTreeMap;
     pub use std::collections::BTreeSet;
+    pub use std::collections::BinaryHeap;
     pub use std::collections::HashMap;
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
@@ -23,10 +23,10 @@ mod shared {
     pub use std::fs::{self, File};
     pub use std::io::{self, BufRead, BufReader, Read, Write};
     pub use std::iter::FromIterator;
+    pub use std::ops::RangeInclusive;
     pub use std::rc::Rc;
     pub use std::str::{self, FromStr};
     pub use std::sync::{Arc, Mutex};
-    pub use std::ops::RangeInclusive;
 
     pub use rand::Rng;
 
@@ -711,7 +711,10 @@ mod day7 {
         let mut fuel_spend = i64::MAX;
 
         for candidate_position in min_crab..=max_crab {
-            let cost = crab_positions.iter().map(|p| (p - candidate_position).abs()).sum();
+            let cost = crab_positions
+                .iter()
+                .map(|p| (p - candidate_position).abs())
+                .sum();
 
             if cost < fuel_spend {
                 best_position = candidate_position;
@@ -741,7 +744,10 @@ mod day7 {
         let mut fuel_spend = i64::MAX;
 
         for candidate_position in min_crab..=max_crab {
-            let cost = crab_positions.iter().map(|p| weight((p - candidate_position).abs())).sum();
+            let cost = crab_positions
+                .iter()
+                .map(|p| weight((p - candidate_position).abs()))
+                .sum();
 
             if cost < fuel_spend {
                 best_position = candidate_position;
@@ -753,7 +759,6 @@ mod day7 {
     }
 }
 
-
 mod day8 {
     use crate::shared::*;
 
@@ -761,17 +766,14 @@ mod day8 {
         let count: usize = input_lines("input_files/day8.txt")
             .map(|line| {
                 let words = line.split(" | ").nth(1).unwrap().split(' ');
-                words
-                    .filter(|w| matches!(w.len(), 2 | 3 | 4 | 7))
-                    .count()
-            }).sum();
+                words.filter(|w| matches!(w.len(), 2 | 3 | 4 | 7)).count()
+            })
+            .sum();
 
         println!("Output count: {}", count);
     }
 
     const WIRES: &[char] = &['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-
-
 
     //   0:      1:      2:      3:      4:
     //  aaaa    ....    aaaa    aaaa    ....
@@ -791,10 +793,11 @@ mod day8 {
     // .    f  e    f  .    f  e    f  .    f
     //  gggg    gggg    ....    gggg    gggg
 
-
-    fn merge_into_candidates(candidates: &mut HashMap<char, HashSet<char>>,
-                             letters: &[char],
-                             input: &str) {
+    fn merge_into_candidates(
+        candidates: &mut HashMap<char, HashSet<char>>,
+        letters: &[char],
+        input: &str,
+    ) {
         let letter_set: HashSet<char> = letters.iter().copied().collect();
         let input_set: HashSet<char> = input.chars().collect();
 
@@ -813,12 +816,13 @@ mod day8 {
     }
 
     fn all_mappings(mut candidates: HashMap<char, HashSet<char>>) -> Vec<HashMap<char, char>> {
-        fn aux(remaining_candidates: &mut HashMap<char, HashSet<char>>,
-               current_mapping: &mut HashMap<char, char>,
-               used_values: &mut HashSet<char>,
-               results: &mut Vec<HashMap<char, char>>,
-               level: usize) {
-
+        fn aux(
+            remaining_candidates: &mut HashMap<char, HashSet<char>>,
+            current_mapping: &mut HashMap<char, char>,
+            used_values: &mut HashSet<char>,
+            results: &mut Vec<HashMap<char, char>>,
+            level: usize,
+        ) {
             if remaining_candidates.is_empty() {
                 results.push(current_mapping.clone());
                 return;
@@ -832,7 +836,13 @@ mod day8 {
             for v in possible_values {
                 used_values.insert(v);
                 current_mapping.insert(next_key, v);
-                aux(remaining_candidates, current_mapping, used_values, results, level + 1);
+                aux(
+                    remaining_candidates,
+                    current_mapping,
+                    used_values,
+                    results,
+                    level + 1,
+                );
                 used_values.remove(&v);
             }
 
@@ -840,18 +850,31 @@ mod day8 {
         }
 
         let mut results = Vec::new();
-        aux(&mut candidates, &mut HashMap::new(), &mut HashSet::new(), &mut results, 0);
+        aux(
+            &mut candidates,
+            &mut HashMap::new(),
+            &mut HashSet::new(),
+            &mut results,
+            0,
+        );
         results
     }
 
     fn unscramble(inputs: &[String], mapping: &HashMap<char, char>) -> Vec<String> {
         let reverse_mapping: HashMap<char, char> = mapping.iter().map(|(&k, &v)| (v, k)).collect();
 
-        inputs.iter().map(|input| {
-            let mut chars: Vec<char> = input.chars().map(|ch| reverse_mapping.get(&ch).unwrap()).copied().collect();
-            chars.sort_unstable();
-            chars.into_iter().collect::<String>()
-        }).collect()
+        inputs
+            .iter()
+            .map(|input| {
+                let mut chars: Vec<char> = input
+                    .chars()
+                    .map(|ch| reverse_mapping.get(&ch).unwrap())
+                    .copied()
+                    .collect();
+                chars.sort_unstable();
+                chars.into_iter().collect::<String>()
+            })
+            .collect()
     }
 
     pub fn part2() {
@@ -859,23 +882,33 @@ mod day8 {
 
         let mut correct_inputs_map: HashMap<String, usize> = HashMap::new();
 
-        correct_inputs_map.insert("abcefg".to_string(),  0);
-        correct_inputs_map.insert("cf".to_string(),      1);
-        correct_inputs_map.insert("acdeg".to_string(),   2);
-        correct_inputs_map.insert("acdfg".to_string(),   3);
-        correct_inputs_map.insert("bcdf".to_string(),    4);
-        correct_inputs_map.insert("abdfg".to_string(),   5);
-        correct_inputs_map.insert("abdefg".to_string(),  6);
-        correct_inputs_map.insert("acf".to_string(),     7);
+        correct_inputs_map.insert("abcefg".to_string(), 0);
+        correct_inputs_map.insert("cf".to_string(), 1);
+        correct_inputs_map.insert("acdeg".to_string(), 2);
+        correct_inputs_map.insert("acdfg".to_string(), 3);
+        correct_inputs_map.insert("bcdf".to_string(), 4);
+        correct_inputs_map.insert("abdfg".to_string(), 5);
+        correct_inputs_map.insert("abdefg".to_string(), 6);
+        correct_inputs_map.insert("acf".to_string(), 7);
         correct_inputs_map.insert("abcdefg".to_string(), 8);
-        correct_inputs_map.insert("abcdfg".to_string(),  9);
+        correct_inputs_map.insert("abcdfg".to_string(), 9);
 
         let correct_inputs: HashSet<String> = correct_inputs_map.keys().cloned().collect();
 
         for line in input_lines("input_files/day8.txt") {
             let mut it = line.split(" | ");
-            let inputs: Vec<String> = it.next().unwrap().split(' ').map(|s| s.to_string()).collect();
-            let outputs: Vec<String> = it.next().unwrap().split(' ').map(|s| s.to_string()).collect();
+            let inputs: Vec<String> = it
+                .next()
+                .unwrap()
+                .split(' ')
+                .map(|s| s.to_string())
+                .collect();
+            let outputs: Vec<String> = it
+                .next()
+                .unwrap()
+                .split(' ')
+                .map(|s| s.to_string())
+                .collect();
 
             // 'a' -> ['a', 'b', 'c'] reads "segment a might be represented by a, b or c"
             let mut candidates: HashMap<char, HashSet<char>> = HashMap::new();
@@ -923,14 +956,16 @@ mod day8 {
     }
 }
 
-
 mod day9 {
     use crate::shared::*;
 
     pub fn part1() {
-        let height_map: Vec<Vec<usize>> =
-            input_lines("input_files/day9.txt")
-            .map(|s| s.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+        let height_map: Vec<Vec<usize>> = input_lines("input_files/day9.txt")
+            .map(|s| {
+                s.chars()
+                    .map(|ch| ch.to_digit(10).unwrap() as usize)
+                    .collect()
+            })
             .collect();
 
         let mut total_risk = 0;
@@ -945,7 +980,11 @@ mod day9 {
                         let n_row = (row as i64 + y_off);
                         let n_col = (col as i64 + x_off);
 
-                        if n_row >= 0 && n_row < height_map.len() as i64 && n_col >= 0 && n_col < height_map[0].len() as i64 {
+                        if n_row >= 0
+                            && n_row < height_map.len() as i64
+                            && n_col >= 0
+                            && n_col < height_map[0].len() as i64
+                        {
                             Some(height_map[n_row as usize][n_col as usize])
                         } else {
                             None
@@ -978,7 +1017,9 @@ mod day9 {
                     // end of a basin
                     result.push(Basin {
                         size: (idx - start_idx),
-                        extents: [(row_idx, vec![(start_idx, idx - 1)])].into_iter().collect(),
+                        extents: [(row_idx, vec![(start_idx, idx - 1)])]
+                            .into_iter()
+                            .collect(),
                     });
 
                     last_start_idx = None;
@@ -994,7 +1035,9 @@ mod day9 {
 
             result.push(Basin {
                 size: (end_idx - last_start_idx + 1),
-                extents: [(row_idx, vec![(last_start_idx, end_idx)])].into_iter().collect(),
+                extents: [(row_idx, vec![(last_start_idx, end_idx)])]
+                    .into_iter()
+                    .collect(),
             });
         }
 
@@ -1005,9 +1048,11 @@ mod day9 {
         fn overlaps(&self, target_idx: usize, other: &Basin) -> bool {
             if let Some(last_row_extents) = self.extents.get(&target_idx) {
                 last_row_extents.iter().any(|(start_idx, end_idx)| {
-                    other.extents.get(&(target_idx + 1)).unwrap().iter().any(|(other_start_idx, other_end_idx)| {
-                        !(other_end_idx < start_idx || other_start_idx > end_idx)
-                    })
+                    other.extents.get(&(target_idx + 1)).unwrap().iter().any(
+                        |(other_start_idx, other_end_idx)| {
+                            !(other_end_idx < start_idx || other_start_idx > end_idx)
+                        },
+                    )
                 })
             } else {
                 false
@@ -1022,18 +1067,21 @@ mod day9 {
     }
 
     pub fn part2() {
-        let height_map: Vec<Vec<usize>> =
-            input_lines("input_files/day9.txt")
-            .map(|s| s.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
+        let height_map: Vec<Vec<usize>> = input_lines("input_files/day9.txt")
+            .map(|s| {
+                s.chars()
+                    .map(|ch| ch.to_digit(10).unwrap() as usize)
+                    .collect()
+            })
             .collect();
 
         let mut basins: Vec<Basin> = Vec::new();
 
         for (row_idx, row) in height_map.iter().enumerate() {
             for row_basin in extract_basins(row_idx, row) {
-                let mut overlapping_basin_indexes: Vec<usize> = (0..basins.len()).filter(|&i| {
-                    row_idx > 0 && basins[i].overlaps(row_idx - 1, &row_basin)
-                }).collect();
+                let mut overlapping_basin_indexes: Vec<usize> = (0..basins.len())
+                    .filter(|&i| row_idx > 0 && basins[i].overlaps(row_idx - 1, &row_basin))
+                    .collect();
 
                 overlapping_basin_indexes.reverse();
 
@@ -1057,8 +1105,10 @@ mod day9 {
         }
 
         basins.sort_by_key(|b| 0 - b.size as i64);
-        println!("Basin sizes multiplied: {}",
-                 basins.iter().take(3).map(|b| b.size).product::<usize>());
+        println!(
+            "Basin sizes multiplied: {}",
+            basins.iter().take(3).map(|b| b.size).product::<usize>()
+        );
     }
 }
 
@@ -1068,8 +1118,7 @@ mod day10 {
     pub fn part1() {
         let mut error_score = 0;
 
-        'input_loop:
-        for line in input_lines("input_files/day10.txt") {
+        'input_loop: for line in input_lines("input_files/day10.txt") {
             let mut expected_closers = Vec::new();
 
             for ch in line.chars() {
@@ -1090,13 +1139,13 @@ mod day10 {
                                 ']' => 57,
                                 '}' => 1197,
                                 '>' => 25137,
-                                _ => unreachable!()
+                                _ => unreachable!(),
                             };
 
-                            continue 'input_loop
+                            continue 'input_loop;
                         }
-                    },
-                    _ => panic!("malformed input")
+                    }
+                    _ => panic!("malformed input"),
                 }
             }
 
@@ -1112,8 +1161,7 @@ mod day10 {
         let mut line_scores = Vec::new();
 
         // WRONG 312966863
-        'input_loop:
-        for line in input_lines("input_files/day10.txt") {
+        'input_loop: for line in input_lines("input_files/day10.txt") {
             let mut expected_closers = Vec::new();
 
             for ch in line.chars() {
@@ -1127,10 +1175,10 @@ mod day10 {
                         let expected_closer = expected_closers.pop();
 
                         if Some(ch) != expected_closer {
-                            continue 'input_loop
+                            continue 'input_loop;
                         }
-                    },
-                    _ => panic!("malformed input")
+                    }
+                    _ => panic!("malformed input"),
                 }
             }
 
@@ -1157,7 +1205,6 @@ mod day10 {
         println!("Median score: {}", line_scores[line_scores.len() / 2]);
     }
 }
-
 
 mod day11 {
     use crate::shared::*;
@@ -1215,7 +1262,9 @@ mod day11 {
                     let neighbour_row = row as i64 + xoff;
                     let neighbour_col = col as i64 + yoff;
 
-                    if (neighbour_row >= 0 && neighbour_row < height) && (neighbour_col >= 0 && neighbour_col < width) {
+                    if (neighbour_row >= 0 && neighbour_row < height)
+                        && (neighbour_col >= 0 && neighbour_col < width)
+                    {
                         self.grid[neighbour_row as usize][neighbour_col as usize] += 1;
                     }
                 }
@@ -1236,16 +1285,19 @@ mod day11 {
                     *cell = false;
                 }
             }
-
         }
-
     }
 
-
     pub fn part1() {
-        let mut grid = Grid::new(input_lines("input_files/day11.txt")
-                                 .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
-                                 .collect());
+        let mut grid = Grid::new(
+            input_lines("input_files/day11.txt")
+                .map(|row| {
+                    row.chars()
+                        .map(|ch| ch.to_digit(10).unwrap() as usize)
+                        .collect()
+                })
+                .collect(),
+        );
 
         let mut flash_count = 0;
 
@@ -1273,9 +1325,15 @@ mod day11 {
     }
 
     pub fn part2() {
-        let mut grid = Grid::new(input_lines("input_files/day11.txt")
-                                 .map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect())
-                                 .collect());
+        let mut grid = Grid::new(
+            input_lines("input_files/day11.txt")
+                .map(|row| {
+                    row.chars()
+                        .map(|ch| ch.to_digit(10).unwrap() as usize)
+                        .collect()
+                })
+                .collect(),
+        );
 
         // 1000: the largest known number
         for step in 0..1000 {
@@ -1307,7 +1365,6 @@ mod day11 {
     }
 }
 
-
 mod day12 {
     use crate::shared::*;
 
@@ -1327,35 +1384,35 @@ mod day12 {
     }
 
     fn count_paths(connections: &HashMap<Cave, Vec<Cave>>) -> usize {
-        fn aux(connections: &HashMap<Cave, Vec<Cave>>,
-               visited_caves: &mut HashSet<Cave>,
-               path: &mut Vec<Cave>,
-               current_cave: Cave) -> usize {
-
+        fn aux(
+            connections: &HashMap<Cave, Vec<Cave>>,
+            visited_caves: &mut HashSet<Cave>,
+            path: &mut Vec<Cave>,
+            current_cave: Cave,
+        ) -> usize {
             if current_cave.name == "end" {
                 return 1;
             }
 
             visited_caves.insert(current_cave.clone());
 
-            let subcount =
-                if let Some(candidates) = connections.get(&current_cave) {
-                    let mut total = 0;
+            let subcount = if let Some(candidates) = connections.get(&current_cave) {
+                let mut total = 0;
 
-                    for candidate in candidates {
-                        if !candidate.is_big && visited_caves.contains(candidate) {
-                            continue;
-                        }
-
-                        path.push(current_cave.clone());
-                        total += aux(connections, visited_caves, path, candidate.clone());
-                        path.pop();
+                for candidate in candidates {
+                    if !candidate.is_big && visited_caves.contains(candidate) {
+                        continue;
                     }
 
-                    total
-                } else {
-                    0
-                };
+                    path.push(current_cave.clone());
+                    total += aux(connections, visited_caves, path, candidate.clone());
+                    path.pop();
+                }
+
+                total
+            } else {
+                0
+            };
 
             visited_caves.remove(&current_cave);
 
@@ -1365,12 +1422,13 @@ mod day12 {
         let mut visited_caves = HashSet::new();
         let mut path = Vec::new();
 
-        aux(connections,
+        aux(
+            connections,
             &mut visited_caves,
             &mut path,
-            Cave::from_str("start"))
+            Cave::from_str("start"),
+        )
     }
-
 
     pub fn part1() {
         let mut cave_connections: HashMap<Cave, Vec<Cave>> = HashMap::new();
@@ -1382,7 +1440,9 @@ mod day12 {
 
             // a -> b
             {
-                let entry = cave_connections.entry(from.clone()).or_insert_with(Vec::new);
+                let entry = cave_connections
+                    .entry(from.clone())
+                    .or_insert_with(Vec::new);
                 entry.push(to.clone());
             }
 
@@ -1396,15 +1456,19 @@ mod day12 {
         println!("Unique paths: {}", count_paths(&cave_connections));
     }
 
-    fn count_paths_pt2(connections: &HashMap<Cave, Vec<Cave>>, blessed_small_cave: Cave, all_paths: &mut HashSet<Vec<Cave>>) -> usize {
-        fn aux(connections: &HashMap<Cave, Vec<Cave>>,
-               visited_caves: &mut HashSet<Cave>,
-               path: &mut Vec<Cave>,
-               current_cave: Cave,
-               blessed_small_cave: &mut Option<Cave>,
-               all_paths: &mut HashSet<Vec<Cave>>,
+    fn count_paths_pt2(
+        connections: &HashMap<Cave, Vec<Cave>>,
+        blessed_small_cave: Cave,
+        all_paths: &mut HashSet<Vec<Cave>>,
+    ) -> usize {
+        fn aux(
+            connections: &HashMap<Cave, Vec<Cave>>,
+            visited_caves: &mut HashSet<Cave>,
+            path: &mut Vec<Cave>,
+            current_cave: Cave,
+            blessed_small_cave: &mut Option<Cave>,
+            all_paths: &mut HashSet<Vec<Cave>>,
         ) -> usize {
-
             if current_cave.name == "end" {
                 all_paths.insert(path.clone());
                 return 1;
@@ -1412,37 +1476,43 @@ mod day12 {
 
             visited_caves.insert(current_cave.clone());
 
-            let subcount =
-                if let Some(candidates) = connections.get(&current_cave) {
-                    let mut total = 0;
+            let subcount = if let Some(candidates) = connections.get(&current_cave) {
+                let mut total = 0;
 
-                    for candidate in candidates {
-                        let mut used_blessed = false;
+                for candidate in candidates {
+                    let mut used_blessed = false;
 
-                        if !candidate.is_big && visited_caves.contains(candidate) {
-                            if Some(candidate) == blessed_small_cave.as_ref() {
-                                // OK, you get one repeat
-                                blessed_small_cave.take();
-                                used_blessed = true;
-                            } else {
-                                continue;
-                            }
-                        }
-
-                        path.push(current_cave.clone());
-                        total += aux(connections, visited_caves, path, candidate.clone(), blessed_small_cave, all_paths);
-                        path.pop();
-
-                        if used_blessed {
-                            let _ = blessed_small_cave.insert(candidate.clone());
-                            visited_caves.insert(candidate.clone());
+                    if !candidate.is_big && visited_caves.contains(candidate) {
+                        if Some(candidate) == blessed_small_cave.as_ref() {
+                            // OK, you get one repeat
+                            blessed_small_cave.take();
+                            used_blessed = true;
+                        } else {
+                            continue;
                         }
                     }
 
-                    total
-                } else {
-                    0
-                };
+                    path.push(current_cave.clone());
+                    total += aux(
+                        connections,
+                        visited_caves,
+                        path,
+                        candidate.clone(),
+                        blessed_small_cave,
+                        all_paths,
+                    );
+                    path.pop();
+
+                    if used_blessed {
+                        let _ = blessed_small_cave.insert(candidate.clone());
+                        visited_caves.insert(candidate.clone());
+                    }
+                }
+
+                total
+            } else {
+                0
+            };
 
             visited_caves.remove(&current_cave);
 
@@ -1453,16 +1523,17 @@ mod day12 {
         let mut path = Vec::new();
         let mut blessed_small_cave = Some(blessed_small_cave);
 
-        aux(connections,
+        aux(
+            connections,
             &mut visited_caves,
             &mut path,
             Cave::from_str("start"),
             &mut blessed_small_cave,
-            all_paths);
+            all_paths,
+        );
 
         all_paths.len()
     }
-
 
     pub fn part2() {
         let mut cave_connections: HashMap<Cave, Vec<Cave>> = HashMap::new();
@@ -1474,7 +1545,9 @@ mod day12 {
 
             // a -> b
             {
-                let entry = cave_connections.entry(from.clone()).or_insert_with(Vec::new);
+                let entry = cave_connections
+                    .entry(from.clone())
+                    .or_insert_with(Vec::new);
                 entry.push(to.clone());
             }
 
@@ -1487,7 +1560,10 @@ mod day12 {
 
         let mut all_paths = HashSet::new();
 
-        for blessed_cave in cave_connections.keys().filter(|&cave| !cave.is_big && (cave.name != "start" && cave.name != "end")) {
+        for blessed_cave in cave_connections
+            .keys()
+            .filter(|&cave| !cave.is_big && (cave.name != "start" && cave.name != "end"))
+        {
             count_paths_pt2(&cave_connections, blessed_cave.clone(), &mut all_paths);
         }
 
@@ -1625,8 +1701,6 @@ mod day13 {
 
         print_grid(&grid);
     }
-
-
 }
 
 mod day14 {
@@ -1662,8 +1736,11 @@ mod day14 {
             // Find the chars to insert
             let mut to_insert = Vec::new();
             for idx in 0..(template.len() - 1) {
-                if let Some(s) = substitutions.get(&template[idx..idx+2]) {
-                    to_insert.push(Insertion { s: s.clone(), idx: idx + 1});
+                if let Some(s) = substitutions.get(&template[idx..idx + 2]) {
+                    to_insert.push(Insertion {
+                        s: s.clone(),
+                        idx: idx + 1,
+                    });
                 }
             }
 
@@ -1719,15 +1796,18 @@ mod day14 {
 
             for (pair, to_insert) in substitutions.iter() {
                 if let Some(freq) = pairs.remove(pair) {
-                    *new_pairs.entry(format!("{}{}", pair.chars().next().unwrap(), to_insert)).or_insert(0) += freq;
-                    *new_pairs.entry(format!("{}{}", to_insert, pair.chars().nth(1).unwrap())).or_insert(0) += freq;
+                    *new_pairs
+                        .entry(format!("{}{}", pair.chars().next().unwrap(), to_insert))
+                        .or_insert(0) += freq;
+                    *new_pairs
+                        .entry(format!("{}{}", to_insert, pair.chars().nth(1).unwrap()))
+                        .or_insert(0) += freq;
                 }
             }
 
             new_pairs.extend(pairs);
             pairs = new_pairs;
         }
-
 
         let mut freqs: HashMap<char, usize> = HashMap::new();
         for k in pairs.keys() {
@@ -1762,19 +1842,31 @@ mod day15 {
             let mut result = Vec::with_capacity(4);
 
             if self.col > 0 {
-                result.push(Vertex { row: self.row, col: self.col - 1 });
+                result.push(Vertex {
+                    row: self.row,
+                    col: self.col - 1,
+                });
             }
 
             if self.col < width - 1 {
-                result.push(Vertex { row: self.row, col: self.col + 1 });
+                result.push(Vertex {
+                    row: self.row,
+                    col: self.col + 1,
+                });
             }
 
             if self.row > 0 {
-                result.push(Vertex { row: self.row - 1, col: self.col });
+                result.push(Vertex {
+                    row: self.row - 1,
+                    col: self.col,
+                });
             }
 
             if self.row < height - 1 {
-                result.push(Vertex { row: self.row + 1, col: self.col });
+                result.push(Vertex {
+                    row: self.row + 1,
+                    col: self.col,
+                });
             }
 
             result
@@ -1783,7 +1875,13 @@ mod day15 {
 
     pub fn part1() {
         let lines = input_lines("input_files/day15.txt");
-        let grid: Vec<Vec<_>> = lines.map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()).collect();
+        let grid: Vec<Vec<_>> = lines
+            .map(|row| {
+                row.chars()
+                    .map(|ch| ch.to_digit(10).unwrap() as usize)
+                    .collect()
+            })
+            .collect();
 
         let source = Vertex { row: 0, col: 0 };
 
@@ -1815,7 +1913,10 @@ mod day15 {
                     continue;
                 }
 
-                let alt = dist.get(&u).unwrap().saturating_add(grid[neighbour.row][neighbour.col]);
+                let alt = dist
+                    .get(&u)
+                    .unwrap()
+                    .saturating_add(grid[neighbour.row][neighbour.col]);
                 if alt < *dist.get(&neighbour).unwrap() {
                     dist.insert(neighbour, alt);
                     prev.insert(neighbour, Some(u));
@@ -1825,7 +1926,10 @@ mod day15 {
 
         let mut total_risk: usize = 0;
 
-        let mut u = Vertex { row: height - 1, col: width - 1 };
+        let mut u = Vertex {
+            row: height - 1,
+            col: width - 1,
+        };
         if prev.get(&u).is_some() || u == source {
             loop {
                 total_risk += grid[u.row][u.col];
@@ -1847,7 +1951,9 @@ mod day15 {
         let projected_width = width * 5;
         let projected_height = height * 5;
 
-        let mut result: Vec<Vec<usize>> = (0..projected_height).map(|_| vec![0; projected_width]).collect();
+        let mut result: Vec<Vec<usize>> = (0..projected_height)
+            .map(|_| vec![0; projected_width])
+            .collect();
 
         for row in 0..projected_height {
             for col in 0..projected_width {
@@ -1886,17 +1992,26 @@ mod day15 {
         }
     }
 
-
-
     pub fn part2() {
         let lines = input_lines("input_files/day15.txt");
-        let grid: Vec<Vec<_>> = project_grid(lines.map(|row| row.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()).collect());
+        let grid: Vec<Vec<_>> = project_grid(
+            lines
+                .map(|row| {
+                    row.chars()
+                        .map(|ch| ch.to_digit(10).unwrap() as usize)
+                        .collect()
+                })
+                .collect(),
+        );
 
         let width = grid[0].len();
         let height = grid.len();
 
         let source = Vertex { row: 0, col: 0 };
-        let target = Vertex { row: height - 1, col: width - 1 };
+        let target = Vertex {
+            row: height - 1,
+            col: width - 1,
+        };
 
         let mut queue: HashSet<Vertex> = HashSet::new();
         let mut heap: BTreeMap<WeightedVertex, usize> = BTreeMap::new();
@@ -1915,7 +2030,13 @@ mod day15 {
                     heap.insert(WeightedVertex { dist: 0, vertex: v }, 0);
                     dist.insert(v, 0);
                 } else {
-                    heap.insert(WeightedVertex { dist: usize::MAX, vertex: v }, usize::MAX);
+                    heap.insert(
+                        WeightedVertex {
+                            dist: usize::MAX,
+                            vertex: v,
+                        },
+                        usize::MAX,
+                    );
                     dist.insert(v, usize::MAX);
                 }
             }
@@ -1937,13 +2058,25 @@ mod day15 {
                     continue;
                 }
 
-                let alt = dist.get(&u).unwrap().saturating_add(grid[neighbour.row][neighbour.col]);
+                let alt = dist
+                    .get(&u)
+                    .unwrap()
+                    .saturating_add(grid[neighbour.row][neighbour.col]);
                 let old_dist = *dist.get(&neighbour).unwrap();
                 if alt < old_dist {
-                    heap.remove(&WeightedVertex { vertex: neighbour, dist: old_dist });
+                    heap.remove(&WeightedVertex {
+                        vertex: neighbour,
+                        dist: old_dist,
+                    });
                     dist.insert(neighbour, alt);
                     prev.insert(neighbour, Some(u));
-                    heap.insert(WeightedVertex { vertex: neighbour, dist: alt }, alt);
+                    heap.insert(
+                        WeightedVertex {
+                            vertex: neighbour,
+                            dist: alt,
+                        },
+                        alt,
+                    );
                 }
             }
         }
@@ -1966,7 +2099,6 @@ mod day15 {
     }
 }
 
-
 mod day16 {
     use crate::shared::*;
 
@@ -1978,7 +2110,10 @@ mod day16 {
     impl BitStream {
         fn from_hex(s: &str) -> BitStream {
             BitStream {
-                bytes: (0..s.len()).step_by(2).map(|idx| u8::from_str_radix(&s[idx..idx+2], 16).unwrap()).collect(),
+                bytes: (0..s.len())
+                    .step_by(2)
+                    .map(|idx| u8::from_str_radix(&s[idx..idx + 2], 16).unwrap())
+                    .collect(),
                 bit_offset: 0,
             }
         }
@@ -1990,14 +2125,14 @@ mod day16 {
                 let current_byte_offset = self.bit_offset / 8;
 
                 result *= 2;
-                result |= ((self.bytes[current_byte_offset] >> (7 - (self.bit_offset % 8))) & 0x01) as usize;
+                result |= ((self.bytes[current_byte_offset] >> (7 - (self.bit_offset % 8))) & 0x01)
+                    as usize;
                 self.bit_offset += 1;
             }
 
             result
         }
     }
-
 
     #[derive(Debug)]
     enum Packet {
@@ -2010,7 +2145,7 @@ mod day16 {
             version: usize,
             type_id: usize,
             subpackets: Vec<Packet>,
-        }
+        },
     }
 
     fn read_packet(stream: &mut BitStream) -> Packet {
@@ -2034,7 +2169,7 @@ mod day16 {
             Packet::Literal {
                 version,
                 type_id,
-                value
+                value,
             }
         } else {
             // Operator packet
@@ -2057,16 +2192,18 @@ mod day16 {
                         type_id,
                         subpackets,
                     }
-                },
+                }
                 1 => {
                     let number_of_subpackets = stream.read_usize(11);
 
                     Packet::Operator {
                         version,
                         type_id,
-                        subpackets: (0..number_of_subpackets).map(|_| read_packet(stream)).collect(),
+                        subpackets: (0..number_of_subpackets)
+                            .map(|_| read_packet(stream))
+                            .collect(),
                     }
-                },
+                }
                 _ => panic!("Invalid length type id: {}", length_type_id),
             }
         }
@@ -2075,9 +2212,11 @@ mod day16 {
     fn sum_versions(packet: &Packet) -> usize {
         match packet {
             Packet::Literal { version, .. } => *version,
-            Packet::Operator { version, subpackets, .. } => {
-                *version + subpackets.iter().map(|p| sum_versions(p)).sum::<usize>()
-            }
+            Packet::Operator {
+                version,
+                subpackets,
+                ..
+            } => *version + subpackets.iter().map(|p| sum_versions(p)).sum::<usize>(),
         }
     }
 
@@ -2093,7 +2232,11 @@ mod day16 {
     fn evaluate(packet: &Packet) -> usize {
         match packet {
             Packet::Literal { value, .. } => *value,
-            Packet::Operator { type_id, subpackets, .. } => {
+            Packet::Operator {
+                type_id,
+                subpackets,
+                ..
+            } => {
                 match type_id {
                     0 => {
                         // Sum packet
@@ -2134,13 +2277,11 @@ mod day16 {
                         } else {
                             0
                         }
-
                     }
                     _ => panic!("Invalid packet type: {}", type_id),
                 }
             }
         }
-
     }
 
     pub fn part2() {
@@ -2151,9 +2292,7 @@ mod day16 {
 
         println!("Packet result: {}", evaluate(&packet));
     }
-
 }
-
 
 mod day17 {
     use crate::shared::*;
@@ -2175,7 +2314,6 @@ mod day17 {
 
         for start_x_velocity in -1000..1000 {
             for start_y_velocity in -1000..1000 {
-
                 let mut x_velocity = start_x_velocity;
                 let mut y_velocity = start_y_velocity;
 
@@ -2186,7 +2324,9 @@ mod day17 {
 
                 // let mut step: usize = 0;
                 loop {
-                    if (x >= target_xmin && x <= target_xmax) && (y >= target_ymin && y <= target_ymax) {
+                    if (x >= target_xmin && x <= target_xmax)
+                        && (y >= target_ymin && y <= target_ymax)
+                    {
                         // println!("Hit on step {}", step);
 
                         if best_y_this_round > best_y {
@@ -2239,7 +2379,6 @@ mod day17 {
 
         for start_x_velocity in -1000..1000 {
             for start_y_velocity in -1000..1000 {
-
                 let mut x_velocity = start_x_velocity;
                 let mut y_velocity = start_y_velocity;
 
@@ -2248,7 +2387,9 @@ mod day17 {
 
                 // let mut step: usize = 0;
                 loop {
-                    if (x >= target_xmin && x <= target_xmax) && (y >= target_ymin && y <= target_ymax) {
+                    if (x >= target_xmin && x <= target_xmax)
+                        && (y >= target_ymin && y <= target_ymax)
+                    {
                         // println!("Hit on step {}", step);
                         target_hit.insert((start_x_velocity, start_y_velocity));
                         break;
@@ -2275,7 +2416,6 @@ mod day17 {
 
         println!("Unique values: {}", target_hit.len());
     }
-
 }
 
 mod day18 {
@@ -2309,8 +2449,8 @@ mod day18 {
                     }
 
                     result.push(Token::Number(n))
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
 
@@ -2395,7 +2535,6 @@ mod day18 {
         false
     }
 
-
     #[allow(clippy::vec_init_then_push)]
     fn sum_snailfish(n1: &[Token], n2: &[Token]) -> Vec<Token> {
         let mut result: Vec<Token> = Vec::new();
@@ -2422,7 +2561,7 @@ mod day18 {
             lhs: Box<SnailfishNumber>,
             rhs: Box<SnailfishNumber>,
         },
-        Number(usize)
+        Number(usize),
     }
 
     fn parse_tree(tokens: Vec<Token>) -> SnailfishNumber {
@@ -2435,7 +2574,13 @@ mod day18 {
                     // Eat the EndPair
                     assert_eq!(tokens[next_offset], Token::EndPair);
 
-                    (SnailfishNumber::Pair { lhs: Box::new(lhs), rhs: Box::new(rhs) }, next_offset + 1)
+                    (
+                        SnailfishNumber::Pair {
+                            lhs: Box::new(lhs),
+                            rhs: Box::new(rhs),
+                        },
+                        next_offset + 1,
+                    )
                 }
                 Token::Number(n) => (SnailfishNumber::Number(n), offset + 1),
                 _ => panic!("Parse error"),
@@ -2448,21 +2593,23 @@ mod day18 {
     fn magnitude(tree: &SnailfishNumber) -> usize {
         match tree {
             SnailfishNumber::Number(n) => *n,
-            SnailfishNumber::Pair { lhs, rhs } => {
-                3 * magnitude(lhs) + 2 * magnitude(rhs)
-            }
+            SnailfishNumber::Pair { lhs, rhs } => 3 * magnitude(lhs) + 2 * magnitude(rhs),
         }
     }
 
     pub fn part1() {
         let numbers = input_lines("input_files/day18.txt").map(|s| tokenise_tree(&s));
-        let sum = numbers.reduce(|result, n| sum_snailfish(&result, &n)).unwrap();
+        let sum = numbers
+            .reduce(|result, n| sum_snailfish(&result, &n))
+            .unwrap();
 
         println!("Magnitude: {}", magnitude(&parse_tree(sum)));
     }
 
     pub fn part2() {
-        let numbers: Vec<Vec<Token>> = input_lines("input_files/day18.txt").map(|s| tokenise_tree(&s)).collect();
+        let numbers: Vec<Vec<Token>> = input_lines("input_files/day18.txt")
+            .map(|s| tokenise_tree(&s))
+            .collect();
 
         let mut best_magnitude = usize::MIN;
 
@@ -2479,9 +2626,7 @@ mod day18 {
 
         println!("Best magnitude: {}", best_magnitude);
     }
-
 }
-
 
 mod day19 {
     use crate::shared::*;
@@ -2513,11 +2658,10 @@ mod day19 {
     // to every set of beacons, then brute force to find where the sensors overlap.
 
     fn determinant_3x3(matrix: &[[i64; 3]]) -> i64 {
-        (matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) -
-         matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]) +
-         matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]))
+        (matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1])
+            - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0])
+            + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]))
     }
-
 
     fn build_rotation_matrices() -> Vec<Vec<[i64; 3]>> {
         // Starting with a nice trick from Knuth TAOCP 4a.  You can generate all
@@ -2538,9 +2682,7 @@ mod day19 {
 
         for perm in (0..=2).permutations(3) {
             for sign_mask in (0..=7) {
-                let mut matrix = vec![[0, 0, 0],
-                                      [0, 0, 0],
-                                      [0, 0, 0]];
+                let mut matrix = vec![[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
                 for (x, &y) in (0..=3).zip(&perm) {
                     if sign_mask & (1 << x) == 0 {
@@ -2558,7 +2700,6 @@ mod day19 {
 
         matrices
     }
-
 
     #[derive(Debug, Hash, Eq, PartialEq, Clone)]
     #[allow(clippy::upper_case_acronyms)]
@@ -2578,9 +2719,7 @@ mod day19 {
         }
 
         fn manhattan_distance(&self, other: &XYZ) -> i64 {
-            (other.x - self.x).abs() +
-                (other.y - self.y).abs() +
-                (other.z - self.z).abs()
+            (other.x - self.x).abs() + (other.y - self.y).abs() + (other.z - self.z).abs()
         }
     }
 
@@ -2595,17 +2734,27 @@ mod day19 {
         rotations: Vec<Scanner>,
     }
 
-    fn parse_scanners(it: impl Iterator<Item=String>) -> Vec<Scanner> {
+    fn parse_scanners(it: impl Iterator<Item = String>) -> Vec<Scanner> {
         let mut result: Vec<Scanner> = Vec::new();
 
         let mut current_scanner = None;
 
         for line in it {
             if line.starts_with("---") {
-                if current_scanner.is_some() { result.push(current_scanner.take().unwrap()); }
+                if current_scanner.is_some() {
+                    result.push(current_scanner.take().unwrap());
+                }
 
-                let number = line.split(' ').nth(2).map(|s| s.parse::<usize>().ok()).flatten().unwrap();
-                current_scanner = Some(Scanner { number, beacons: HashSet::new() });
+                let number = line
+                    .split(' ')
+                    .nth(2)
+                    .map(|s| s.parse::<usize>().ok())
+                    .flatten()
+                    .unwrap();
+                current_scanner = Some(Scanner {
+                    number,
+                    beacons: HashSet::new(),
+                });
             } else if line.is_empty() {
                 continue;
             } else {
@@ -2621,7 +2770,9 @@ mod day19 {
             }
         }
 
-        if current_scanner.is_some() { result.push(current_scanner.take().unwrap()); }
+        if current_scanner.is_some() {
+            result.push(current_scanner.take().unwrap());
+        }
 
         result
     }
@@ -2634,7 +2785,10 @@ mod day19 {
         }
     }
 
-    fn generate_rotations(scanners: Vec<Scanner>, rotations: &[Vec<[i64; 3]>]) -> Vec<ScannerRotations> {
+    fn generate_rotations(
+        scanners: Vec<Scanner>,
+        rotations: &[Vec<[i64; 3]>],
+    ) -> Vec<ScannerRotations> {
         let mut result = Vec::new();
 
         for scanner in scanners {
@@ -2647,7 +2801,11 @@ mod day19 {
             for rotation in rotations {
                 scanner_rotations.rotations.push(Scanner {
                     number: base.number,
-                    beacons: base.beacons.iter().map(|coord| matrix_multiply(coord, rotation)).collect()
+                    beacons: base
+                        .beacons
+                        .iter()
+                        .map(|coord| matrix_multiply(coord, rotation))
+                        .collect(),
                 });
             }
 
@@ -2667,11 +2825,15 @@ mod day19 {
             for candidate_point in candidate.beacons.iter() {
                 let offset = candidate_point.subtract(target_point);
 
-                let offset_candidates: HashSet<XYZ> = candidate.beacons.iter().map(|XYZ { x, y, z }| XYZ {
-                    x: x - offset.x,
-                    y: y - offset.y,
-                    z: z - offset.z,
-                }).collect();
+                let offset_candidates: HashSet<XYZ> = candidate
+                    .beacons
+                    .iter()
+                    .map(|XYZ { x, y, z }| XYZ {
+                        x: x - offset.x,
+                        y: y - offset.y,
+                        z: z - offset.z,
+                    })
+                    .collect();
 
                 let len = offset_candidates.intersection(&target.beacons).count();
 
@@ -2691,7 +2853,10 @@ mod day19 {
         let three_by_three_rotation_matrices = build_rotation_matrices();
         let scanners: Vec<Scanner> = parse_scanners(input_lines("input_files/day19.txt"));
 
-        let mut all_rotations: VecDeque<ScannerRotations> = generate_rotations(scanners, &three_by_three_rotation_matrices).into_iter().collect();
+        let mut all_rotations: VecDeque<ScannerRotations> =
+            generate_rotations(scanners, &three_by_three_rotation_matrices)
+                .into_iter()
+                .collect();
 
         // Arbitrarily pick a scanner as our starting point and required orientation
         let mut merged_scanner = all_rotations.pop_front().unwrap().scanner;
@@ -2702,9 +2867,12 @@ mod day19 {
 
             let mut success = false;
             for rotation in &candidate_scanner_rotations.rotations {
-                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation) {
+                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation)
+                {
                     success = true;
-                    merged_scanner.beacons.extend(alignment_result.mapped_beacons);
+                    merged_scanner
+                        .beacons
+                        .extend(alignment_result.mapped_beacons);
                     break;
                 }
             }
@@ -2722,7 +2890,10 @@ mod day19 {
         let three_by_three_rotation_matrices = build_rotation_matrices();
         let scanners: Vec<Scanner> = parse_scanners(input_lines("input_files/day19.txt"));
 
-        let mut all_rotations: VecDeque<ScannerRotations> = generate_rotations(scanners, &three_by_three_rotation_matrices).into_iter().collect();
+        let mut all_rotations: VecDeque<ScannerRotations> =
+            generate_rotations(scanners, &three_by_three_rotation_matrices)
+                .into_iter()
+                .collect();
 
         // Arbitrarily pick a scanner as our starting point and required orientation
         let mut merged_scanner = all_rotations.pop_front().unwrap().scanner;
@@ -2735,9 +2906,12 @@ mod day19 {
 
             let mut success = false;
             for rotation in &candidate_scanner_rotations.rotations {
-                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation) {
+                if let Some(alignment_result) = attempt_scanner_alignment(&merged_scanner, rotation)
+                {
                     success = true;
-                    merged_scanner.beacons.extend(alignment_result.mapped_beacons);
+                    merged_scanner
+                        .beacons
+                        .extend(alignment_result.mapped_beacons);
                     offsets.push(alignment_result.offset);
                     break;
                 }
@@ -2772,7 +2946,7 @@ mod day20 {
     use crate::shared::*;
 
     #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
-    struct Position (i64, i64);
+    struct Position(i64, i64);
 
     #[derive(Debug, Default)]
     struct Image {
@@ -2788,9 +2962,7 @@ mod day20 {
             Default::default()
         }
 
-        fn set_pixel(&mut self,
-                     position: Position,
-                     ch: char) {
+        fn set_pixel(&mut self, position: Position, ch: char) {
             self.top_left_row = std::cmp::min(self.top_left_row, position.0);
             self.top_left_col = std::cmp::min(self.top_left_col, position.1);
             self.bottom_right_row = std::cmp::max(self.bottom_right_row, position.0);
@@ -2821,9 +2993,15 @@ mod day20 {
             let mut result = 0;
 
             for &(offset_row, offset_col) in &[
-                (-1, -1),  (-1, 0),  (-1, 1),
-                (0,  -1),  (0,  0),  (0,  1),
-                (1,  -1),  (1,  0),  (1,  1),
+                (-1, -1),
+                (-1, 0),
+                (-1, 1),
+                (0, -1),
+                (0, 0),
+                (0, 1),
+                (1, -1),
+                (1, 0),
+                (1, 1),
             ] {
                 let p = Position((position.0 + offset_row), (position.1 + offset_col));
 
@@ -2832,7 +3010,6 @@ mod day20 {
                     Some('.') => 0,
                     _ => default_value,
                 };
-
 
                 result *= 2;
                 result += bit;
@@ -2848,11 +3025,13 @@ mod day20 {
                 for col in ((self.top_left_col - margin)..=(self.bottom_right_col + margin)) {
                     let p = Position(row, col);
 
-                    print!("{}",
-                           match self.pixels.get(&p) {
-                               Some(ch) => *ch,
-                               _ => '.'
-                           });
+                    print!(
+                        "{}",
+                        match self.pixels.get(&p) {
+                            Some(ch) => *ch,
+                            _ => '.',
+                        }
+                    );
                 }
                 println!();
             }
@@ -2932,7 +3111,7 @@ mod day21 {
     #[derive(Debug, Default, Clone)]
     struct Player {
         position: usize,
-        score: usize
+        score: usize,
     }
 
     pub fn part1() {
@@ -2947,11 +3126,20 @@ mod day21 {
 
         loop {
             for &i in &[0, 1] {
-                let roll1 = { dice += 1; dice};
+                let roll1 = {
+                    dice += 1;
+                    dice
+                };
                 rolls += 1;
-                let roll2 = { dice += 1; dice};
+                let roll2 = {
+                    dice += 1;
+                    dice
+                };
                 rolls += 1;
-                let roll3 = { dice += 1; dice};
+                let roll3 = {
+                    dice += 1;
+                    dice
+                };
                 rolls += 1;
 
                 player[i].position += (roll1 + roll2 + roll3);
@@ -2999,12 +3187,12 @@ mod day21 {
             map
         };
 
-        let mut active_universes = vec!(Universe {
+        let mut active_universes = vec![Universe {
             positions: [10, 6],
             scores: [0, 0],
             universes_created: 1,
             next_player: 0,
-        });
+        }];
 
         while !active_universes.is_empty() {
             let mut next_universes = Vec::new();
@@ -3022,7 +3210,8 @@ mod day21 {
 
                     next_universe.scores[player] += next_universe.positions[player];
 
-                    next_universe.universes_created *= *roll_sum_frequencies.get(&roll_total).unwrap();
+                    next_universe.universes_created *=
+                        *roll_sum_frequencies.get(&roll_total).unwrap();
 
                     next_universe.next_player = (player + 1) % 2;
 
@@ -3045,7 +3234,6 @@ mod day21 {
     }
 }
 
-
 mod day22 {
     use crate::shared::*;
 
@@ -3056,7 +3244,8 @@ mod day22 {
     pub fn part1() {
         let mut world: HashSet<(i64, i64, i64)> = HashSet::new();
 
-        let rule_pattern = Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
+        let rule_pattern =
+            Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
 
         for line in input_lines("input_files/day22.txt") {
             let mut it = line.split(' ');
@@ -3127,7 +3316,6 @@ mod day22 {
     }
 
     impl Cube {
-
         // Coordinate system I'm using here
         //
         //        z+
@@ -3144,14 +3332,26 @@ mod day22 {
         fn clip_to(&self, other: &Cube) -> Cube {
             let mut result = self.clone();
 
-            if result.top_x < other.top_x { result.top_x = other.top_x; }
-            if result.bot_x > other.bot_x { result.bot_x = other.bot_x; }
+            if result.top_x < other.top_x {
+                result.top_x = other.top_x;
+            }
+            if result.bot_x > other.bot_x {
+                result.bot_x = other.bot_x;
+            }
 
-            if result.top_y < other.top_y { result.top_y = other.top_y; }
-            if result.bot_y > other.bot_y { result.bot_y = other.bot_y; }
+            if result.top_y < other.top_y {
+                result.top_y = other.top_y;
+            }
+            if result.bot_y > other.bot_y {
+                result.bot_y = other.bot_y;
+            }
 
-            if result.top_z < other.top_z { result.top_z = other.top_z; }
-            if result.bot_z > other.bot_z { result.bot_z = other.bot_z; }
+            if result.top_z < other.top_z {
+                result.top_z = other.top_z;
+            }
+            if result.bot_z > other.bot_z {
+                result.bot_z = other.bot_z;
+            }
 
             result
         }
@@ -3159,7 +3359,7 @@ mod day22 {
         fn split(&self, other: &Cube) -> Vec<Cube> {
             let other = other.clip_to(self);
 
-            let result: Vec<Cube> = vec!(
+            let result: Vec<Cube> = vec![
                 // Left of other
                 Cube {
                     top_x: self.top_x,
@@ -3170,7 +3370,6 @@ mod day22 {
                     bot_z: self.bot_z,
                     split_type: SplitType::Left,
                 },
-
                 // Right of other
                 Cube {
                     top_x: other.bot_x + 1,
@@ -3181,7 +3380,6 @@ mod day22 {
                     bot_z: self.bot_z,
                     split_type: SplitType::Right,
                 },
-
                 // Front of other
                 Cube {
                     top_x: other.top_x,
@@ -3192,7 +3390,6 @@ mod day22 {
                     bot_z: other.top_z - 1,
                     split_type: SplitType::Front,
                 },
-
                 // Back of other
                 Cube {
                     top_x: other.top_x,
@@ -3203,7 +3400,6 @@ mod day22 {
                     bot_z: self.bot_z,
                     split_type: SplitType::Back,
                 },
-
                 // Top of other
                 Cube {
                     top_x: other.top_x,
@@ -3214,7 +3410,6 @@ mod day22 {
                     bot_z: other.bot_z,
                     split_type: SplitType::Top,
                 },
-
                 // Bottom of other
                 Cube {
                     top_x: other.top_x,
@@ -3225,10 +3420,13 @@ mod day22 {
                     bot_z: other.bot_z,
                     split_type: SplitType::Bottom,
                 },
-            ).into_iter().filter(|c| !c.is_empty()).collect();
+            ]
+            .into_iter()
+            .filter(|c| !c.is_empty())
+            .collect();
 
             for i in 0..result.len() {
-                for j in i+1..result.len() {
+                for j in i + 1..result.len() {
                     assert!(!result[i].overlaps(&result[j]));
                 }
             }
@@ -3241,21 +3439,24 @@ mod day22 {
         }
 
         fn overlaps(&self, other: &Cube) -> bool {
-            !(self.bot_x < other.top_x ||
-              self.top_x > other.bot_x ||
-              self.bot_y < other.top_y ||
-              self.top_y > other.bot_y ||
-              self.bot_z < other.top_z ||
-              self.top_z > other.bot_z)
+            !(self.bot_x < other.top_x
+                || self.top_x > other.bot_x
+                || self.bot_y < other.top_y
+                || self.top_y > other.bot_y
+                || self.bot_z < other.top_z
+                || self.top_z > other.bot_z)
         }
 
         fn area(&self) -> i64 {
-            (((self.bot_x + 1) - self.top_x) * ((self.bot_y + 1) - self.top_y) * ((self.bot_z + 1) - self.top_z))
+            (((self.bot_x + 1) - self.top_x)
+                * ((self.bot_y + 1) - self.top_y)
+                * ((self.bot_z + 1) - self.top_z))
         }
     }
 
     pub fn part2() {
-        let rule_pattern = Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
+        let rule_pattern =
+            Regex::new(r"^x=(.+?)\.\.(.+?),y=(.+?)\.\.(.+?),z=(.+?)\.\.(.+?)$").unwrap();
 
         let mut world = Vec::new();
 
@@ -3294,7 +3495,6 @@ mod day22 {
                         dbg!(&splits);
                     }
 
-
                     assert!(cube.area() > splits.iter().map(|s| s.area()).sum());
 
                     new_world.extend(cube.split(&rule_cube));
@@ -3310,7 +3510,10 @@ mod day22 {
             world = new_world;
         }
 
-        println!("{} cubes are on", world.iter().map(|cube| cube.area()).sum::<i64>());
+        println!(
+            "{} cubes are on",
+            world.iter().map(|cube| cube.area()).sum::<i64>()
+        );
     }
 }
 
@@ -3323,7 +3526,6 @@ mod day23_pt1 {
     use Amphipod::*;
     use Tile::*;
 
-
     #[derive(Clone, Eq, PartialEq, Hash, Debug)]
     enum Tile {
         Hallway {
@@ -3334,7 +3536,7 @@ mod day23_pt1 {
             idx: usize,
             upper_occupant: Option<Amphipod>,
             lower_occupant: Option<Amphipod>,
-        }
+        },
     }
 
     #[derive(Eq, PartialEq, Debug, Clone, Hash, Copy)]
@@ -3342,7 +3544,7 @@ mod day23_pt1 {
         A,
         B,
         C,
-        D
+        D,
     }
 
     impl Amphipod {
@@ -3368,30 +3570,31 @@ mod day23_pt1 {
     type World = Vec<Tile>;
 
     fn is_complete(world: &World) -> bool {
-        world.iter().all(|t| {
-            match t {
-                Hallway { .. } => true,
-                Room { upper_occupant, lower_occupant, .. } => {
-                    upper_occupant == lower_occupant && upper_occupant.is_some()
-                }
-            }
+        world.iter().all(|t| match t {
+            Hallway { .. } => true,
+            Room {
+                upper_occupant,
+                lower_occupant,
+                ..
+            } => upper_occupant == lower_occupant && upper_occupant.is_some(),
         })
     }
 
     fn possible_moves(world: &World) -> Vec<(World, usize)> {
         if is_complete(world) {
-            return vec!();
+            return vec![];
         }
 
         let mut result = Vec::new();
 
         // If any amphipod is on a transitory square, it must move.  This constrains the
         // possible moves.
-        let in_transitory = world.iter().any(|t| {
-            match t {
-                Hallway { idx, occupant: Some(_) } => (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8),
-                _ => false,
-            }
+        let in_transitory = world.iter().any(|t| match t {
+            Hallway {
+                idx,
+                occupant: Some(_),
+            } => (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8),
+            _ => false,
         });
 
         for world_idx in 0..world.len() {
@@ -3399,36 +3602,57 @@ mod day23_pt1 {
 
             match tile {
                 Hallway { occupant: None, .. } => {}
-                Hallway { occupant: Some(amphipod), idx } => {
+                Hallway {
+                    occupant: Some(amphipod),
+                    idx,
+                } => {
                     // FIXME: missed a rule here.  An amphipod that stops moving in a hallway is
                     // frozen until it can move into its room.
 
-                    if idx > &0 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
-                        if let Some(target_idx) = world.iter().position(|t| {
-                            match t {
-                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx - 1,
-                                _ => false,
-                            }
+                    if idx > &0
+                        && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8))
+                    {
+                        if let Some(target_idx) = world.iter().position(|t| match t {
+                            Hallway {
+                                occupant: None,
+                                idx: tile_idx,
+                            } => *tile_idx == idx - 1,
+                            _ => false,
                         }) {
                             // move it left
                             let mut new_world = world.clone();
-                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx - 1 };
+                            new_world[world_idx] = Hallway {
+                                occupant: None,
+                                idx: *idx,
+                            };
+                            new_world[target_idx] = Hallway {
+                                occupant: Some(*amphipod),
+                                idx: idx - 1,
+                            };
                             result.push((new_world, amphipod.energy()));
                         }
                     }
 
-                    if idx < &10 && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8)) {
-                        if let Some(target_idx) = world.iter().position(|t| {
-                            match t {
-                                Hallway { occupant: None, idx: tile_idx } => *tile_idx == idx + 1,
-                                _ => false,
-                            }
+                    if idx < &10
+                        && (!in_transitory || (*idx == 2 || *idx == 4 || *idx == 6 || *idx == 8))
+                    {
+                        if let Some(target_idx) = world.iter().position(|t| match t {
+                            Hallway {
+                                occupant: None,
+                                idx: tile_idx,
+                            } => *tile_idx == idx + 1,
+                            _ => false,
                         }) {
                             // move it right
                             let mut new_world = world.clone();
-                            new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                            new_world[target_idx] = Hallway { occupant: Some(*amphipod), idx: idx + 1 };
+                            new_world[world_idx] = Hallway {
+                                occupant: None,
+                                idx: *idx,
+                            };
+                            new_world[target_idx] = Hallway {
+                                occupant: Some(*amphipod),
+                                idx: idx + 1,
+                            };
                             result.push((new_world, amphipod.energy()));
                         }
                     }
@@ -3438,17 +3662,33 @@ mod day23_pt1 {
                         let room_idx = (idx / 2) - 1;
 
                         if amphipod.target_room() == room_idx {
-                            if let Some(target_idx) = world.iter().position(|t| {
-                                match t {
-                                    Room { upper_occupant: None, idx: tile_idx, .. } => *tile_idx == room_idx,
-                                    _ => false,
-                                }
+                            if let Some(target_idx) = world.iter().position(|t| match t {
+                                Room {
+                                    upper_occupant: None,
+                                    idx: tile_idx,
+                                    ..
+                                } => *tile_idx == room_idx,
+                                _ => false,
                             }) {
-                                if let Room { upper_occupant: None, lower_occupant, .. } = &world[target_idx] {
-                                    if lower_occupant.is_none() || lower_occupant == &Some(*amphipod) {
+                                if let Room {
+                                    upper_occupant: None,
+                                    lower_occupant,
+                                    ..
+                                } = &world[target_idx]
+                                {
+                                    if lower_occupant.is_none()
+                                        || lower_occupant == &Some(*amphipod)
+                                    {
                                         let mut new_world = world.clone();
-                                        new_world[world_idx] = Hallway { occupant: None, idx: *idx };
-                                        new_world[target_idx] = Room { upper_occupant: Some(*amphipod), lower_occupant: *lower_occupant, idx: room_idx };
+                                        new_world[world_idx] = Hallway {
+                                            occupant: None,
+                                            idx: *idx,
+                                        };
+                                        new_world[target_idx] = Room {
+                                            upper_occupant: Some(*amphipod),
+                                            lower_occupant: *lower_occupant,
+                                            idx: room_idx,
+                                        };
                                         result.push((new_world, amphipod.energy()));
                                     }
                                 }
@@ -3458,33 +3698,64 @@ mod day23_pt1 {
                 }
                 Room { .. } => {
                     if !in_transitory {
-                        if let Room { idx, lower_occupant: Some(lower_occupant), upper_occupant: None } = tile {
+                        if let Room {
+                            idx,
+                            lower_occupant: Some(lower_occupant),
+                            upper_occupant: None,
+                        } = tile
+                        {
                             // Move lower to upper
                             let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: None, upper_occupant: Some(*lower_occupant) };
+                            new_world[world_idx] = Room {
+                                idx: *idx,
+                                lower_occupant: None,
+                                upper_occupant: Some(*lower_occupant),
+                            };
                             result.push((new_world, lower_occupant.energy()));
                         }
 
-                        if let Room { idx, lower_occupant: None, upper_occupant: Some(upper_occupant) } = tile {
+                        if let Room {
+                            idx,
+                            lower_occupant: None,
+                            upper_occupant: Some(upper_occupant),
+                        } = tile
+                        {
                             // Move upper to lower
                             let mut new_world = world.clone();
-                            new_world[world_idx] = Room { idx: *idx, lower_occupant: Some(*upper_occupant), upper_occupant: None };
+                            new_world[world_idx] = Room {
+                                idx: *idx,
+                                lower_occupant: Some(*upper_occupant),
+                                upper_occupant: None,
+                            };
                             result.push((new_world, upper_occupant.energy()));
                         }
 
-                        if let Room { idx, upper_occupant: Some(upper_occupant), lower_occupant } = tile {
+                        if let Room {
+                            idx,
+                            upper_occupant: Some(upper_occupant),
+                            lower_occupant,
+                        } = tile
+                        {
                             let hallway_idx = (idx * 2) + 2;
 
-                            if let Some(target_hallway_idx) =  world.iter().position(|t| {
-                                match t {
-                                    Hallway { occupant: None, idx: tile_idx } => *tile_idx == hallway_idx,
-                                    _ => false,
-                                }
+                            if let Some(target_hallway_idx) = world.iter().position(|t| match t {
+                                Hallway {
+                                    occupant: None,
+                                    idx: tile_idx,
+                                } => *tile_idx == hallway_idx,
+                                _ => false,
                             }) {
                                 // Move them up into the hallway
                                 let mut new_world = world.clone();
-                                new_world[target_hallway_idx] = Hallway { occupant: Some(*upper_occupant), idx: hallway_idx };
-                                new_world[world_idx] = Room { idx: *idx, upper_occupant: None, lower_occupant: *lower_occupant };
+                                new_world[target_hallway_idx] = Hallway {
+                                    occupant: Some(*upper_occupant),
+                                    idx: hallway_idx,
+                                };
+                                new_world[world_idx] = Room {
+                                    idx: *idx,
+                                    upper_occupant: None,
+                                    lower_occupant: *lower_occupant,
+                                };
                                 result.push((new_world, upper_occupant.energy()));
                             }
                         }
@@ -3505,7 +3776,9 @@ mod day23_pt1 {
 
     impl Ord for Entry {
         fn cmp(&self, other: &Self) -> Ordering {
-            other.cost.cmp(&(self.cost))
+            other
+                .cost
+                .cmp(&(self.cost))
                 .then_with(|| self.position.cmp(&other.position))
         }
     }
@@ -3517,91 +3790,162 @@ mod day23_pt1 {
     }
 
     fn print(world: &World) {
-        let hallways: Vec<String> = (0..=10).map(|idx| {
-            world.iter().find(|t| match t {
-                Hallway { idx: hallway_idx, .. } => *hallway_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|hallway| {
-            match hallway {
-                Hallway { occupant: Some(a), .. } => format!("{:?}", a),
+        let hallways: Vec<String> = (0..=10)
+            .map(|idx| {
+                world
+                    .iter()
+                    .find(|t| match t {
+                        Hallway {
+                            idx: hallway_idx, ..
+                        } => *hallway_idx == idx,
+                        _ => false,
+                    })
+                    .unwrap()
+            })
+            .map(|hallway| match hallway {
+                Hallway {
+                    occupant: Some(a), ..
+                } => format!("{:?}", a),
                 _ => ".".to_string(),
-            }
-        }).collect();
+            })
+            .collect();
 
-        let upper_room: Vec<String> = (0..=3).map(|idx| {
-            world.iter().find(|t| match t {
-                Room { idx: room_idx, .. } => *room_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|room| {
-            match room {
-                Room { upper_occupant: Some(a), .. } => format!("{:?}", a),
+        let upper_room: Vec<String> = (0..=3)
+            .map(|idx| {
+                world
+                    .iter()
+                    .find(|t| match t {
+                        Room { idx: room_idx, .. } => *room_idx == idx,
+                        _ => false,
+                    })
+                    .unwrap()
+            })
+            .map(|room| match room {
+                Room {
+                    upper_occupant: Some(a),
+                    ..
+                } => format!("{:?}", a),
                 _ => ".".to_string(),
-            }
-        }).collect();
+            })
+            .collect();
 
-        let lower_room: Vec<String> = (0..=3).map(|idx| {
-            world.iter().find(|t| match t {
-                Room { idx: room_idx, .. } => *room_idx == idx,
-                _ => false,
-            }).unwrap()
-        }).map(|room| {
-            match room {
-                Room { lower_occupant: Some(a), .. } => format!("{:?}", a),
+        let lower_room: Vec<String> = (0..=3)
+            .map(|idx| {
+                world
+                    .iter()
+                    .find(|t| match t {
+                        Room { idx: room_idx, .. } => *room_idx == idx,
+                        _ => false,
+                    })
+                    .unwrap()
+            })
+            .map(|room| match room {
+                Room {
+                    lower_occupant: Some(a),
+                    ..
+                } => format!("{:?}", a),
                 _ => ".".to_string(),
-            }
-        }).collect();
+            })
+            .collect();
 
-
-        println!("
+        println!(
+            "
 #############
 #{}{}{}{}{}{}{}{}{}{}{}#
 ###{}#{}#{}#{}###
   #{}#{}#{}#{}#
   #########
 ",
-                 hallways[0],
-                 hallways[1],
-                 hallways[2],
-                 hallways[3],
-                 hallways[4],
-                 hallways[5],
-                 hallways[6],
-                 hallways[7],
-                 hallways[8],
-                 hallways[9],
-                 hallways[10],
-                 upper_room[0],
-                 upper_room[1],
-                 upper_room[2],
-                 upper_room[3],
-                 lower_room[0],
-                 lower_room[1],
-                 lower_room[2],
-                 lower_room[3],
-                 );
+            hallways[0],
+            hallways[1],
+            hallways[2],
+            hallways[3],
+            hallways[4],
+            hallways[5],
+            hallways[6],
+            hallways[7],
+            hallways[8],
+            hallways[9],
+            hallways[10],
+            upper_room[0],
+            upper_room[1],
+            upper_room[2],
+            upper_room[3],
+            lower_room[0],
+            lower_room[1],
+            lower_room[2],
+            lower_room[3],
+        );
     }
 
     // The horror!
     pub fn part1() {
-        let world = vec!(
-            Hallway { idx: 0, occupant: None },
-            Hallway { idx: 1, occupant: None },
-            Hallway { idx: 2, occupant: None },
-            Hallway { idx: 3, occupant: None },
-            Hallway { idx: 4, occupant: None },
-            Hallway { idx: 5, occupant: None },
-            Hallway { idx: 6, occupant: None },
-            Hallway { idx: 7, occupant: None },
-            Hallway { idx: 8, occupant: None },
-            Hallway { idx: 9, occupant: None },
-            Hallway { idx: 10, occupant: None },
-            Room { idx: 0, upper_occupant: Some(C), lower_occupant: Some(B) },
-            Room { idx: 1, upper_occupant: Some(D), lower_occupant: Some(A) },
-            Room { idx: 2, upper_occupant: Some(A), lower_occupant: Some(D) },
-            Room { idx: 3, upper_occupant: Some(B), lower_occupant: Some(C) },
-        );
+        let world = vec![
+            Hallway {
+                idx: 0,
+                occupant: None,
+            },
+            Hallway {
+                idx: 1,
+                occupant: None,
+            },
+            Hallway {
+                idx: 2,
+                occupant: None,
+            },
+            Hallway {
+                idx: 3,
+                occupant: None,
+            },
+            Hallway {
+                idx: 4,
+                occupant: None,
+            },
+            Hallway {
+                idx: 5,
+                occupant: None,
+            },
+            Hallway {
+                idx: 6,
+                occupant: None,
+            },
+            Hallway {
+                idx: 7,
+                occupant: None,
+            },
+            Hallway {
+                idx: 8,
+                occupant: None,
+            },
+            Hallway {
+                idx: 9,
+                occupant: None,
+            },
+            Hallway {
+                idx: 10,
+                occupant: None,
+            },
+            Room {
+                idx: 0,
+                upper_occupant: Some(C),
+                lower_occupant: Some(B),
+            },
+            Room {
+                idx: 1,
+                upper_occupant: Some(D),
+                lower_occupant: Some(A),
+            },
+            Room {
+                idx: 2,
+                upper_occupant: Some(A),
+                lower_occupant: Some(D),
+            },
+            Room {
+                idx: 3,
+                upper_occupant: Some(B),
+                lower_occupant: Some(C),
+            },
+        ];
 
         let mut queue = BinaryHeap::new();
 
@@ -3620,7 +3964,10 @@ mod day23_pt1 {
         while let Some(entry) = queue.pop() {
             checked += 1;
             if is_complete(&entry.world) {
-                println!("Completed with cost: {}", seen_states.get(&entry.world).unwrap());
+                println!(
+                    "Completed with cost: {}",
+                    seen_states.get(&entry.world).unwrap()
+                );
                 break;
             }
 
@@ -3658,7 +4005,7 @@ mod day23_pt2 {
         A,
         B,
         C,
-        D
+        D,
     }
 
     impl Amphipod {
@@ -3690,7 +4037,9 @@ mod day23_pt2 {
 
     impl Ord for Entry {
         fn cmp(&self, other: &Self) -> Ordering {
-            other.cost.cmp(&(self.cost))
+            other
+                .cost
+                .cmp(&(self.cost))
                 .then_with(|| self.position.cmp(&other.position))
         }
     }
@@ -3715,7 +4064,8 @@ mod day23_pt2 {
 
     impl WorldPosition {
         fn distance(&self, other: &Self) -> usize {
-            ((self.x as i64 - other.x as i64).abs() + (self.y as i64 - other.y as i64).abs()) as usize
+            ((self.x as i64 - other.x as i64).abs() + (self.y as i64 - other.y as i64).abs())
+                as usize
         }
 
         fn to_room(&self) -> (usize, usize) {
@@ -3738,9 +4088,14 @@ mod day23_pt2 {
     impl World {
         fn is_complete(&self) -> bool {
             self.hallway.iter().all(|h| {
-                h.is_none() && self.rooms.iter().enumerate().all(|(room_idx, room)| {
-                    room.iter().all(|amphipod| amphipod.map(|a| a.target_room() == room_idx).unwrap_or(false))
-                })
+                h.is_none()
+                    && self.rooms.iter().enumerate().all(|(room_idx, room)| {
+                        room.iter().all(|amphipod| {
+                            amphipod
+                                .map(|a| a.target_room() == room_idx)
+                                .unwrap_or(false)
+                        })
+                    })
             })
         }
 
@@ -3752,16 +4107,28 @@ mod day23_pt2 {
 
             let room_count = self.rooms.len();
 
-            let unfinished_rooms: Vec<usize> = (0..room_count).filter(|&room_idx| {
-                self.rooms[room_idx].iter().any(|a| a.map(|a| a.target_room() != room_idx).unwrap_or(false))
-            }).collect();
+            let unfinished_rooms: Vec<usize> = (0..room_count)
+                .filter(|&room_idx| {
+                    self.rooms[room_idx]
+                        .iter()
+                        .any(|a| a.map(|a| a.target_room() != room_idx).unwrap_or(false))
+                })
+                .collect();
 
             for room_idx in unfinished_rooms {
-                let to_move_slot = self.rooms[room_idx].iter().enumerate().find(|(_slot_idx, a)| a.is_some()).unwrap().0;
+                let to_move_slot = self.rooms[room_idx]
+                    .iter()
+                    .enumerate()
+                    .find(|(_slot_idx, a)| a.is_some())
+                    .unwrap()
+                    .0;
 
                 result.push(AmphipodPosition {
                     amphipod: self.rooms[room_idx][to_move_slot].unwrap(),
-                    position: WorldPosition { x: (room_idx * 2 + 2), y: to_move_slot + 1 },
+                    position: WorldPosition {
+                        x: (room_idx * 2 + 2),
+                        y: to_move_slot + 1,
+                    },
                 });
             }
 
@@ -3772,7 +4139,7 @@ mod day23_pt2 {
             let mut result = Vec::new();
 
             for x in 0..self.hallway.len() {
-                if self.hallway[x].is_none() && (x != 2 && x != 4 && x != 6 && x != 8)  {
+                if self.hallway[x].is_none() && (x != 2 && x != 4 && x != 6 && x != 8) {
                     result.push(WorldPosition { x, y: 0 });
                 }
             }
@@ -3780,7 +4147,11 @@ mod day23_pt2 {
             result
         }
 
-        fn move_amphipod_to_hallway(&self, a: &AmphipodPosition, h: &WorldPosition) -> (World, usize) {
+        fn move_amphipod_to_hallway(
+            &self,
+            a: &AmphipodPosition,
+            h: &WorldPosition,
+        ) -> (World, usize) {
             let cost = a.position.distance(h) * a.amphipod.energy();
 
             let mut next_world: World = self.clone();
@@ -3793,12 +4164,15 @@ mod day23_pt2 {
         }
 
         fn waiting_amphipods(&self) -> Vec<AmphipodPosition> {
-            self.hallway.iter()
-                .enumerate().map(|(x, h)|
-                                 h.map(|a| AmphipodPosition {
-                                     amphipod: a,
-                                     position: WorldPosition { x, y: 0 }
-                                 }))
+            self.hallway
+                .iter()
+                .enumerate()
+                .map(|(x, h)| {
+                    h.map(|a| AmphipodPosition {
+                        amphipod: a,
+                        position: WorldPosition { x, y: 0 },
+                    })
+                })
                 .flatten()
                 .collect()
         }
@@ -3808,18 +4182,29 @@ mod day23_pt2 {
 
             let slot_count = self.rooms[0].len();
 
-            if self.rooms[room_idx].iter().all(|slot| slot.is_none() || slot.as_ref() == Some(amphipod)) {
+            if self.rooms[room_idx]
+                .iter()
+                .all(|slot| slot.is_none() || slot.as_ref() == Some(amphipod))
+            {
                 // We can put our amphipod in the highest available room slot
                 return Some(WorldPosition {
                     x: (room_idx * 2) + 2,
-                    y: (0..slot_count).rev().find(|&slot_idx| self.rooms[room_idx][slot_idx].is_none()).unwrap() + 1,
+                    y: (0..slot_count)
+                        .rev()
+                        .find(|&slot_idx| self.rooms[room_idx][slot_idx].is_none())
+                        .unwrap()
+                        + 1,
                 });
             }
 
             None
         }
 
-        fn move_amphimod_to_room(&self, a: &AmphipodPosition, room: &WorldPosition) -> (World, usize) {
+        fn move_amphimod_to_room(
+            &self,
+            a: &AmphipodPosition,
+            room: &WorldPosition,
+        ) -> (World, usize) {
             let cost = a.position.distance(room) * a.amphipod.energy();
 
             let mut next_world: World = self.clone();
@@ -3855,7 +4240,7 @@ mod day23_pt2 {
 
         fn possible_moves(&self) -> Vec<(World, usize)> {
             if self.is_complete() {
-                return vec!();
+                return vec![];
             }
 
             let mut result = Vec::new();
@@ -3885,7 +4270,8 @@ mod day23_pt2 {
         }
 
         fn print(&self) {
-            println!("
+            println!(
+                "
 #############
 #{}{}{}{}{}{}{}{}{}{}{}#
 ###{}#{}#{}#{}###
@@ -3894,68 +4280,159 @@ mod day23_pt2 {
   #{}#{}#{}#{}#
   #########
 ",
-                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                self.hallway[0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[4]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[5]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[6]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[7]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[8]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[9]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[10]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
             );
         }
 
         fn print_2(&self) {
-            println!("
+            println!(
+                "
 #############
 #{}{}{}{}{}{}{}{}{}{}{}#
 ###{}#{}#{}#{}###
   #{}#{}#{}#{}#
   #########
 ",
-                     self.hallway[0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[2].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[3].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[4].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[5].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[6].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[7].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[8].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[9].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.hallway[10].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][0].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[0][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[1][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[2][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
-                     self.rooms[3][1].map(|a| format!("{:?}", a)).unwrap_or_else(|| ".".to_string()),
+                self.hallway[0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[2]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[3]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[4]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[5]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[6]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[7]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[8]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[9]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.hallway[10]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][0]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[0][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[1][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[2][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
+                self.rooms[3][1]
+                    .map(|a| format!("{:?}", a))
+                    .unwrap_or_else(|| ".".to_string()),
             );
         }
-
     }
-
 
     pub fn part2() {
         let first_world = World {
@@ -3965,7 +4442,7 @@ mod day23_pt2 {
                 [Some(A), Some(B), Some(A), Some(D)],
                 [Some(B), Some(A), Some(C), Some(C)],
             ],
-            .. Default::default()
+            ..Default::default()
         };
 
         let mut queue = BinaryHeap::new();
@@ -3985,7 +4462,10 @@ mod day23_pt2 {
         while let Some(entry) = queue.pop() {
             checked += 1;
             if entry.world.is_complete() {
-                println!("Completed with cost: {}", seen_states.get(&entry.world).unwrap());
+                println!(
+                    "Completed with cost: {}",
+                    seen_states.get(&entry.world).unwrap()
+                );
                 break;
             }
 
@@ -4016,7 +4496,6 @@ mod day23_pt2 {
     }
 }
 
-
 mod day24 {
     use crate::shared::*;
 
@@ -4039,7 +4518,6 @@ mod day24 {
     }
 
     pub fn part1() {
-
         fn check_2_3(input_2: i64, input_3: i64) -> bool {
             (((input_2 + 3) % 26) + -11) == input_3
         }
@@ -4052,11 +4530,16 @@ mod day24 {
             ((input_8 % 26) + -2) == input_9
         }
 
-
         fn combined(input: &[i64]) -> bool {
-            if (((input[2] + 3) % 26) + -11) != input[3] { return false; }
-            if (((input[4] + 9) % 26) + -4) != input[5] { return false; }
-            if ((input[8] % 26) + -2) != input[9] { return false; }
+            if (((input[2] + 3) % 26) + -11) != input[3] {
+                return false;
+            }
+            if (((input[4] + 9) % 26) + -4) != input[5] {
+                return false;
+            }
+            if ((input[8] % 26) + -2) != input[9] {
+                return false;
+            }
 
             let mut z = (input[0] + 13);
 
@@ -4064,13 +4547,17 @@ mod day24 {
             z = (z * 26) + (input[2] + 3);
 
             // DONE
-            if ((z % 26) + -11) != input[3] { return false; }
+            if ((z % 26) + -11) != input[3] {
+                return false;
+            }
             z /= 26;
 
             z = (z * 26) + (input[4] + 9);
 
             // DONE
-            if ((z % 26) + -4) != input[5] { return false; };
+            if ((z % 26) + -4) != input[5] {
+                return false;
+            };
             z /= 26;
 
             z = (z * 26) + (input[6] + 5);
@@ -4078,24 +4565,33 @@ mod day24 {
             z = (z * 26) + input[8];
 
             // DONE
-            if ((z % 26) + -2) != input[9] { return false; };
+            if ((z % 26) + -2) != input[9] {
+                return false;
+            };
             z /= 26;
 
-            if ((z % 26) + -5) != input[10] { return false; };
+            if ((z % 26) + -5) != input[10] {
+                return false;
+            };
             z /= 26;
 
-            if ((z % 26) + -11) != input[11] { return false; };
+            if ((z % 26) + -11) != input[11] {
+                return false;
+            };
             z /= 26;
 
-            if ((z % 26) + -13) != input[12] { return false; };
+            if ((z % 26) + -13) != input[12] {
+                return false;
+            };
             z /= 26;
 
-            if ((z % 26) + -10) != input[13] { return false; };
+            if ((z % 26) + -10) != input[13] {
+                return false;
+            };
             // z = (z / 26);
 
             true
         }
-
 
         fn digit_1(w: i64, _z: i64) -> i64 {
             (w + 13)
@@ -4149,7 +4645,6 @@ mod day24 {
             ((z / 26) * ((25 * x) + 1)) + ((w + 15) * x)
         }
 
-
         fn digit_13(w: i64, z: i64) -> i64 {
             // 14 <= (z % 26) <= 22
             // z >= 0 && z <= 672
@@ -4164,12 +4659,11 @@ mod day24 {
             ((z / 26) * ((25 * x) + 1)) + ((w + 8) * x)
         }
 
-
-
-        fn solve(digit_fns: &mut Vec<Box<dyn Fn(i64, i64) -> i64>>,
-                 target_digit: usize,
-                 target_z: i64,
-                 number: Vec<i64>,
+        fn solve(
+            digit_fns: &mut Vec<Box<dyn Fn(i64, i64) -> i64>>,
+            target_digit: usize,
+            target_z: i64,
+            number: Vec<i64>,
         ) {
             for z in 0..500 {
                 for w in (1..=9).rev() {
@@ -4506,8 +5000,7 @@ mod day24 {
             println!("FAILCAKE");
         }
 
-        'outer1:
-        for a in (1..=9).rev() {
+        'outer1: for a in (1..=9).rev() {
             for b in (1..=9).rev() {
                 if (check_2_3(a, b)) {
                     println!("Highest 2/3: {} {}", a, b);
@@ -4516,8 +5009,7 @@ mod day24 {
             }
         }
 
-        'outer2:
-        for a in (1..=9).rev() {
+        'outer2: for a in (1..=9).rev() {
             for b in (1..=9).rev() {
                 if (check_4_5(a, b)) {
                     println!("Highest 4/5: {} {}", a, b);
@@ -4526,8 +5018,7 @@ mod day24 {
             }
         }
 
-        'outer3:
-        for a in (1..=9).rev() {
+        'outer3: for a in (1..=9).rev() {
             for b in (1..=9).rev() {
                 if (check_8_9(a, b)) {
                     println!("Highest 8/9: {} {}", a, b);
@@ -4536,8 +5027,7 @@ mod day24 {
             }
         }
 
-        'outer1a:
-        for a in (1..=9) {
+        'outer1a: for a in (1..=9) {
             for b in (1..=9) {
                 if (check_2_3(a, b)) {
                     println!("Lowest 2/3: {} {}", a, b);
@@ -4546,8 +5036,7 @@ mod day24 {
             }
         }
 
-        'outer2a:
-        for a in (1..=9) {
+        'outer2a: for a in (1..=9) {
             for b in (1..=9) {
                 if (check_4_5(a, b)) {
                     println!("Lowest 4/5: {} {}", a, b);
@@ -4556,8 +5045,7 @@ mod day24 {
             }
         }
 
-        'outer3a:
-        for a in (1..=9) {
+        'outer3a: for a in (1..=9) {
             for b in (1..=9) {
                 if (check_8_9(a, b)) {
                     println!("Lowest 8/9: {} {}", a, b);
@@ -4565,7 +5053,6 @@ mod day24 {
                 }
             }
         }
-
 
         {
             // LARGEST (pt1): 69914999975369
@@ -4577,8 +5064,7 @@ mod day24 {
 
             let mut best = input;
 
-            'outer_highest:
-            loop {
+            'outer_highest: loop {
                 if combined(&input) {
                     best = input;
                 }
@@ -4637,10 +5123,8 @@ mod day24 {
                 }
             }
         }
-
     }
 }
-
 
 mod day25 {
     use crate::shared::*;
@@ -4668,19 +5152,27 @@ mod day25 {
     }
 
     impl Grid {
-        fn parse(it: impl Iterator<Item=String>) -> Grid {
-            let rows: Vec<Vec<Tile>> = it.map(|line| {
-                line.chars().map(|ch| match ch {
-                    '>' => East,
-                    'v' => South,
-                    _ => Empty
-                }).collect()
-            }).collect();
+        fn parse(it: impl Iterator<Item = String>) -> Grid {
+            let rows: Vec<Vec<Tile>> = it
+                .map(|line| {
+                    line.chars()
+                        .map(|ch| match ch {
+                            '>' => East,
+                            'v' => South,
+                            _ => Empty,
+                        })
+                        .collect()
+                })
+                .collect();
 
             let width = rows[0].len();
             let height = rows.len();
 
-            Grid { rows, width, height }
+            Grid {
+                rows,
+                width,
+                height,
+            }
         }
 
         fn advance(&self, row: usize, col: usize, mover: Tile) -> (usize, usize) {
@@ -4702,7 +5194,11 @@ mod day25 {
                         if self.rows[row][col] == *mover {
                             let (next_row, next_col) = self.advance(row, col, *mover);
                             if self.rows[next_row][next_col] == Empty {
-                                moves.push(Move { row, col, mover: *mover });
+                                moves.push(Move {
+                                    row,
+                                    col,
+                                    mover: *mover,
+                                });
                             }
                         }
                     }
@@ -4819,6 +5315,4 @@ fn main() {
 
         day25::part1();
     }
-
 }
-
