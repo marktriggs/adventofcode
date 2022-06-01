@@ -976,7 +976,7 @@ mod day9 {
 
                 let mut neighbours = [(-1, 0), (1, 0), (0, -1), (0, 1)]
                     .into_iter()
-                    .map(|(x_off, y_off)| {
+                    .filter_map(|(x_off, y_off)| {
                         let n_row = (row as i64 + y_off);
                         let n_col = (col as i64 + x_off);
 
@@ -989,8 +989,7 @@ mod day9 {
                         } else {
                             None
                         }
-                    })
-                    .flatten();
+                    });
 
                 if neighbours.all(|v| v > value) {
                     total_risk += (1 + value);
@@ -2216,7 +2215,7 @@ mod day16 {
                 version,
                 subpackets,
                 ..
-            } => *version + subpackets.iter().map(|p| sum_versions(p)).sum::<usize>(),
+            } => *version + subpackets.iter().map(sum_versions).sum::<usize>(),
         }
     }
 
@@ -2240,19 +2239,19 @@ mod day16 {
                 match type_id {
                     0 => {
                         // Sum packet
-                        subpackets.iter().map(|p| evaluate(p)).sum::<usize>()
+                        subpackets.iter().map(evaluate).sum::<usize>()
                     }
                     1 => {
                         // Product packet
-                        subpackets.iter().map(|p| evaluate(p)).product::<usize>()
+                        subpackets.iter().map(evaluate).product::<usize>()
                     }
                     2 => {
                         // Minimum packet
-                        subpackets.iter().map(|p| evaluate(p)).min().unwrap()
+                        subpackets.iter().map(evaluate).min().unwrap()
                     }
                     3 => {
                         // Maximum packet
-                        subpackets.iter().map(|p| evaluate(p)).max().unwrap()
+                        subpackets.iter().map(evaluate).max().unwrap()
                     }
                     5 => {
                         // Greater than packet
@@ -2748,8 +2747,7 @@ mod day19 {
                 let number = line
                     .split(' ')
                     .nth(2)
-                    .map(|s| s.parse::<usize>().ok())
-                    .flatten()
+                    .and_then(|s| s.parse::<usize>().ok())
                     .unwrap();
                 current_scanner = Some(Scanner {
                     number,
@@ -4167,13 +4165,12 @@ mod day23_pt2 {
             self.hallway
                 .iter()
                 .enumerate()
-                .map(|(x, h)| {
+                .filter_map(|(x, h)| {
                     h.map(|a| AmphipodPosition {
                         amphipod: a,
                         position: WorldPosition { x, y: 0 },
                     })
                 })
-                .flatten()
                 .collect()
         }
 
