@@ -1,0 +1,11 @@
+[package]
+name = "adventofcode2022"
+version = "0.1.0"
+authors = ["Mark Triggs <mark@dishevelled.net>"]
+
+[dependencies]
+regex = "*"
+once_cell = "*"
+rand = "*"
+itertools = "*"
+anyhow = "*"
