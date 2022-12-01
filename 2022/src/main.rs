@@ -4,6 +4,10 @@
 #![allow(unused_parens)]
 #![allow(dead_code)]
 
+extern crate regex;
+extern crate rand;
+extern crate anyhow;
+
 mod shared {
     pub use regex::Regex;
 
@@ -31,8 +35,6 @@ mod shared {
     pub use rand::Rng;
 
     pub use anyhow::{anyhow, bail, Error};
-
-    pub use itertools::Itertools;
 
     pub const ALPHABET: &str = "abcdefghijlkmnopqrstuvwxyz";
     pub const ALPHABET_UPPER: &str = "ABCDEFGHIJLKMNOPQRSTUVWXYZ";
@@ -104,9 +106,32 @@ mod day1 {
     use crate::shared::*;
 
     pub fn part1() {
+        let readings: Vec<String> = input_lines("input_files/day1.txt").collect();
+
+        let mut max_calories = 0;
+
+        for elf in readings.split(|s| s.is_empty()) {
+            let total_calories = elf.iter().map(|s| s.parse::<usize>().expect("int parse")).sum();
+
+            if total_calories > max_calories {
+                max_calories = total_calories;
+            }
+        }
+
+        println!("Max calories: {}", max_calories);
     }
 
     pub fn part2() {
+        let readings: Vec<String> = input_lines("input_files/day1.txt").collect();
+
+        let mut elf_calories: Vec<usize> = readings.split(|s| s.is_empty()).map(|elf| {
+            elf.iter().map(|s| s.parse::<usize>().expect("int parse")).sum()
+        }).collect();
+
+        elf_calories.sort();
+        elf_calories.reverse();
+
+        println!("Top three: {}", elf_calories[0] + elf_calories[1] + elf_calories[2]);
     }
 }
 
