@@ -7,6 +7,7 @@
 extern crate regex;
 extern crate rand;
 extern crate anyhow;
+extern crate itertools;
 
 mod shared {
     pub use regex::Regex;
@@ -135,15 +136,132 @@ mod day1 {
     }
 }
 
+mod day2 {
+    use itertools::Itertools;
+
+    use crate::shared::*;
+
+    #[derive(Clone, Copy)]
+    enum Hand {
+        Rock,
+        Paper,
+        Scissors,
+    }
+
+    #[derive(Eq, PartialEq)]
+    enum Outcome {
+        WeWin,
+        TheyWin,
+        Draw,
+    }
+
+    fn score_hand(h: Hand) -> usize {
+        match h {
+            Hand::Rock => 1,
+            Hand::Paper => 2,
+            Hand::Scissors => 3,
+        }
+    }
+
+    fn score_round(opponent: Hand, us: Hand) -> Outcome {
+        match (opponent, us) {
+            (Hand::Rock, Hand::Rock) => Outcome::Draw,
+            (Hand::Scissors, Hand::Scissors) => Outcome::Draw,
+            (Hand::Paper, Hand::Paper) => Outcome::Draw,
+            (Hand::Rock, Hand::Paper) => Outcome::WeWin,
+            (Hand::Rock, Hand::Scissors) => Outcome::TheyWin,
+            (Hand::Scissors, Hand::Paper) => Outcome::TheyWin,
+            (Hand::Scissors, Hand::Rock) => Outcome::WeWin,
+            (Hand::Paper, Hand::Rock) => Outcome::TheyWin,
+            (Hand::Paper, Hand::Scissors) => Outcome::WeWin,
+        }
+    }
+
+    fn parse_hand(ch: char) -> Hand {
+        match ch {
+            'A' | 'X' => Hand::Rock,
+            'B' | 'Y' => Hand::Paper,
+            'C' | 'Z' => Hand::Scissors,
+            _ => panic!("Parse error: {}", ch),
+        }
+    }
+
+    fn parse_outcome(ch: char) -> Outcome {
+        match ch {
+            'X' => Outcome::TheyWin,
+            'Y' => Outcome::Draw,
+            'Z' => Outcome::WeWin,
+            _ => panic!("Parse error: {}", ch),
+        }
+    }
+
+
+    pub fn part1() {
+        let mut total_score = 0;
+
+        for line in input_lines("input_files/day2.txt") {
+            if let Some((opponent, _, me)) = line.chars().collect_tuple() {
+                let opponent = parse_hand(opponent);
+                let me = parse_hand(me);
+
+                let round_score = score_hand(me) + match score_round(opponent, me) {
+                    Outcome::TheyWin => 0,
+                    Outcome::Draw => 3,
+                    Outcome::WeWin => 6,
+                };
+
+                total_score += round_score;
+            }
+        }
+
+        println!("Total score: {}", total_score);
+    }
+
+    pub fn part2() {
+        let mut total_score = 0;
+
+        for line in input_lines("input_files/day2.txt") {
+            if let Some((opponent, _, target_outcome)) = line.chars().collect_tuple() {
+                let opponent = parse_hand(opponent);
+                let target_outcome = parse_outcome(target_outcome);
+
+                for &candidate_move in &[Hand::Rock, Hand::Paper, Hand::Scissors] {
+                    if score_round(opponent, candidate_move) == target_outcome {
+                        let round_score = score_hand(candidate_move) + match score_round(opponent, candidate_move) {
+                            Outcome::TheyWin => 0,
+                            Outcome::Draw => 3,
+                            Outcome::WeWin => 6,
+                        };
+
+                        total_score += round_score;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        println!("Total score: {}", total_score);
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
 
-    pub fn part1() {}
+    pub fn part1() {
+
+    }
     pub fn part2() {}
 }
 
 fn main() {
-    day1::part1();
-    day1::part2();
+    if false {
+        day1::part1();
+        day1::part2();
+    }
+
+    day2::part1();
+    day2::part2();
+
 }
