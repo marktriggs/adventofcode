@@ -245,6 +245,57 @@ mod day2 {
     }
 }
 
+mod day3 {
+    use std::ops::Index;
+
+    use itertools::Itertools;
+
+    use crate::shared::*;
+
+    fn priority(item: char) -> usize {
+        let priorities: Vec<char> = ('a' ..= 'z').chain('A' ..= 'Z').collect();
+
+        priorities.iter().position(|&ch| ch == item).unwrap() + 1
+    }
+
+    pub fn part1() {
+        let mut result = 0;
+
+        for line in input_lines("input_files/day3.txt") {
+            let compartment_size = line.chars().count() / 2;
+
+            let compartment_one: HashSet<char> = line.chars().take(compartment_size).collect();
+            let compartment_two: HashSet<char> = line.chars().skip(compartment_size).collect();
+
+            let overlap = compartment_one.intersection(&compartment_two).next().unwrap();
+
+            result += priority(*overlap);
+        }
+
+        println!("Total priority: {}", result);
+    }
+
+    pub fn part2() {
+        let mut total = 0;
+
+        for group in &input_lines("input_files/day3.txt").chunks(3) {
+            let group_lines: Vec<String> = group.collect();
+
+            let all_chars: HashSet<char> = group_lines.join("").chars().collect();
+            let group_sets: Vec<HashSet<char>> = group_lines.iter().map(|line| line.chars().collect::<HashSet<char>>()).collect();
+
+            for ch in all_chars {
+                let count: usize = group_sets.iter().map(|set| usize::from(set.contains(&ch))).sum();
+
+                if count == 3 {
+                    total += priority(ch);
+                }
+            }
+        }
+
+        println!("Total priority (pt2): {}", total);
+    }
+}
 
 mod dayn {
     use crate::shared::*;
@@ -259,9 +310,12 @@ fn main() {
     if false {
         day1::part1();
         day1::part2();
+
+        day2::part1();
+        day2::part2();
     }
 
-    day2::part1();
-    day2::part2();
+    day3::part1();
+    day3::part2();
 
 }
