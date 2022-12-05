@@ -337,12 +337,98 @@ mod day4 {
 }
 
 
-mod dayn {
+mod day5 {
     use crate::shared::*;
 
     pub fn part1() {
+        // Not even showing the common decency to parse the starting state.  Just mangled it using shell/cut/emacs
+        let mut stacks: Vec<VecDeque<char>> = vec![
+            VecDeque::new(),
+            "QWPSZRHD".chars().collect(),
+            "VBRWQHF".chars().collect(),
+            "CVSH".chars().collect(),
+            "HFG".chars().collect(),
+            "PGJBZ".chars().collect(),
+            "QTJHWFL".chars().collect(),
+            "ZTWDLVJN".chars().collect(),
+            "DTZCJGHF".chars().collect(),
+            "WPVMBH".chars().collect(),
+        ];
 
+        let move_regex = Regex::new(r"move (\d+) from (\d+) to (\d+)").unwrap();
+        for line in input_lines("input_files/day5.txt") {
+            for cap in move_regex.captures_iter(&line) {
+                if cap.len() > 0 {
+                    let count = cap[1].parse::<usize>().unwrap();
+                    let source = cap[2].parse::<usize>().unwrap();
+                    let destination = cap[3].parse::<usize>().unwrap();
+
+                    for _ in (0..count) {
+                        let elt = stacks[source].pop_back().unwrap();
+                        stacks[destination].push_back(elt);
+                    }
+                }
+            }
+        }
+
+        for stack in &mut stacks[1..] {
+            print!("{}", stack.pop_back().unwrap());
+        }
+
+        println!();
     }
+
+
+    pub fn part2() {
+        // Not even showing the common decency to parse the starting state.  Just mangled it using shell/cut/emacs
+        let mut stacks: Vec<VecDeque<char>> = vec![
+            VecDeque::new(),
+            "QWPSZRHD".chars().collect(),
+            "VBRWQHF".chars().collect(),
+            "CVSH".chars().collect(),
+            "HFG".chars().collect(),
+            "PGJBZ".chars().collect(),
+            "QTJHWFL".chars().collect(),
+            "ZTWDLVJN".chars().collect(),
+            "DTZCJGHF".chars().collect(),
+            "WPVMBH".chars().collect(),
+        ];
+
+        let move_regex = Regex::new(r"move (\d+) from (\d+) to (\d+)").unwrap();
+        for line in input_lines("input_files/day5.txt") {
+            for cap in move_regex.captures_iter(&line) {
+                if cap.len() > 0 {
+                    let count = cap[1].parse::<usize>().unwrap();
+                    let source = cap[2].parse::<usize>().unwrap();
+                    let destination = cap[3].parse::<usize>().unwrap();
+
+                    let mut buffer = VecDeque::new();
+
+                    for _ in (0..count) {
+                        let elt = stacks[source].pop_back().unwrap();
+                        buffer.push_front(elt);
+                    }
+
+                    while !buffer.is_empty() {
+                        let elt = buffer.pop_front().unwrap();
+                        stacks[destination].push_back(elt);
+                    }
+                }
+            }
+        }
+
+        for stack in &mut stacks[1..] {
+            print!("{}", stack.pop_back().unwrap());
+        }
+
+        println!();
+    }
+}
+
+mod dayn {
+    use crate::shared::*;
+
+    pub fn part1() {}
     pub fn part2() {}
 }
 
@@ -356,9 +442,11 @@ fn main() {
 
         day3::part1();
         day3::part2();
+
+        day4::part1();
+        day4::part2();
     }
 
-    day4::part1();
-    day4::part2();
-
+    day5::part1();
+    day5::part2();
 }
