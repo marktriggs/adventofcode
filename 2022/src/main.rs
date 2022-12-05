@@ -12,6 +12,7 @@ extern crate itertools;
 mod shared {
     pub use regex::Regex;
 
+    pub use itertools::Itertools;
     // pub use intcode::{self, IntCode};
     pub use std::cell::RefCell;
     pub use std::cell::RefMut;
@@ -297,6 +298,45 @@ mod day3 {
     }
 }
 
+mod day4 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let mut count = 0;
+        for line in input_lines("input_files/day4.txt") {
+            if let Some((elf1_s, elf2_s)) = line.split(',').collect_tuple() {
+                let (elf1_start, elf1_end) = elf1_s.split('-').map(|s| s.parse::<usize>().unwrap()).collect_tuple().unwrap();
+                let (elf2_start, elf2_end) = elf2_s.split('-').map(|s| s.parse::<usize>().unwrap()).collect_tuple().unwrap();
+
+                if (elf1_start >= elf2_start && elf1_end <= elf2_end) || (elf2_start >= elf1_start && elf2_end <= elf1_end) {
+                    count += 1;
+                }
+            }
+        }
+
+        println!("Fully contained assignment count: {}", count);
+    }
+
+    pub fn part2() {
+        let mut count = 0;
+        for line in input_lines("input_files/day4.txt") {
+            if let Some((elf1_s, elf2_s)) = line.split(',').collect_tuple() {
+                let (elf1_start, elf1_end) = elf1_s.split('-').map(|s| s.parse::<usize>().unwrap()).collect_tuple().unwrap();
+                let (elf2_start, elf2_end) = elf2_s.split('-').map(|s| s.parse::<usize>().unwrap()).collect_tuple().unwrap();
+
+                if (elf1_end < elf2_start) || (elf1_start > elf2_end) {
+                    // no overlap
+                } else {
+                    count += 1;
+                }
+            }
+        }
+
+        println!("Any overlap count: {}", count);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -313,9 +353,12 @@ fn main() {
 
         day2::part1();
         day2::part2();
+
+        day3::part1();
+        day3::part2();
     }
 
-    day3::part1();
-    day3::part2();
+    day4::part1();
+    day4::part2();
 
 }
