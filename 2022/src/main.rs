@@ -425,6 +425,46 @@ mod day5 {
     }
 }
 
+mod day6 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let input = read_file("input_files/day6.txt");
+
+        let mut position = 0;
+        while position < input.len() {
+            let last_four: HashSet<char> = input.chars().skip(position).take(4).collect();
+
+            if last_four.len() == 4 {
+                println!("First position: {}", position + 4);
+                break;
+            }
+
+            position += 1;
+        }
+    }
+
+
+    pub fn part2() {
+        let input = read_file("input_files/day6.txt");
+
+        let mut buffer: VecDeque<char> = VecDeque::new();
+
+        for (idx, ch) in input.chars().enumerate() {
+            if buffer.iter().copied().collect::<HashSet<char>>().len() == 14 {
+                println!("First position: {}", idx);
+                break;
+            }
+
+            buffer.push_back(ch);
+
+            if buffer.len() > 14 {
+                let _ = buffer.pop_front().unwrap();
+            }
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -445,8 +485,11 @@ fn main() {
 
         day4::part1();
         day4::part2();
+
+        day5::part1();
+        day5::part2();
     }
 
-    day5::part1();
-    day5::part2();
+    // day6::part1();
+    day6::part2();
 }
