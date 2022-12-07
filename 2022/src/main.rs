@@ -540,8 +540,8 @@ mod day7 {
                 break;
             }
 
-            if cd_regex.is_match(&line) {
-                let dir = cd_regex.captures(&line).unwrap().get(1).unwrap().as_str();
+            if let Some(caps) = cd_regex.captures(&line) {
+                let dir = caps.get(1).unwrap().as_str();
 
                 if dir == ".." {
                     let _ = cwd.pop().unwrap();
@@ -564,13 +564,11 @@ mod day7 {
                         break;
                     }
 
-                    if dirent_file_regex.is_match(&entry) {
-                        let caps = dirent_file_regex.captures(&entry).unwrap();
+                    if let Some(caps) = dirent_file_regex.captures(&entry) {
                         filesystem.record_file(&cwd,
                                                caps.get(2).unwrap().as_str(),
                                                caps.get(1).unwrap().as_str().parse().unwrap());
-                    } else if dirent_dir_regex.is_match(&entry) {
-                        let caps = dirent_dir_regex.captures(&entry).unwrap();
+                    } else if let Some(caps) = dirent_dir_regex.captures(&entry) {
                         filesystem.record_dir(&cwd,
                                               caps.get(1).unwrap().as_str());
                     } else {
