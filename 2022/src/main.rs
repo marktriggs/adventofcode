@@ -465,6 +465,182 @@ mod day6 {
     }
 }
 
+mod day7 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Filesystem {
+        files: HashMap<String, usize>,
+        known_dirs: HashSet<String>,
+    }
+
+    impl Filesystem {
+        pub fn new() -> Filesystem {
+            let mut result = Filesystem {
+                files: HashMap::new(),
+                known_dirs: HashSet::new(),
+            };
+
+            result.known_dirs.insert("/".to_string());
+
+            result
+        }
+
+        pub fn record_file(&mut self, parent_path: &[String], name: &str, size: usize) {
+            for i in 1..parent_path.len() {
+                let mut dir = parent_path[0..i].join("/");
+                dir.push('/');
+
+                self.known_dirs.insert(dir);
+            }
+
+            let mut file_path = parent_path.join("/");
+            file_path.push('/');
+            file_path.push_str(name);
+
+            self.files.insert(file_path, size);
+        }
+
+        pub fn record_dir(&mut self, parent_path: &[String], name: &str) {
+            for i in 1..parent_path.len() {
+                let mut dir = parent_path[0..i].join("/");
+                dir.push('/');
+
+                self.known_dirs.insert(dir);
+            }
+
+
+            let mut dir_path = parent_path.join("/");
+            dir_path.push('/');
+            dir_path.push_str(name);
+            dir_path.push('/');
+
+            self.known_dirs.insert(dir_path);
+        }
+    }
+
+
+    fn parse_fs_output(path: &str) -> Filesystem {
+        let cd_regex = Regex::new(r"^\$ cd (.+?)$").unwrap();
+        let ls_regex = Regex::new(r"^\$ ls$").unwrap();
+        let dirent_file_regex = Regex::new(r"^([0-9]+) (.+)$").unwrap();
+        let dirent_dir_regex = Regex::new(r"^dir (.+)$").unwrap();
+        let eof_regex = Regex::new(r"^__EOF__$").unwrap();
+
+        let mut filesystem = Filesystem::new();
+        let mut cwd = vec!["".to_owned()];
+
+        let mut input = input_lines(path).collect::<VecDeque<String>>();
+        input.push_back("__EOF__".to_owned());
+
+        loop {
+            let line = input.pop_front().unwrap();
+
+            if eof_regex.is_match(&line) {
+                break;
+            }
+
+            if cd_regex.is_match(&line) {
+                let dir = cd_regex.captures(&line).unwrap().get(1).unwrap().as_str();
+
+                if dir == ".." {
+                    let _ = cwd.pop().unwrap();
+                } else if dir.starts_with('/') {
+                    cwd = dir.split('/').map(str::to_string).collect();
+
+                    // Knocking out trailing slashes
+                    if (cwd.len() > 1 && cwd[cwd.len() - 1].is_empty()) {
+                        cwd.pop();
+                    }
+                } else {
+                    cwd.push(dir.to_owned());
+                }
+            } else if ls_regex.is_match(&line) {
+                loop {
+                    let entry = input.pop_front().unwrap();
+
+                    if eof_regex.is_match(&entry) || entry.starts_with('$') {
+                        input.push_front(entry);
+                        break;
+                    }
+
+                    if dirent_file_regex.is_match(&entry) {
+                        let caps = dirent_file_regex.captures(&entry).unwrap();
+                        filesystem.record_file(&cwd,
+                                               caps.get(2).unwrap().as_str(),
+                                               caps.get(1).unwrap().as_str().parse().unwrap());
+                    } else if dirent_dir_regex.is_match(&entry) {
+                        let caps = dirent_dir_regex.captures(&entry).unwrap();
+                        filesystem.record_dir(&cwd,
+                                              caps.get(1).unwrap().as_str());
+                    } else {
+                        unreachable!();
+                    }
+                }
+            } else {
+                unreachable!();
+            }
+        }
+
+        filesystem
+    }
+
+
+    pub fn part1() {
+        let filesystem = parse_fs_output("input_files/day7.txt");
+
+        let mut grand_total = 0;
+
+        for dir in filesystem.known_dirs {
+            let mut total_size = 0;
+            for (path, size) in &filesystem.files {
+                if path.starts_with(&dir) {
+                    total_size += size;
+                }
+            }
+
+            println!("{}: {}", dir, total_size);
+
+            if total_size <= 100000 {
+                grand_total += total_size;
+            }
+        }
+
+        println!("Grand total: {}", grand_total);
+    }
+
+    pub fn part2() {
+        let filesystem = parse_fs_output("input_files/day7.txt");
+
+        let volume_size = 70_000_000;
+        let space_needed = 30_000_000;
+
+        let space_used: usize = filesystem.files.iter().map(|(_path, size)| size).sum();
+
+        let space_to_free = space_needed - (volume_size - space_used);
+
+        let mut dir_sizes: Vec<(String, usize)> = filesystem.known_dirs.iter().map(|dir| {
+            let mut total_size = 0;
+            for (path, size) in &filesystem.files {
+                if path.starts_with(dir) {
+                    total_size += size;
+                }
+            }
+
+            (dir.to_owned(), total_size)
+        }).collect();
+
+        dir_sizes.sort_by_key(|(_path, size)| *size);
+
+        for (path, size) in dir_sizes {
+            if size >= space_to_free {
+                println!("delete {} with size {}", path, size);
+                break
+            }
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -488,8 +664,12 @@ fn main() {
 
         day5::part1();
         day5::part2();
+
+        day6::part1();
+        day6::part2();
+
+        day7::part1();
     }
 
-    // day6::part1();
-    day6::part2();
+        day7::part2();
 }
