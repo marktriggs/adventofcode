@@ -639,6 +639,102 @@ mod day7 {
     }
 }
 
+mod day8 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let tree_heights = input_lines("input_files/day8.txt").map(|line| {
+            line.chars().map(|ch| ch.to_digit(10).unwrap() as i32).collect()
+        }).collect::<Vec<Vec<i32>>>();
+
+        let grid_height = tree_heights.len();
+        let grid_width = tree_heights[0].len();
+
+        let mut visibility_map = (0..grid_height).map(|_| vec![false; grid_width]).collect::<Vec<Vec<bool>>>();
+
+        for row in 0..grid_height {
+            for colrange in &[(0..grid_width).collect::<Vec<usize>>(), (0..grid_width).rev().collect::<Vec<usize>>()] {
+                let mut last_height: i32 = -1;
+                for &col in colrange {
+                    if tree_heights[row][col] > last_height {
+                        visibility_map[row][col] = true;
+                    }
+
+                    last_height = std::cmp::max(last_height, tree_heights[row][col]);
+                }
+            }
+        }
+
+        for col in 0..grid_width {
+            for rowrange in &[(0..grid_height).collect::<Vec<usize>>(), (0..grid_height).rev().collect::<Vec<usize>>()] {
+                let mut last_height: i32 = -1;
+                for &row in rowrange {
+                    if tree_heights[row][col] > last_height {
+                        visibility_map[row][col] = true;
+                    }
+
+                    last_height = std::cmp::max(last_height, tree_heights[row][col]);
+                }
+            }
+        }
+
+        println!("Visible trees: {}", visibility_map.iter().map(|row| row.iter().filter(|&&v| v).count()).sum::<usize>());
+    }
+
+    pub fn part2() {
+        let tree_heights = input_lines("input_files/day8.txt").map(|line| {
+            line.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()
+        }).collect::<Vec<Vec<usize>>>();
+
+        let grid_height = tree_heights.len();
+        let grid_width = tree_heights[0].len();
+
+        let mut tree_scores = (0..grid_height).map(|_| vec![1; grid_width]).collect::<Vec<Vec<usize>>>();
+
+        for row in 0..grid_height {
+            for colrange in &[(0..grid_width).collect::<Vec<usize>>(), (0..grid_width).rev().collect::<Vec<usize>>()] {
+                let mut seen_heights: VecDeque<usize> = VecDeque::new();
+                for &col in colrange {
+
+                    let mut tree_count = 0;
+                    for &h in seen_heights.iter() {
+                        tree_count += 1;
+
+                        if h >= tree_heights[row][col] {
+                            break;
+                        }
+                    }
+
+                    tree_scores[row][col] *= tree_count;
+                    seen_heights.push_front(tree_heights[row][col]);
+                }
+            }
+        }
+
+        for col in 0..grid_width {
+            for rowrange in &[(0..grid_height).collect::<Vec<usize>>(), (0..grid_height).rev().collect::<Vec<usize>>()] {
+                let mut seen_heights: VecDeque<usize> = VecDeque::new();
+                for &row in rowrange {
+                    let mut tree_count = 0;
+                    for &h in seen_heights.iter() {
+                        tree_count += 1;
+
+                        if h >= tree_heights[row][col] {
+                            break;
+                        }
+                    }
+
+                    tree_scores[row][col] *= tree_count;
+                    seen_heights.push_front(tree_heights[row][col]);
+                }
+            }
+        }
+
+        println!("Best score: {}", tree_scores.iter().map(|row| row.iter().max().unwrap()).max().unwrap());
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -667,7 +763,9 @@ fn main() {
         day6::part2();
 
         day7::part1();
+        day7::part2();
     }
 
-        day7::part2();
+    day8::part1();
+    day8::part2();
 }
