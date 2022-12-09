@@ -734,6 +734,120 @@ mod day8 {
     }
 }
 
+mod day9 {
+    use crate::shared::*;
+
+    #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
+    struct Position {
+        x: i64,
+        y: i64,
+    }
+
+    fn move_tail(head_position: Position, tail_position: Position) -> Position {
+        let difference = Position {
+            x: (head_position.x - tail_position.x),
+            y: (head_position.y - tail_position.y),
+        };
+
+        if difference.x.abs() > 1 || difference.y.abs() > 1 {
+            let adjustment = Position {
+                x: if difference.x == 0 { 0 } else { difference.x / difference.x.abs() },
+                y: if difference.y == 0 { 0 } else { difference.y / difference.y.abs() },
+            };
+
+            Position {
+                x: tail_position.x + adjustment.x,
+                y: tail_position.y + adjustment.y,
+            }
+        } else {
+            tail_position
+        }
+    }
+
+    pub fn part1() {
+        let mut head_position = Position {x: 0, y: 0};
+        let mut tail_position = Position {x: 0, y: 0};
+
+        let mut tail_positions_reached: HashSet<Position> = HashSet::new();
+
+        tail_positions_reached.insert(tail_position);
+
+        for line in input_lines("input_files/day9.txt") {
+            if let Some((direction, count)) = line.split(' ').collect_tuple() {
+                let count = count.parse::<usize>().unwrap();
+
+                for _ in (0..count) {
+                    let adjustment = match direction {
+                        "U" => Position { x: 0, y: 1},
+                        "D" => Position { x: 0, y: -1},
+                        "L" => Position { x: -1, y: 0},
+                        "R" => Position { x: 1, y: 0},
+                        _ => panic!("Parse error"),
+                    };
+
+                    head_position.x += adjustment.x;
+                    head_position.y += adjustment.y;
+
+
+                    tail_position = move_tail(head_position, tail_position);
+                    tail_positions_reached.insert(tail_position);
+                }
+            }
+        }
+
+        dbg!(tail_positions_reached.len());
+    }
+
+    pub fn part2() {
+        // head -> tail
+        let mut knots = vec!(
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+            Position {x: 0, y: 0},
+        );
+
+        let mut tail_positions_reached: HashSet<Position> = HashSet::new();
+
+        tail_positions_reached.insert(knots[knots.len() - 1]);
+
+        for line in input_lines("input_files/day9.txt") {
+            if let Some((direction, count)) = line.split(' ').collect_tuple() {
+                let count = count.parse::<usize>().unwrap();
+
+                for _ in (0..count) {
+                    let adjustment = match direction {
+                        "U" => Position { x: 0, y: 1},
+                        "D" => Position { x: 0, y: -1},
+                        "L" => Position { x: -1, y: 0},
+                        "R" => Position { x: 1, y: 0},
+                        _ => panic!("Parse error"),
+                    };
+
+                    knots[0].x += adjustment.x;
+                    knots[0].y += adjustment.y;
+
+                    for i in 0..(knots.len() - 1) {
+                        let new_position = move_tail(knots[i], knots[i + 1]);
+
+                        knots[i + 1] = new_position
+                    }
+
+                    tail_positions_reached.insert(knots[knots.len() - 1]);
+                }
+            }
+        }
+
+        dbg!(tail_positions_reached.len());
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -764,8 +878,11 @@ fn main() {
 
         day7::part1();
         day7::part2();
+
+        day8::part1();
+        day8::part2();
     }
 
-    day8::part1();
-    day8::part2();
+    day9::part1();
+    day9::part2();
 }
