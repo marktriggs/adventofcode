@@ -1,5 +1,8 @@
 // (cd ~/projects/adventofcode/2022 && cargo run)
 
+// I like 'em!
+#![allow(needless_range_loop)]
+
 #![allow(unused_imports)]
 #![allow(unused_parens)]
 #![allow(dead_code)]
@@ -849,6 +852,84 @@ mod day9 {
 }
 
 
+mod day10 {
+    use crate::shared::*;
+
+    pub fn part1() {
+        let mut x = 1;
+
+        let mut cycle_values: Vec<i64> = Vec::new();
+
+        for line in input_lines("input_files/day10.txt") {
+            if line == "noop" {
+                cycle_values.push(x);
+            } else {
+                let adjustment = line.split(' ').last().unwrap().parse::<i64>().unwrap();
+                cycle_values.push(x);
+                cycle_values.push(x);
+
+                x += adjustment;
+            }
+        }
+
+        cycle_values.push(x);
+
+        let mut signal_strength = 0;
+
+        for cycle_input in &[20, 60, 100, 140, 180, 220] {
+            signal_strength += (*cycle_input as i64 * cycle_values[cycle_input - 1]);
+        }
+
+        println!("Final signal strength: {}", signal_strength);
+    }
+
+    pub fn part2() {
+        let mut x = 1;
+
+        let mut cycle_values: Vec<i64> = Vec::new();
+
+        for line in input_lines("input_files/day10.txt") {
+            if line == "noop" {
+                cycle_values.push(x);
+            } else {
+                let adjustment = line.split(' ').last().unwrap().parse::<i64>().unwrap();
+                cycle_values.push(x);
+                cycle_values.push(x);
+
+                x += adjustment;
+            }
+        }
+
+        cycle_values.push(x);
+
+        let screen_width = 40;
+        let screen_height = 6;
+
+        let mut crt: Vec<Vec<char>> = (0..screen_height).map(|_| vec!['.'; screen_width]).collect();
+
+        let mut cycle = 0;
+        for row in 0..screen_height {
+            for col in 0..screen_width {
+                let x_position = cycle_values[cycle];
+
+                if ((x_position - 1)..=(x_position + 1)).contains(&(col as i64)) {
+                    crt[row][col] = '#';
+                }
+
+                cycle += 1;
+            }
+        }
+
+        for row in 0..screen_height {
+            for col in 0..screen_width {
+                print!("{}", crt[row][col]);
+            }
+
+            println!();
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -881,8 +962,12 @@ fn main() {
 
         day8::part1();
         day8::part2();
+
+        day9::part1();
+        day9::part2();
     }
 
-    day9::part1();
-    day9::part2();
+    day10::part1();
+    day10::part2();
+
 }
