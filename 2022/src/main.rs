@@ -27,6 +27,7 @@ mod shared {
     pub use std::collections::HashSet;
     pub use std::collections::LinkedList;
     pub use std::collections::VecDeque;
+    pub use std::convert::TryFrom;
     pub use std::convert::TryInto;
     pub use std::fmt::{self, Display};
     pub use std::fs::{self, File};
@@ -647,7 +648,7 @@ mod day8 {
 
     pub fn part1() {
         let tree_heights = input_lines("input_files/day8.txt").map(|line| {
-            line.chars().map(|ch| ch.to_digit(10).unwrap() as i32).collect()
+            line.chars().map(|ch| i32::try_from(ch.to_digit(10).unwrap()).unwrap()).collect()
         }).collect::<Vec<Vec<i32>>>();
 
         let grid_height = tree_heights.len();
@@ -686,7 +687,7 @@ mod day8 {
 
     pub fn part2() {
         let tree_heights = input_lines("input_files/day8.txt").map(|line| {
-            line.chars().map(|ch| ch.to_digit(10).unwrap() as usize).collect()
+            line.chars().map(|ch| usize::try_from(ch.to_digit(10).unwrap()).unwrap()).collect()
         }).collect::<Vec<Vec<usize>>>();
 
         let grid_height = tree_heights.len();
@@ -882,7 +883,7 @@ mod day10 {
         let cycle_values = run_program(input_lines("input_files/day10.txt"));
 
         for cycle_input in &[20, 60, 100, 140, 180, 220] {
-            signal_strength += (*cycle_input as i64 * cycle_values[cycle_input - 1]);
+            signal_strength += (num_traits::cast::<_, i64>(*cycle_input).unwrap() * cycle_values[cycle_input - 1]);
         }
 
         println!("Final signal strength: {}", signal_strength);
@@ -901,7 +902,7 @@ mod day10 {
             for col in 0..screen_width {
                 let x_position = cycle_values[cycle];
 
-                if ((x_position - 1)..=(x_position + 1)).contains(&(col as i64)) {
+                if ((x_position - 1)..=(x_position + 1)).contains(&i64::try_from(col).unwrap()) {
                     crt[row][col] = '#';
                 }
 
