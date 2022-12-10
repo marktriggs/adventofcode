@@ -1,7 +1,7 @@
 // (cd ~/projects/adventofcode/2022 && cargo run)
 
 // I like 'em!
-#![allow(needless_range_loop)]
+#![allow(clippy::needless_range_loop)]
 
 #![allow(unused_imports)]
 #![allow(unused_parens)]
@@ -855,12 +855,12 @@ mod day9 {
 mod day10 {
     use crate::shared::*;
 
-    pub fn part1() {
+    fn run_program(lines: impl Iterator<Item=String>) -> Vec<i64> {
         let mut x = 1;
 
         let mut cycle_values: Vec<i64> = Vec::new();
 
-        for line in input_lines("input_files/day10.txt") {
+        for line in lines {
             if line == "noop" {
                 cycle_values.push(x);
             } else {
@@ -873,8 +873,13 @@ mod day10 {
         }
 
         cycle_values.push(x);
+        cycle_values
+    }
 
+    pub fn part1() {
         let mut signal_strength = 0;
+
+        let cycle_values = run_program(input_lines("input_files/day10.txt"));
 
         for cycle_input in &[20, 60, 100, 140, 180, 220] {
             signal_strength += (*cycle_input as i64 * cycle_values[cycle_input - 1]);
@@ -884,23 +889,7 @@ mod day10 {
     }
 
     pub fn part2() {
-        let mut x = 1;
-
-        let mut cycle_values: Vec<i64> = Vec::new();
-
-        for line in input_lines("input_files/day10.txt") {
-            if line == "noop" {
-                cycle_values.push(x);
-            } else {
-                let adjustment = line.split(' ').last().unwrap().parse::<i64>().unwrap();
-                cycle_values.push(x);
-                cycle_values.push(x);
-
-                x += adjustment;
-            }
-        }
-
-        cycle_values.push(x);
+        let cycle_values = run_program(input_lines("input_files/day10.txt"));
 
         let screen_width = 40;
         let screen_height = 6;
