@@ -920,6 +920,323 @@ mod day10 {
     }
 }
 
+mod day11 {
+    use crate::shared::*;
+
+    struct Monkey {
+        items: VecDeque<usize>,
+        operation: Box<dyn Fn(usize) -> usize>,
+        prime: usize,
+        true_target: usize,
+        false_target: usize,
+        monkey_business: usize,
+    }
+
+    pub fn part1() {
+        let mut _sample_monkeys: Vec<Option<Monkey>> = vec![
+            Some(Monkey {
+                items: [79, 98].iter().copied().collect(),
+                operation: Box::new(|old| old * 19),
+                prime: 23,
+                true_target: 2,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [54, 65, 75, 74].iter().copied().collect(),
+                operation: Box::new(|old| old + 6),
+                prime: 19,
+                true_target: 2,
+                false_target: 0,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [79, 60, 97].iter().copied().collect(),
+                operation: Box::new(|old| old * old),
+                prime: 13,
+                true_target: 1,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [74].iter().copied().collect(),
+                operation: Box::new(|old| old + 3),
+                prime: 17,
+                true_target: 0,
+                false_target: 1,
+                monkey_business: 0,
+            })
+        ];
+
+        let mut monkeys: Vec<Option<Monkey>> = vec![
+            Some(Monkey {
+                items: [98, 89, 52].iter().copied().collect(),
+                operation: Box::new(|old| old * 2),
+                prime: 5,
+                true_target: 6,
+                false_target: 1,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [57, 95, 80, 92, 57, 78].iter().copied().collect(),
+                operation: Box::new(|old| old * 13),
+                prime: 2,
+                true_target: 2,
+                false_target: 6,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [82, 74, 97, 75, 51, 92, 83].iter().copied().collect(),
+                operation: Box::new(|old| old + 5),
+                prime: 19,
+                true_target: 7,
+                false_target: 5,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [97, 88, 51, 68, 76].iter().copied().collect(),
+                operation: Box::new(|old| old + 6),
+                prime: 7,
+                true_target: 0,
+                false_target: 4,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [63].iter().copied().collect(),
+                operation: Box::new(|old| old + 1),
+                prime: 17,
+                true_target: 0,
+                false_target: 1,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [94, 91, 51, 63].iter().copied().collect(),
+                operation: Box::new(|old| old + 4),
+                prime: 13,
+                true_target: 4,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [61, 54, 94, 71, 74, 68, 98, 83].iter().copied().collect(),
+                operation: Box::new(|old| old + 2),
+                prime: 3,
+                true_target: 2,
+                false_target: 7,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [90, 56].iter().copied().collect(),
+                operation: Box::new(|old| old * old),
+                prime: 11,
+                true_target: 3,
+                false_target: 5,
+                monkey_business: 0,
+            }),
+        ];
+
+
+        let prime_multiple: usize = monkeys.iter().map(|m| m.as_ref().unwrap().prime).product();
+
+        for _round in 0..20 {
+            for monkey_idx in 0..monkeys.len() {
+                let mut monkey = std::mem::replace(&mut monkeys[monkey_idx], None).unwrap();
+
+                while !monkey.items.is_empty() {
+                    monkey.monkey_business += 1;
+
+                    let mut worry_level = monkey.items.pop_front().unwrap();
+
+                    worry_level = (monkey.operation)(worry_level);
+                    worry_level /= 3;
+
+                    // CALM DOWN
+                    while worry_level > prime_multiple {
+                        worry_level -= prime_multiple;
+                    }
+
+                    let target_monkey_idx = if worry_level % monkey.prime == 0 {
+                        monkey.true_target
+                    } else {
+                        monkey.false_target
+                    };
+
+                    let mut target_monkey = std::mem::replace(&mut monkeys[target_monkey_idx], None).unwrap();
+                    target_monkey.items.push_back(worry_level);
+                    monkeys[target_monkey_idx] = Some(target_monkey);
+                }
+
+                monkeys[monkey_idx] = Some(monkey);
+            }
+        }
+
+        let mut monkey_scores: Vec<usize> = monkeys.iter().map(|m| m.as_ref().unwrap().monkey_business).collect();
+        monkey_scores.sort_by_key(|score| *score);
+        monkey_scores.reverse();
+
+        println!("Top two monkeys: {}", monkey_scores[0] * monkey_scores[1]);
+    }
+
+    pub fn part2() {
+        let mut _sample_monkeys: Vec<Option<Monkey>> = vec![
+            Some(Monkey {
+                items: [79, 98].iter().copied().collect(),
+                operation: Box::new(|old| old * 19),
+                prime: 23,
+                true_target: 2,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [54, 65, 75, 74].iter().copied().collect(),
+                operation: Box::new(|old| old + 6),
+                prime: 19,
+                true_target: 2,
+                false_target: 0,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [79, 60, 97].iter().copied().collect(),
+                operation: Box::new(|old| old * old),
+                prime: 13,
+                true_target: 1,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+            Some(Monkey {
+                items: [74].iter().copied().collect(),
+                operation: Box::new(|old| old + 3),
+                prime: 17,
+                true_target: 0,
+                false_target: 1,
+                monkey_business: 0,
+            })
+        ];
+
+        let mut monkeys: Vec<Option<Monkey>> = vec![
+            Some(Monkey {
+                items: [98, 89, 52].iter().copied().collect(),
+                operation: Box::new(|old| old * 2),
+                prime: 5,
+                true_target: 6,
+                false_target: 1,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [57, 95, 80, 92, 57, 78].iter().copied().collect(),
+                operation: Box::new(|old| old * 13),
+                prime: 2,
+                true_target: 2,
+                false_target: 6,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [82, 74, 97, 75, 51, 92, 83].iter().copied().collect(),
+                operation: Box::new(|old| old + 5),
+                prime: 19,
+                true_target: 7,
+                false_target: 5,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [97, 88, 51, 68, 76].iter().copied().collect(),
+                operation: Box::new(|old| old + 6),
+                prime: 7,
+                true_target: 0,
+                false_target: 4,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [63].iter().copied().collect(),
+                operation: Box::new(|old| old + 1),
+                prime: 17,
+                true_target: 0,
+                false_target: 1,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [94, 91, 51, 63].iter().copied().collect(),
+                operation: Box::new(|old| old + 4),
+                prime: 13,
+                true_target: 4,
+                false_target: 3,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [61, 54, 94, 71, 74, 68, 98, 83].iter().copied().collect(),
+                operation: Box::new(|old| old + 2),
+                prime: 3,
+                true_target: 2,
+                false_target: 7,
+                monkey_business: 0,
+            }),
+
+            Some(Monkey {
+                items: [90, 56].iter().copied().collect(),
+                operation: Box::new(|old| old * old),
+                prime: 11,
+                true_target: 3,
+                false_target: 5,
+                monkey_business: 0,
+            }),
+        ];
+
+
+        let prime_multiple: usize = monkeys.iter().map(|m| m.as_ref().unwrap().prime).product();
+
+        for _round in 0..10000 {
+            for monkey_idx in 0..monkeys.len() {
+                let mut monkey = std::mem::replace(&mut monkeys[monkey_idx], None).unwrap();
+
+                while !monkey.items.is_empty() {
+                    monkey.monkey_business += 1;
+
+                    let mut worry_level = monkey.items.pop_front().unwrap();
+
+                    worry_level = (monkey.operation)(worry_level);
+
+                    // CALM DOWN
+                    while worry_level >= prime_multiple {
+                        worry_level -= prime_multiple;
+                    }
+
+                    let target_monkey_idx = if worry_level % monkey.prime == 0 {
+                        monkey.true_target
+                    } else {
+                        monkey.false_target
+                    };
+
+                    let mut target_monkey = std::mem::replace(&mut monkeys[target_monkey_idx], None).unwrap();
+                    target_monkey.items.push_back(worry_level);
+                    monkeys[target_monkey_idx] = Some(target_monkey);
+                }
+
+                monkeys[monkey_idx] = Some(monkey);
+            }
+        }
+
+        let mut monkey_scores: Vec<usize> = monkeys.iter().map(|m| m.as_ref().unwrap().monkey_business).collect();
+        monkey_scores.sort_by_key(|score| *score);
+        monkey_scores.reverse();
+
+        println!("Top two monkeys: {}", monkey_scores[0] * monkey_scores[1]);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -955,9 +1272,12 @@ fn main() {
 
         day9::part1();
         day9::part2();
+
+        day10::part1();
+        day10::part2();
     }
 
-    day10::part1();
-    day10::part2();
+    day11::part1();
+    day11::part2();
 
 }
