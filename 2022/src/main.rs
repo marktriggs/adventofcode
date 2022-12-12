@@ -1358,11 +1358,65 @@ mod day12 {
         }
 
         println!("Found shortest path: {}", shortest_path);
-
-
     }
 
-    pub fn part2() {}
+    pub fn part2() {
+        let base_height_map = HeightMap::parse(input_lines("input_files/day12.txt"));
+
+        let mut shortest_path = usize::MAX;
+
+        let mut candidate_starts: Vec<HeightMap> = Vec::new();
+
+        for row in 0..base_height_map.height {
+            for col in 0..base_height_map.width {
+                if base_height_map.height(Position { x: col, y: row }) == 0 {
+                    candidate_starts.push(HeightMap {
+                        grid: base_height_map.grid.clone(),
+                        start: Position { x: col, y: row },
+                        .. base_height_map
+                    });
+                }
+            }
+        }
+
+        for height_map in candidate_starts {
+            let mut active_paths = vec!(Path { current_position: height_map.start, length: 0 });
+
+            let mut best_cost_map: HashMap<Position, usize> = HashMap::new();
+
+            while !active_paths.is_empty() {
+                let mut new_paths = Vec::new();
+
+                for path in active_paths {
+                    if path.current_position == height_map.goal {
+                        if path.length < shortest_path {
+                            shortest_path = path.length;
+                        }
+
+                        continue;
+                    }
+
+                    for position in height_map.neighbours(path.current_position) {
+                        if height_map.height(position) <= height_map.height(path.current_position) + 1 {
+                            // OK to move
+                            if best_cost_map.get(&position).copied().unwrap_or(usize::MAX) > path.length + 1 {
+                                // It's a good move!
+                                best_cost_map.insert(position, path.length + 1);
+                                new_paths.push(Path {
+                                    current_position: position,
+                                    length: path.length + 1,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                active_paths = new_paths;
+            }
+        }
+
+        println!("Found shortest path: {}", shortest_path);
+    }
 }
 
 mod dayn {
@@ -1414,5 +1468,5 @@ fn main() {
     }
 
     day12::part1();
-
+    day12::part2();
 }
