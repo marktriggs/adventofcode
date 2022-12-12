@@ -1237,11 +1237,144 @@ mod day11 {
 }
 
 
+mod day12 {
+    use crate::shared::*;
+
+    const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
+
+    #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
+    struct Position {
+        x: i64,
+        y: i64,
+    }
+
+
+    #[derive(Debug)]
+    struct HeightMap {
+        grid: Vec<Vec<i64>>,
+        width: i64,
+        height: i64,
+        start: Position,
+        goal: Position,
+    }
+
+    impl HeightMap {
+        fn parse(lines: impl Iterator<Item=String>) -> HeightMap {
+            let mut start: Option<Position> = None;
+            let mut goal: Option<Position> = None;
+
+            let grid: Vec<Vec<i64>> =
+                lines.enumerate().map(|(row, line)| {
+                    line.chars().enumerate().map(|(col, ch)| {
+                        let depth = match ch {
+                            'S' => 0,
+                            'E' => 25,
+                            _ => ALPHABET.find(ch).unwrap() as i64,
+                        };
+
+                        if ch == 'S' {
+                            start = Some(Position { x: col as i64, y: row as i64 });
+                        } else if ch == 'E' {
+                            goal = Some(Position { x: col as i64, y: row as i64 });
+                        }
+
+                        depth
+                    }).collect::<Vec<i64>>()
+                }).collect();
+
+            let width = grid[0].len() as i64;
+            let height = grid.len() as i64;
+
+            HeightMap {
+                grid,
+                width,
+                height,
+                start: start.unwrap(),
+                goal: goal.unwrap(),
+            }
+        }
+
+        fn neighbours(&self, position: Position) -> Vec<Position> {
+            let mut result = Vec::with_capacity(4);
+
+            for (xoff, yoff) in &[(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                let new_x = position.x + xoff;
+                let new_y = position.y + yoff;
+
+                if (new_x >= 0 && new_x < self.width) && (new_y >= 0 && new_y < self.height) {
+                    result.push(Position { x: new_x, y: new_y });
+                }
+            }
+
+            result
+        }
+
+        fn height(&self, position: Position) -> i64 {
+            self.grid[position.y as usize][position.x as usize]
+        }
+    }
+
+    struct Path {
+        current_position: Position,
+        length: usize,
+    }
+
+    pub fn part1() {
+        let height_map = HeightMap::parse(input_lines("input_files/day12.txt"));
+
+        let mut shortest_path = usize::MAX;
+        let mut active_paths = vec!(Path { current_position: height_map.start, length: 0 });
+
+        let mut best_cost_map: HashMap<Position, usize> = HashMap::new();
+
+        while !active_paths.is_empty() {
+            let mut new_paths = Vec::new();
+
+            for path in active_paths {
+                if path.current_position == height_map.goal {
+                    if path.length < shortest_path {
+                        shortest_path = path.length;
+                    }
+
+                    continue;
+                }
+
+                for position in height_map.neighbours(path.current_position) {
+                    if height_map.height(position) <= height_map.height(path.current_position) + 1 {
+                        // OK to move
+                        if best_cost_map.get(&position).copied().unwrap_or(usize::MAX) > path.length + 1 {
+                            // It's a good move!
+                            best_cost_map.insert(position, path.length + 1);
+                            new_paths.push(Path {
+                                current_position: position,
+                                length: path.length + 1,
+                            });
+                        }
+                    }
+                }
+            }
+
+            active_paths = new_paths;
+        }
+
+        println!("Found shortest path: {}", shortest_path);
+
+
+    }
+
+    pub fn part2() {}
+}
+
 mod dayn {
     use crate::shared::*;
 
-    pub fn part1() {}
-    pub fn part2() {}
+    pub fn part1() {
+
+    }
+
+    pub fn part2() {
+
+    }
 }
 
 fn main() {
@@ -1275,9 +1408,11 @@ fn main() {
 
         day10::part1();
         day10::part2();
+
+        day11::part1();
+        day11::part2();
     }
 
-    day11::part1();
-    day11::part2();
+    day12::part1();
 
 }
