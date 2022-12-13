@@ -1419,6 +1419,121 @@ mod day12 {
     }
 }
 
+mod day13 {
+    use crate::shared::*;
+
+    #[derive(Debug, Clone)]
+    enum Packet {
+        Integer(usize),
+        List(Vec<Packet>),
+    }
+
+    fn parse_packet(s: &str) -> (Packet, &str) {
+        if let Some(mut rest) = s.strip_prefix('[') {
+            let mut elements = Vec::new();
+
+            while !rest.starts_with(']') {
+                if rest.starts_with(',') {
+                    rest = &rest[1..];
+                }
+
+                let (element, new_rest) = parse_packet(rest);
+                rest = new_rest;
+                elements.push(element);
+            }
+
+            (Packet::List(elements), &rest[1..])
+        } else {
+            let len = s.chars().take_while(|&c| char::is_digit(c, 10)).count();
+            (Packet::Integer(s[0..len].parse().unwrap()), &s[len..])
+        }
+    }
+
+    #[derive(Eq, PartialEq, Debug)]
+    enum PacketOrder {
+        Right,
+        Wrong,
+        Unsure,
+    }
+
+    fn determine_order(p1: &Packet, p2: &Packet) -> PacketOrder {
+        match (p1, p2) {
+            (Packet::Integer(n1), Packet::Integer(n2)) => {
+                match n1.cmp(n2) {
+                    Ordering::Less => PacketOrder::Right,
+                    Ordering::Greater => PacketOrder::Wrong,
+                    Ordering::Equal => PacketOrder::Unsure,
+                }
+            },
+            (Packet::List(l1), Packet::List(l2)) => {
+                for idx in 0..std::cmp::min(l1.len(), l2.len()) {
+                    let order = determine_order(&l1[idx], &l2[idx]);
+
+                    if order != PacketOrder::Unsure {
+                        return order;
+                    }
+                }
+
+                match l1.len().cmp(&l2.len()) {
+                    Ordering::Less => PacketOrder::Right,
+                    Ordering::Greater => PacketOrder::Wrong,
+                    Ordering::Equal => PacketOrder::Unsure,
+                }
+            },
+            (Packet::List(_), Packet::Integer(_)) => {
+                let wrapped = Packet::List(vec![p2.clone()]);
+
+                determine_order(p1, &wrapped)
+            },
+            (Packet::Integer(_), Packet::List(_)) => {
+                let wrapped = Packet::List(vec![p1.clone()]);
+
+                determine_order(&wrapped, p2)
+            },
+        }
+    }
+
+    pub fn part1() {
+        let lines: Vec<String> = input_lines("input_files/day13.txt").collect();
+
+        let mut total = 0;
+
+        for (idx, line_pair) in lines.split(|s| s.is_empty()).enumerate() {
+            assert_eq!(line_pair.len(), 2);
+
+            let packet1 = parse_packet(&line_pair[0]).0;
+            let packet2 = parse_packet(&line_pair[1]).0;
+
+            if determine_order(&packet1, &packet2) == PacketOrder::Right {
+                total += idx + 1;
+            }
+        }
+
+        println!("Pt1: {}", total);
+    }
+
+    pub fn part2() {
+        let mut lines: Vec<String> = input_lines("input_files/day13.txt")
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        lines.push("[[2]]".to_owned());
+        lines.push("[[6]]".to_owned());
+
+        lines.sort_by(|l1, l2| {
+            match determine_order(&parse_packet(l1).0, &parse_packet(l2).0) {
+                PacketOrder::Right => Ordering::Less,
+                PacketOrder::Wrong => Ordering::Greater,
+                PacketOrder::Unsure => Ordering::Equal,
+            }
+        });
+
+        println!("Decoder key: {}",
+                 (lines.iter().position(|elt| elt == "[[2]]").unwrap() + 1) *
+                 (lines.iter().position(|elt| elt == "[[6]]").unwrap() + 1));
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1465,8 +1580,11 @@ fn main() {
 
         day11::part1();
         day11::part2();
+
+        day12::part1();
+        day12::part2();
     }
 
-    day12::part1();
-    day12::part2();
+    day13::part1();
+    day13::part2();
 }
