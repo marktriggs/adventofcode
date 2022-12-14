@@ -1534,6 +1534,259 @@ mod day13 {
     }
 }
 
+mod day14 {
+    use crate::shared::*;
+
+    type Point = (usize, usize);
+
+    enum Tile {
+        Rock,
+        Sand,
+    }
+
+    struct CaveWithAbyss {
+        grid: HashMap<Point, Tile>,
+        min_x: usize,
+        max_x: usize,
+        min_y: usize,
+        max_y: usize,
+    }
+
+    impl CaveWithAbyss {
+        pub fn new() -> CaveWithAbyss {
+            CaveWithAbyss {
+                grid: HashMap::new(),
+                min_x: usize::MAX,
+                min_y: usize::MAX,
+                max_x: usize::MIN,
+                max_y: usize::MIN,
+            }
+        }
+
+        pub fn fill_line(&mut self, start: Point, end: Point) {
+            self.min_x = std::cmp::min(end.0, std::cmp::min(start.0, self.min_x));
+            self.min_y = std::cmp::min(end.1, std::cmp::min(start.1, self.min_y));
+            self.max_x = std::cmp::max(end.0, std::cmp::max(start.0, self.max_x));
+            self.max_y = std::cmp::max(end.1, std::cmp::max(start.1, self.max_y));
+
+            if start.0 == end.0 {
+                // Vertical line
+                for y in std::cmp::min(start.1, end.1)..=std::cmp::max(start.1, end.1) {
+                    self.grid.insert((start.0, y), Tile::Rock);
+                }
+            } else {
+                // Horizontal line
+                for x in std::cmp::min(start.0, end.0)..=std::cmp::max(start.0, end.0) {
+                    self.grid.insert((x, start.1), Tile::Rock);
+                }
+            }
+        }
+
+        pub fn draw(&self) {
+            for y in self.min_y..=self.max_y {
+                for x in self.min_x..=self.max_x {
+                    let ch = match self.grid.get(&(x, y)) {
+                        Some(&Tile::Rock) => '#',
+                        Some(&Tile::Sand) => 'o',
+                        None => ' ',
+                    };
+
+                    print!("{}", ch);
+                }
+
+                println!();
+            }
+        }
+
+        // Returns true if the sand settled.  False if it fell forever.
+        pub fn drop_sand(&mut self, origin: Point) -> bool {
+            let mut sand_position = origin;
+
+            loop {
+                let next_position = (sand_position.0, sand_position.1 + 1);
+
+                if next_position.1 > self.max_y {
+                    // Into the abyss!
+                    return false;
+                }
+
+                if self.grid.contains_key(&next_position) {
+                    if !self.grid.contains_key(&(next_position.0 - 1, next_position.1)) {
+                        // Head left
+                        sand_position = (next_position.0 - 1, next_position.1);
+                    } else if  !self.grid.contains_key(&(next_position.0 + 1, next_position.1)) {
+                        // Head right
+                        sand_position = (next_position.0 + 1, next_position.1);
+                    } else {
+                        // We're stuck!
+                        self.grid.insert(sand_position, Tile::Sand);
+                        return true;
+                    }
+                } else {
+                    // Keep falling
+                    sand_position = next_position;
+                }
+            }
+
+        }
+    }
+
+    pub fn part1() {
+        let mut cave = CaveWithAbyss::new();
+
+        for line in input_lines("input_files/day14.txt") {
+            let points: Vec<(usize, usize)> = line.split(" -> ").map(|s| s.split(',').map(|n| n.parse::<usize>().unwrap()).collect_tuple().unwrap()).collect();
+
+            for i in 0..(points.len() - 1) {
+                let start_point = points[i];
+                let end_point = points[i + 1];
+
+                cave.fill_line(start_point, end_point);
+            }
+        }
+
+        let mut sand_count = 0;
+
+        loop {
+            if cave.drop_sand((500, 0)) {
+                // Neat.
+                sand_count += 1;
+            } else {
+                // Sand tumbling into the abyss
+                break;
+            }
+        }
+
+        println!("Sand dropped: {}", sand_count);
+    }
+
+    struct CaveWithFloor {
+        grid: HashMap<Point, Tile>,
+        min_x: usize,
+        max_x: usize,
+        min_y: usize,
+        max_y: usize,
+    }
+
+    impl CaveWithFloor {
+        pub fn new() -> CaveWithFloor {
+            CaveWithFloor {
+                grid: HashMap::new(),
+                min_x: usize::MAX,
+                min_y: usize::MAX,
+                max_x: usize::MIN,
+                max_y: usize::MIN,
+            }
+        }
+
+        pub fn fill_line(&mut self, start: Point, end: Point) {
+            self.min_x = std::cmp::min(end.0, std::cmp::min(start.0, self.min_x));
+            self.min_y = std::cmp::min(end.1, std::cmp::min(start.1, self.min_y));
+            self.max_x = std::cmp::max(end.0, std::cmp::max(start.0, self.max_x));
+            self.max_y = std::cmp::max(end.1, std::cmp::max(start.1, self.max_y));
+
+            if start.0 == end.0 {
+                // Vertical line
+                for y in std::cmp::min(start.1, end.1)..=std::cmp::max(start.1, end.1) {
+                    self.grid.insert((start.0, y), Tile::Rock);
+                }
+            } else {
+                // Horizontal line
+                for x in std::cmp::min(start.0, end.0)..=std::cmp::max(start.0, end.0) {
+                    self.grid.insert((x, start.1), Tile::Rock);
+                }
+            }
+        }
+
+        pub fn draw(&self) {
+            // Recompute x bounds for display to show the whole thing
+            let min_x = self.grid.keys().map(|p| p.0).min().unwrap();
+            let max_x = self.grid.keys().map(|p| p.0).max().unwrap();
+
+            let min_y = 0;
+
+            for y in min_y..=(self.max_y + 2) {
+                for x in min_x..=max_x {
+                    let ch = match self.grid.get(&(x, y)) {
+                        Some(&Tile::Rock) => '#',
+                        Some(&Tile::Sand) => 'o',
+                        None => ' ',
+                    };
+
+                    print!("{}", ch);
+                }
+
+                println!();
+            }
+        }
+
+        // Returns true if the sand settled.  False if it fell forever.
+        pub fn drop_sand(&mut self, origin: Point) -> bool {
+            let mut sand_position = origin;
+
+            loop {
+                let next_position = (sand_position.0, sand_position.1 + 1);
+
+                if next_position.1 == (self.max_y + 2) {
+                    // We've hit the floor
+                    self.grid.insert(sand_position, Tile::Sand);
+                    return true;
+                }
+
+                if self.grid.contains_key(&next_position) {
+                    if !self.grid.contains_key(&(next_position.0 - 1, next_position.1)) {
+                        // Head left
+                        sand_position = (next_position.0 - 1, next_position.1);
+                    } else if  !self.grid.contains_key(&(next_position.0 + 1, next_position.1)) {
+                        // Head right
+                        sand_position = (next_position.0 + 1, next_position.1);
+                    } else {
+                        // We're stuck!
+                        self.grid.insert(sand_position, Tile::Sand);
+
+                        return sand_position != origin;
+                    }
+                } else {
+                    // Keep falling
+                    sand_position = next_position;
+                }
+            }
+
+        }
+    }
+
+    pub fn part2() {
+        let mut cave = CaveWithFloor::new();
+
+        for line in input_lines("input_files/day14.txt") {
+            let points: Vec<(usize, usize)> = line.split(" -> ").map(|s| s.split(',').map(|n| n.parse::<usize>().unwrap()).collect_tuple().unwrap()).collect();
+
+            for i in 0..(points.len() - 1) {
+                let start_point = points[i];
+                let end_point = points[i + 1];
+
+                cave.fill_line(start_point, end_point);
+            }
+        }
+
+        let mut sand_count = 0;
+
+        loop {
+            sand_count += 1;
+
+            if cave.drop_sand((500, 0)) {
+                // Neat.
+            } else {
+                // We're full!
+                break;
+            }
+        }
+
+        println!("Sand dropped: {}", sand_count);
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -1583,8 +1836,11 @@ fn main() {
 
         day12::part1();
         day12::part2();
+
+        day13::part1();
+        day13::part2();
     }
 
-    day13::part1();
-    day13::part2();
+    day14::part1();
+    day14::part2();
 }
