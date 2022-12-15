@@ -1787,6 +1787,177 @@ mod day14 {
 }
 
 
+mod day15 {
+    use crate::shared::*;
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+    struct Position {
+        x: i64,
+        y: i64,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+    enum Tile {
+        Sensor,
+        SensorHighlight,
+        Beacon,
+        Signal,
+    }
+
+    fn draw_world(world: &HashMap<Position, Tile>) {
+        let min_x = world.keys().map(|p| p.x).min().unwrap();
+        let max_x = world.keys().map(|p| p.x).max().unwrap();
+        let min_y = world.keys().map(|p| p.y).min().unwrap();
+        let max_y = world.keys().map(|p| p.y).max().unwrap();
+
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                let ch = match world.get(&Position { x, y }) {
+                    Some(&Tile::Beacon) => 'B',
+                    Some(&Tile::Sensor) => 'S',
+                    Some(&Tile::Signal) => '#',
+                    Some(&Tile::SensorHighlight) => 'X',
+                    None => ' ',
+                };
+
+                print!("{}", ch);
+            }
+
+            println!();
+        }
+    }
+
+    fn manhattan_distance(p1: Position, p2: Position) -> i64 {
+        (p1.x - p2.x).abs() + (p1.y - p2.y).abs()
+    }
+
+    pub fn part1() {
+        let line_regex = Regex::new(r"^Sensor at x=([-0-9]+), y=([-0-9]+): closest beacon is at x=([-0-9]+), y=([-0-9]+)$").unwrap();
+
+        let mut world: HashMap<Position, Tile> = HashMap::new();
+
+        let target_row = 2_000_000;
+
+        for line in input_lines("input_files/day15.txt") {
+            if let Some(caps) = line_regex.captures(&line) {
+                let sensor = Position {
+                    x: caps[1].parse::<i64>().unwrap(),
+                    y: caps[2].parse::<i64>().unwrap(),
+                };
+
+                let beacon = Position {
+                    x: caps[3].parse::<i64>().unwrap(),
+                    y: caps[4].parse::<i64>().unwrap(),
+                };
+
+                world.insert(sensor, Tile::Sensor);
+                world.insert(beacon, Tile::Beacon);
+
+
+                let max_distance = manhattan_distance(sensor, beacon);
+
+                if (sensor.y + max_distance) < target_row || (sensor.y - max_distance) > target_row {
+                    // Not of interest.  Cull this point.
+                } else {
+                    for x in (sensor.x - max_distance)..=(sensor.x + max_distance) {
+                        if manhattan_distance(Position { x, y: target_row }, sensor) <= max_distance {
+                            // In range
+                            world.entry(Position { x, y: target_row }).or_insert(Tile::Signal);
+                        }
+                    }
+                }
+            }
+        }
+
+        let min_x = world.keys().map(|p| p.x).min().unwrap();
+        let max_x = world.keys().map(|p| p.x).max().unwrap();
+
+        println!("Impossible positions: {}", (min_x..=max_x).filter(|&x| world.get(&Position { x, y: target_row }) == Some(&Tile::Signal)).count());
+    }
+
+    fn inclusive_range(a: i64, b: i64) -> Vec<i64> {
+        if a < b {
+            (a..=b).collect()
+        } else {
+            (b..=a).rev().collect()
+        }
+    }
+
+    pub fn part2() {
+        let line_regex = Regex::new(r"^Sensor at x=([-0-9]+), y=([-0-9]+): closest beacon is at x=([-0-9]+), y=([-0-9]+)$").unwrap();
+
+        struct Diamond {
+            origin: Position,
+            max_distance: i64,
+            x_min: i64,
+            x_max: i64,
+            y_min: i64,
+            y_max: i64,
+        }
+
+        impl Diamond {
+            fn contains(&self, x: i64, y: i64) -> bool {
+                ((self.origin.x - x).abs() + (self.origin.y - y).abs()) <= self.max_distance
+            }
+        }
+
+        let mut diamonds: Vec<Diamond> = Vec::new();
+
+        for line in input_lines("input_files/day15.txt") {
+            if let Some(caps) = line_regex.captures(&line) {
+                let sensor = Position {
+                    x: caps[1].parse::<i64>().unwrap(),
+                    y: caps[2].parse::<i64>().unwrap(),
+                };
+
+                let beacon = Position {
+                    x: caps[3].parse::<i64>().unwrap(),
+                    y: caps[4].parse::<i64>().unwrap(),
+                };
+
+
+                let max_distance = manhattan_distance(sensor, beacon);
+
+                diamonds.push(Diamond {
+                    origin: sensor,
+                    max_distance,
+                    x_min: (sensor.x - max_distance),
+                    x_max: (sensor.x + max_distance),
+                    y_min: (sensor.y - max_distance),
+                    y_max: (sensor.y + max_distance),
+                });
+            }
+        }
+
+        let min_coord = 0;
+        let max_coord = 4000000;
+
+        // Idea: Our search only contains one position not reached by a sensor.  This
+        // must be right on the edge of one of the diamonds, so only check those
+        // positions.
+        for diamond in &diamonds {
+            for (a, b, c, d) in &[
+                (diamond.x_min - 1, diamond.origin.x, diamond.origin.y, diamond.y_min - 1),
+                (diamond.origin.x, diamond.x_max + 1, diamond.y_min - 1, diamond.origin.y),
+                (diamond.x_min - 1, diamond.origin.x, diamond.origin.y, diamond.y_max + 1),
+                (diamond.origin.x, diamond.x_max + 1, diamond.y_max + 1, diamond.origin.y)
+            ] {
+                for (x, y) in inclusive_range(*a, *b).into_iter().zip(inclusive_range(*c, *d)) {
+                    if x < min_coord || x > max_coord || y < min_coord || y > max_coord {
+                        continue;
+                    }
+
+                    if !diamonds.iter().any(|d| d.contains(x, y)) {
+                        println!("Found frequency: {}", (x * 4000000) + y);
+                        return;
+                    }
+                }
+
+            }
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -1839,8 +2010,11 @@ fn main() {
 
         day13::part1();
         day13::part2();
+
+        day14::part1();
+        day14::part2();
     }
 
-    day14::part1();
-    day14::part2();
+    // day15::part1();
+    day15::part2();
 }
