@@ -1984,20 +1984,28 @@ mod day16 {
 
     impl Stats {
         fn is_better_than(&self, other: &Stats) -> bool {
-            if self.minute > other.minute {
-                return other.is_better_than(self);
+            if self.minute == other.minute && self.current_flow_rate == other.current_flow_rate && self.pressure_released < other.pressure_released {
+                return false;
+            } else {
+                // Maybe!
+                return true;
             }
 
-            let minute_difference = other.minute - self.minute;
-
-            ((self.current_flow_rate * minute_difference) + self.pressure_released) > other.pressure_released
+            // if self.minute > other.minute {
+            //     return other.is_better_than(self);
+            // }
+            //
+            // let minute_difference = other.minute - self.minute;
+            //
+            // ((self.current_flow_rate * minute_difference) + self.pressure_released) > other.pressure_released
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct Snapshot {
         state: State,
         stats: Stats,
+        moves: Vec<String>,
     }
 
     const MAX_MINUTES: usize = 30;
@@ -2031,8 +2039,9 @@ mod day16 {
         let mut best_state_seen: HashMap<State, Stats> = HashMap::new();
 
         let mut queue = vec!(Snapshot {
-            state: State { open_valves_mask: 0, current_location: 1 },
+            state: State { open_valves_mask: 0, current_location: 0 },
             stats: Stats { minute: 1, pressure_released: 0, current_flow_rate: 0 },
+            moves: Vec::new(),
         });
 
         let pressure_per_second = |open_valves_mask| {
@@ -2048,6 +2057,7 @@ mod day16 {
         };
 
         let mut best_ever_pressure = 0;
+        let mut best_ever_snapshot = queue[0].clone();
 
         best_state_seen.insert(queue[0].state.clone(), queue[0].stats.clone());
 
@@ -2075,9 +2085,13 @@ mod day16 {
 
                 if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
                     // We can do better!
+                    let mut next_moves = snapshot.moves.clone();
+                    next_moves.push(format!("open {}", this_valve.name));
+
                     let next_snapshot = Snapshot {
                         state: next_state.clone(),
-                        stats: next_stats
+                        stats: next_stats,
+                        moves: next_moves,
                     };
 
                     best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
@@ -2108,9 +2122,13 @@ mod day16 {
 
                     if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
                         // We can do better!
+                        let mut next_moves = snapshot.moves.clone();
+                        next_moves.push(format!("move to {}", target_valve.name));
+
                         let next_snapshot = Snapshot {
                             state: next_state.clone(),
-                            stats: next_stats
+                            stats: next_stats,
+                            moves: next_moves,
                         };
 
                         best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
@@ -2123,10 +2141,12 @@ mod day16 {
             // Or we could do nothing from here on out
             best_ever_pressure = std::cmp::max(best_ever_pressure,
                                                ((MAX_MINUTES - snapshot.stats.minute) * snapshot.stats.current_flow_rate) + snapshot.stats.pressure_released);
+            best_ever_snapshot = snapshot;
         }
 
 
         println!("Best pressure: {}", best_ever_pressure);
+        println!("Best snapshot: {:?}", best_ever_snapshot);
     }
 
     pub fn part2() {
