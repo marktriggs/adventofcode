@@ -1958,6 +1958,182 @@ mod day15 {
     }
 }
 
+mod day16 {
+    use crate::shared::*;
+
+    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+    struct Valve {
+        id: usize,
+        name: String,
+        flow_rate: usize,
+        tunnels: Vec<String>,
+    }
+
+    #[derive(Eq, PartialEq, Debug, Hash, Clone)]
+    struct State {
+        open_valves_mask: usize,
+        current_location: usize,
+    }
+
+    #[derive(Eq, PartialEq, Debug, Hash, Clone)]
+    struct Stats {
+        minute: usize,
+        pressure_released: usize,
+        current_flow_rate: usize,
+    }
+
+    impl Stats {
+        fn is_better_than(&self, other: &Stats) -> bool {
+            if self.minute > other.minute {
+                return other.is_better_than(self);
+            }
+
+            let minute_difference = other.minute - self.minute;
+
+            ((self.current_flow_rate * minute_difference) + self.pressure_released) > other.pressure_released
+        }
+    }
+
+    #[derive(Debug)]
+    struct Snapshot {
+        state: State,
+        stats: Stats,
+    }
+
+    const MAX_MINUTES: usize = 30;
+
+    pub fn part1() {
+        let line_regex = Regex::new(r"^Valve ([A-Z]+) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)$").unwrap();
+
+        let mut valves_by_name: HashMap<String, Valve> = HashMap::new();
+        let mut valves_by_id: HashMap<usize, Valve> = HashMap::new();
+
+        let mut id = 0;
+
+        for line in input_lines("input_files/day16_sample.txt") {
+            if let Some(caps) = line_regex.captures(&line) {
+                let valve = Valve {
+                    id,
+                    name: caps[1].to_string(),
+                    flow_rate: caps[2].parse().unwrap(),
+                    tunnels: caps[3].split(", ").map(str::to_string).collect(),
+                };
+
+                id += 1;
+
+                valves_by_id.insert(valve.id, valve.clone());
+                valves_by_name.insert(valve.name.clone(), valve);
+            } else {
+                panic!("Input parse error: {}", line);
+            }
+        }
+
+        let mut best_state_seen: HashMap<State, Stats> = HashMap::new();
+
+        let mut queue = vec!(Snapshot {
+            state: State { open_valves_mask: 0, current_location: 1 },
+            stats: Stats { minute: 1, pressure_released: 0, current_flow_rate: 0 },
+        });
+
+        let pressure_per_second = |open_valves_mask| {
+            let mut total = 0;
+
+            for (id, valve) in &valves_by_id {
+                if (open_valves_mask & (1 << id)) > 0 {
+                    total += valve.flow_rate;
+                }
+            }
+
+            total
+        };
+
+        let mut best_ever_pressure = 0;
+
+        best_state_seen.insert(queue[0].state.clone(), queue[0].stats.clone());
+
+        while !queue.is_empty() {
+            let snapshot = queue.pop().unwrap();
+
+            let this_valve = valves_by_id.get(&snapshot.state.current_location).unwrap();
+
+            if snapshot.stats.minute < MAX_MINUTES && this_valve.flow_rate > 0 && (snapshot.state.open_valves_mask & (1 << snapshot.state.current_location)) == 0 {
+                // Well, we could try turning it on...
+                let next_state = State {
+                    open_valves_mask: (snapshot.state.open_valves_mask | (1 << snapshot.state.current_location)),
+                    ..snapshot.state
+                };
+
+                let new_open_valves_mask = next_state.open_valves_mask;
+
+                let next_stats = Stats {
+                    minute: snapshot.stats.minute + 1,
+                    pressure_released: snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask),
+                    current_flow_rate: pressure_per_second(new_open_valves_mask)
+                };
+
+                let best_so_far = best_state_seen.get(&next_state);
+
+                if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
+                    // We can do better!
+                    let next_snapshot = Snapshot {
+                        state: next_state.clone(),
+                        stats: next_stats
+                    };
+
+                    best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
+
+                    queue.push(next_snapshot);
+                }
+            }
+
+            if snapshot.stats.minute < MAX_MINUTES {
+                // Or we could just move to any of the adjacent locations
+                for target_tunnel_name in &this_valve.tunnels {
+                    let target_valve = valves_by_name.get(target_tunnel_name).unwrap();
+
+                    let next_state = State {
+                        current_location: target_valve.id,
+                        ..snapshot.state
+                    };
+
+                    let new_open_valves_mask = next_state.open_valves_mask;
+
+                    let next_stats = Stats {
+                        minute: snapshot.stats.minute + 1,
+                        pressure_released: snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask),
+                        current_flow_rate: pressure_per_second(new_open_valves_mask)
+                    };
+
+                    let best_so_far = best_state_seen.get(&next_state);
+
+                    if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
+                        // We can do better!
+                        let next_snapshot = Snapshot {
+                            state: next_state.clone(),
+                            stats: next_stats
+                        };
+
+                        best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
+
+                        queue.push(next_snapshot);
+                    }
+                }
+            }
+
+            // Or we could do nothing from here on out
+            best_ever_pressure = std::cmp::max(best_ever_pressure,
+                                               ((MAX_MINUTES - snapshot.stats.minute) * snapshot.stats.current_flow_rate) + snapshot.stats.pressure_released);
+        }
+
+
+        println!("Best pressure: {}", best_ever_pressure);
+    }
+
+    pub fn part2() {
+
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -2013,8 +2189,11 @@ fn main() {
 
         day14::part1();
         day14::part2();
+
+        day15::part1();
+        day15::part2();
     }
 
-    // day15::part1();
-    day15::part2();
+    day16::part1();
+
 }
