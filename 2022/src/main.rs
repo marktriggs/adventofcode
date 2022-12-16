@@ -1980,26 +1980,15 @@ mod day16 {
         minute: usize,
         pressure_released: usize,
         current_flow_rate: usize,
+        projected_score: usize,
     }
 
-    impl Stats {
-        fn is_better_than(&self, other: &Stats) -> bool {
-            if self.minute == other.minute && self.current_flow_rate == other.current_flow_rate && self.pressure_released < other.pressure_released {
-                return false;
-            } else {
-                // Maybe!
-                return true;
-            }
-
-            // if self.minute > other.minute {
-            //     return other.is_better_than(self);
-            // }
-            //
-            // let minute_difference = other.minute - self.minute;
-            //
-            // ((self.current_flow_rate * minute_difference) + self.pressure_released) > other.pressure_released
-        }
+    #[derive(Eq, PartialEq, Debug, Hash, Clone)]
+    struct Goodness {
+        projected_score: usize,
+        minute: usize,
     }
+
 
     #[derive(Debug, Clone)]
     struct Snapshot {
@@ -2018,7 +2007,9 @@ mod day16 {
 
         let mut id = 0;
 
-        for line in input_lines("input_files/day16_sample.txt") {
+        // 1694: too low
+        // 1806: too high!
+        for line in input_lines("input_files/day16.txt") {
             if let Some(caps) = line_regex.captures(&line) {
                 let valve = Valve {
                     id,
@@ -2036,11 +2027,11 @@ mod day16 {
             }
         }
 
-        let mut best_state_seen: HashMap<State, Stats> = HashMap::new();
+        let mut seen_states: HashMap<State, Goodness> = HashMap::new();
 
         let mut queue = vec!(Snapshot {
             state: State { open_valves_mask: 0, current_location: 0 },
-            stats: Stats { minute: 1, pressure_released: 0, current_flow_rate: 0 },
+            stats: Stats { minute: 1, pressure_released: 0, current_flow_rate: 0, projected_score: 0 },
             moves: Vec::new(),
         });
 
@@ -2059,14 +2050,18 @@ mod day16 {
         let mut best_ever_pressure = 0;
         let mut best_ever_snapshot = queue[0].clone();
 
-        best_state_seen.insert(queue[0].state.clone(), queue[0].stats.clone());
+        seen_states.insert(queue[0].state.clone(), Goodness { projected_score: 0, minute: 1 });
 
         while !queue.is_empty() {
             let snapshot = queue.pop().unwrap();
 
+            // if snapshot.moves == ["move to DD", "open DD", "move to AA", "move to BB", "open BB", "move to AA", "move to II"] {
+            //     dbg!("INTEREST", &snapshot);
+            // }
+
             let this_valve = valves_by_id.get(&snapshot.state.current_location).unwrap();
 
-            if snapshot.stats.minute < MAX_MINUTES && this_valve.flow_rate > 0 && (snapshot.state.open_valves_mask & (1 << snapshot.state.current_location)) == 0 {
+            if snapshot.stats.minute < (MAX_MINUTES + 1) && this_valve.flow_rate > 0 && (snapshot.state.open_valves_mask & (1 << snapshot.state.current_location)) == 0 {
                 // Well, we could try turning it on...
                 let next_state = State {
                     open_valves_mask: (snapshot.state.open_valves_mask | (1 << snapshot.state.current_location)),
@@ -2078,29 +2073,29 @@ mod day16 {
                 let next_stats = Stats {
                     minute: snapshot.stats.minute + 1,
                     pressure_released: snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask),
-                    current_flow_rate: pressure_per_second(new_open_valves_mask)
+                    current_flow_rate: pressure_per_second(new_open_valves_mask),
+                    projected_score: (pressure_per_second(new_open_valves_mask) * ((MAX_MINUTES + 1) - (snapshot.stats.minute + 1)) +
+                                      snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask))
                 };
 
-                let best_so_far = best_state_seen.get(&next_state);
+                if !seen_states.contains_key(&next_state) ||
+                    seen_states.get(&next_state).unwrap().projected_score < next_stats.projected_score {
+                        let mut next_moves = snapshot.moves.clone();
+                        next_moves.push(format!("open {}", this_valve.name));
 
-                if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
-                    // We can do better!
-                    let mut next_moves = snapshot.moves.clone();
-                    next_moves.push(format!("open {}", this_valve.name));
+                        let next_snapshot = Snapshot {
+                            state: next_state.clone(),
+                            stats: next_stats.clone(),
+                            moves: next_moves,
+                        };
 
-                    let next_snapshot = Snapshot {
-                        state: next_state.clone(),
-                        stats: next_stats,
-                        moves: next_moves,
-                    };
+                        seen_states.insert(next_state.clone(), Goodness { projected_score: next_stats.projected_score, minute: next_stats.minute });
 
-                    best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
-
-                    queue.push(next_snapshot);
-                }
+                        queue.push(next_snapshot);
+                    }
             }
 
-            if snapshot.stats.minute < MAX_MINUTES {
+            if snapshot.stats.minute < (MAX_MINUTES + 1) {
                 // Or we could just move to any of the adjacent locations
                 for target_tunnel_name in &this_valve.tunnels {
                     let target_valve = valves_by_name.get(target_tunnel_name).unwrap();
@@ -2115,33 +2110,54 @@ mod day16 {
                     let next_stats = Stats {
                         minute: snapshot.stats.minute + 1,
                         pressure_released: snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask),
-                        current_flow_rate: pressure_per_second(new_open_valves_mask)
+                        current_flow_rate: pressure_per_second(new_open_valves_mask),
+                        projected_score: (pressure_per_second(new_open_valves_mask) * ((MAX_MINUTES + 1) - (snapshot.stats.minute + 1)) +
+                                          snapshot.stats.pressure_released + pressure_per_second(snapshot.state.open_valves_mask))
+
                     };
 
-                    let best_so_far = best_state_seen.get(&next_state);
+                    // if snapshot.moves == ["move to DD", "open DD", "move to CC"] && target_valve.name == "BB" {
+                    //     dbg!("this!");
+                    //     dbg!(seen_states.get(&next_state));
+                    //     dbg!(&next_stats);
+                    //     dbg!(&next_state);
+                    // }
 
-                    if best_so_far.is_none() || next_stats.is_better_than(best_so_far.unwrap()) {
-                        // We can do better!
-                        let mut next_moves = snapshot.moves.clone();
-                        next_moves.push(format!("move to {}", target_valve.name));
+                    if !seen_states.contains_key(&next_state) ||
+                        seen_states.get(&next_state).unwrap().projected_score < next_stats.projected_score {
+                            let mut next_moves = snapshot.moves.clone();
+                            next_moves.push(format!("move to {}", target_tunnel_name));
 
-                        let next_snapshot = Snapshot {
-                            state: next_state.clone(),
-                            stats: next_stats,
-                            moves: next_moves,
-                        };
+                            let next_snapshot = Snapshot {
+                                state: next_state.clone(),
+                                stats: next_stats.clone(),
+                                moves: next_moves.clone(),
+                            };
 
-                        best_state_seen.insert(next_state.clone(), next_snapshot.stats.clone());
+                            // if next_stats.projected_score == 540 && next_stats.minute == 5 {
+                            //     dbg!("OK", &next_state);
+                            //     dbg!("NEXT", &next_stats);
+                            //     dbg!("SNAPSHOT", &next_moves);
+                            // }
 
-                        queue.push(next_snapshot);
-                    }
+                            seen_states.insert(next_state.clone(), Goodness { projected_score: next_stats.projected_score, minute: next_stats.minute });
+
+                            queue.push(next_snapshot);
+                        } else {
+                            // if snapshot.moves == ["move to DD", "open DD", "move to CC"] && target_valve.name == "BB" {
+                            //     dbg!("decline");
+                            // }
+                        }
                 }
             }
 
             // Or we could do nothing from here on out
-            best_ever_pressure = std::cmp::max(best_ever_pressure,
-                                               ((MAX_MINUTES - snapshot.stats.minute) * snapshot.stats.current_flow_rate) + snapshot.stats.pressure_released);
-            best_ever_snapshot = snapshot;
+            let this_pressure = (((MAX_MINUTES + 1) - snapshot.stats.minute) * snapshot.stats.current_flow_rate) + snapshot.stats.pressure_released;
+
+            if this_pressure > best_ever_pressure {
+                best_ever_pressure = this_pressure;
+                best_ever_snapshot = snapshot;
+            }
         }
 
 
