@@ -1976,6 +1976,7 @@ mod day16_pt1 {
         current_minute: usize,
         pressure_released: usize,
         projected_score: usize,
+        remaining_minutes: usize,
 
         moves: Vec<Move<'a>>,
         previous_states: Arc<HashSet<StateKey>>,
@@ -2051,6 +2052,11 @@ mod day16_pt1 {
         Open(&'a str),
     }
 
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+    struct HighScoreKey {
+        key: StateKey,
+    }
+
     pub fn part1() {
         let valves = parse_valves();
 
@@ -2063,6 +2069,7 @@ mod day16_pt1 {
             current_minute: 0,
             pressure_released: 0,
             projected_score: 0,
+            remaining_minutes: MAX_MINUTES,
 
             previous_states: Arc::new(HashSet::new()),
             moves: Vec::new(),
@@ -2071,7 +2078,7 @@ mod day16_pt1 {
         let mut best_ever_pressure = 0;
         let mut best_ever_state = queue[0].clone();
 
-        let mut high_scores: HashMap<StateKey, usize> = HashMap::new();
+        let mut high_scores: HashMap<HighScoreKey, (usize, usize)> = HashMap::new();
 
         while !queue.is_empty() {
             let state = queue.pop().unwrap();
@@ -2118,10 +2125,11 @@ mod day16_pt1 {
 
                     current_minute: state.current_minute + 1,
 
-                    pressure_released: state.pressure_released + valves.pressure_per_second(next_state_key.open_valves_mask),
+                    pressure_released: state.pressure_released + valves.pressure_per_second(state.key.open_valves_mask),
 
                     // Below...
                     projected_score: 0,
+                    remaining_minutes: 0,
 
                     previous_states: updated_previous_states.clone(),
                     moves: state.moves.clone(),
@@ -2136,13 +2144,14 @@ mod day16_pt1 {
                     next_state.moves.push(Move::Open(&valves.get(opened_valve).name));
                 }
 
-                let remaining_minutes = (MAX_MINUTES - next_state.current_minute);
+                next_state.remaining_minutes = MAX_MINUTES - next_state.current_minute;
+                next_state.projected_score = next_state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * next_state.remaining_minutes);
 
-                next_state.projected_score = state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * remaining_minutes);
+                let highscore_key = HighScoreKey { key: next_state.key.clone() };
+                let high_score = high_scores.get(&highscore_key);
 
-                let high_score = high_scores.get(&next_state.key);
-                if high_score.is_none() || high_score.unwrap() < &next_state.projected_score {
-                    high_scores.insert(next_state.key.clone(), next_state.projected_score);
+                if high_score.is_none() || high_score.unwrap().0 < next_state.projected_score || ((high_score.unwrap().0 == next_state.projected_score) && (high_score.unwrap().1 > next_state.current_minute)) {
+                    high_scores.insert(highscore_key, (next_state.projected_score, next_state.current_minute));
                     queue.push(next_state);
                 }
             }
@@ -2176,10 +2185,16 @@ mod day16_pt2 {
         key: StateKey,
 
         current_minute: usize,
+        remaining_minutes: usize,
         pressure_released: usize,
         projected_score: usize,
 
         previous_states: Arc<HashSet<StateKey>>,
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+    struct HighScoreKey {
+        key: StateKey,
     }
 
     #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -2250,7 +2265,7 @@ mod day16_pt2 {
 
         let mut id = 0;
 
-        for line in input_lines("input_files/day16_sample.txt") {
+        for line in input_lines("input_files/day16.txt") {
             if let Some(caps) = line_regex.captures(&line) {
                 let valve = Valve {
                     id,
@@ -2281,6 +2296,7 @@ mod day16_pt2 {
             },
 
             current_minute: 0,
+            remaining_minutes: MAX_MINUTES,
             pressure_released: 0,
             projected_score: 0,
 
@@ -2288,9 +2304,9 @@ mod day16_pt2 {
         });
 
         let mut best_ever_pressure = 0;
-        let mut best_ever_state = queue[0].clone();
+        // let mut best_ever_state = queue[0].clone();
 
-        let mut high_scores: HashMap<StateKey, usize> = HashMap::new();
+        let mut high_scores: HashMap<HighScoreKey, (usize, usize)> = HashMap::new();
 
         while !queue.is_empty() {
             let state = queue.pop().unwrap();
@@ -2355,22 +2371,23 @@ mod day16_pt2 {
 
                     current_minute: state.current_minute + 1,
 
-                    pressure_released: state.pressure_released + valves.pressure_per_second(next_state_key.open_valves_mask),
+                    pressure_released: state.pressure_released + valves.pressure_per_second(state.key.open_valves_mask),
 
                     // Below...
                     projected_score: 0,
+                    remaining_minutes: 0,
 
                     previous_states: updated_previous_states.clone(),
                 };
 
-                let remaining_minutes = (MAX_MINUTES - next_state.current_minute);
+                next_state.remaining_minutes = MAX_MINUTES - next_state.current_minute;
+                next_state.projected_score = next_state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * next_state.remaining_minutes);
 
-                next_state.projected_score = state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * remaining_minutes);
+                let highscore_key = HighScoreKey { key: next_state.key.clone() };
+                let high_score = high_scores.get(&highscore_key);
 
-                let high_score = high_scores.get(&next_state.key);
-                // FIXME: < wrong here.  Should be <=
-                if high_score.is_none() || high_score.unwrap() < &next_state.projected_score {
-                    high_scores.insert(next_state.key.clone(), next_state.projected_score);
+                if high_score.is_none() || high_score.unwrap().0 < next_state.projected_score || ((high_score.unwrap().0 == next_state.projected_score) && (high_score.unwrap().1 > next_state.current_minute)) {
+                    high_scores.insert(highscore_key, (next_state.projected_score, next_state.current_minute));
                     queue.push(next_state);
                 }
             }
@@ -2378,7 +2395,6 @@ mod day16_pt2 {
             // Or we could do nothing from here on out
             if state.projected_score > best_ever_pressure {
                 best_ever_pressure = state.projected_score;
-                best_ever_state = state;
             }
         }
 
@@ -2447,6 +2463,6 @@ fn main() {
         day15::part2();
     }
 
-    day16_pt1::part1();
-    // day16_pt2::part2();
+    // day16_pt1::part1();
+    day16_pt2::part2();
 }
