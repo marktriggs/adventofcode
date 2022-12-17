@@ -2226,6 +2226,29 @@ mod day16_pt2 {
 
             result
         }
+
+        fn insert_previous_states(&self, previous_states: &mut HashSet<StateKey>) {
+            for location in self.current_locations() {
+                previous_states.insert(StateKey {
+                    open_valves_mask: self.open_valves_mask,
+                    current_locations_mask: (1 << location)
+                });
+            }
+        }
+
+        fn is_already_in(&self, previous_states: &HashSet<StateKey>) -> bool {
+            for location in self.current_locations() {
+                if previous_states.contains(&StateKey {
+                    open_valves_mask: self.open_valves_mask,
+                    current_locations_mask: (1 << location)
+                }) {
+                    return true;
+                }
+            }
+
+            false
+        }
+
     }
 
     struct Valves {
@@ -2308,8 +2331,11 @@ mod day16_pt2 {
 
         let mut high_scores: HashMap<HighScoreKey, (usize, usize)> = HashMap::new();
 
+        let mut checked = 0;
+
         while !queue.is_empty() {
             let state = queue.pop().unwrap();
+            checked += 1;
 
             let mut new_states: HashSet<StateKey> = HashSet::new();
 
@@ -2356,12 +2382,13 @@ mod day16_pt2 {
             }
 
             let mut previous_states: HashSet<StateKey> = (*state.previous_states).clone();
-            previous_states.insert(state.key.clone());
+
+            state.key.insert_previous_states(&mut previous_states);
 
             let updated_previous_states = Arc::new(previous_states);
 
             for next_state_key in new_states.into_iter() {
-                if state.previous_states.contains(&next_state_key) {
+                if next_state_key.is_already_in(&state.previous_states) {
                     // Seen this state before on this path.
                     continue;
                 }
