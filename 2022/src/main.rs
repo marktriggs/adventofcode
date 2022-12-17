@@ -2141,7 +2141,7 @@ mod day16_pt1 {
                 next_state.projected_score = state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * remaining_minutes);
 
                 let high_score = high_scores.get(&next_state.key);
-                if high_score.is_none() || high_score.unwrap() <= &next_state.projected_score {
+                if high_score.is_none() || high_score.unwrap() < &next_state.projected_score {
                     high_scores.insert(next_state.key.clone(), next_state.projected_score);
                     queue.push(next_state);
                 }
@@ -2185,21 +2185,31 @@ mod day16_pt2 {
     #[derive(Clone, Eq, PartialEq, Hash, Debug)]
     struct StateKey {
         open_valves_mask: usize,
-        my_current_location: usize,
-        elephant_current_location: usize,
+        current_locations_mask: usize,
     }
 
     impl StateKey {
-        fn normalised(&self) -> StateKey {
-            if self.elephant_current_location <= self.my_current_location {
-                self.clone()
-            } else {
-                StateKey {
-                    my_current_location: self.elephant_current_location,
-                    elephant_current_location: self.my_current_location,
-                    ..*self
+        fn current_locations(&self) -> Vec<usize> {
+            let mut result = Vec::with_capacity(2);
+
+            let mut idx = 0;
+
+            let mut mask = self.current_locations_mask;
+
+            while mask > 0 {
+                if (mask & 0x01) == 1 {
+                    result.push(idx);
                 }
+
+                mask >>= 1;
+                idx += 1;
             }
+
+            if result.len() < 2 {
+                result.push(result[0]);
+            }
+
+            result
         }
     }
 
@@ -2261,20 +2271,13 @@ mod day16_pt2 {
         Valves { valves_by_id, valves_by_name }
     }
 
-    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-    enum Move<'a> {
-        Move(&'a str),
-        Open(&'a str),
-    }
-
     pub fn part2() {
         let valves = parse_valves();
 
         let mut queue = vec!(State {
             key: StateKey {
                 open_valves_mask: 0,
-                my_current_location: valves.get_by_name("AA").id,
-                elephant_current_location: valves.get_by_name("AA").id,
+                current_locations_mask: (1 << valves.get_by_name("AA").id),
             },
 
             current_minute: 0,
@@ -2284,97 +2287,71 @@ mod day16_pt2 {
             previous_states: Arc::new(HashSet::new()),
         });
 
-        let mut seen_states: HashSet<(StateKey, usize)> = HashSet::new();
-
         let mut best_ever_pressure = 0;
         let mut best_ever_state = queue[0].clone();
 
         let mut high_scores: HashMap<StateKey, usize> = HashMap::new();
 
-        let mut all_new_states = Vec::new();
-
         while !queue.is_empty() {
             let state = queue.pop().unwrap();
 
-            let set_key = (state.key.clone(), state.current_minute);
-            if seen_states.contains(&set_key) {
-                continue;
-            } else {
-                seen_states.insert(set_key);
-            }
+            let mut new_states: HashSet<StateKey> = HashSet::new();
 
-            // If we're both in the same room, only one of us can flip the valve.
-            let mut flips_possible = if state.key.my_current_location == state.key.elephant_current_location { 1 } else { 2 };
+            if state.current_minute < MAX_MINUTES {
+                let mut movements_by_entity = Vec::with_capacity(2);
 
-            for current_location in [state.key.my_current_location, state.key.elephant_current_location] {
-                let this_valve = valves.get(current_location);
+                for location in state.key.current_locations() {
+                    let mut movements = Vec::new();
 
-                let mut new_states = Vec::new();
+                    let this_valve = valves.get(location);
 
-                if state.current_minute < MAX_MINUTES {
-                    let is_valve_open = state.key.open_valves_mask & (1 << current_location) > 0;
+                    // We'll stay put and flip the switch
+                    movements.push(StateKey {
+                        current_locations_mask: (1 << location),
+                        open_valves_mask: state.key.open_valves_mask | (1 << location)
+                    });
 
-                    if this_valve.flow_rate > 0 && !is_valve_open && flips_possible > 0 {
-                        flips_possible -= 1;
-
-                        // Open this valve
-                        new_states.push(StateKey {
-                            open_valves_mask: (state.key.open_valves_mask | (1 << current_location)),
-                            ..state.key
-                        });
-                    }
-
-                    // Or we could just move to any of the adjacent locations
                     for target_tunnel_name in &this_valve.tunnels {
                         let target_valve = valves.get_by_name(target_tunnel_name);
 
-                        // Hack: setting both locations because we're going to merge them anyway
-                        new_states.push(StateKey {
-                            my_current_location: target_valve.id,
-                            elephant_current_location: target_valve.id,
-                            ..state.key
+                        movements.push(StateKey {
+                            current_locations_mask: (1 << target_valve.id),
+                            open_valves_mask: state.key.open_valves_mask
                         });
+                    }
+
+                    movements_by_entity.push(movements);
+                }
+
+                // Combine our two entity movements into final states
+                for i in 0..movements_by_entity[0].len() {
+                    for j in i..movements_by_entity[1].len() {
+                        new_states.insert(
+                            StateKey {
+                                current_locations_mask: (movements_by_entity[0][i].current_locations_mask | movements_by_entity[1][j].current_locations_mask),
+                                open_valves_mask: (movements_by_entity[0][i].open_valves_mask | movements_by_entity[1][j].open_valves_mask),
+                            }
+                        );
                     }
                 }
 
-                all_new_states.push(new_states);
+                // If nothing changed, that's not a thing.
+                new_states.remove(&state.key);
             }
 
             let mut previous_states: HashSet<StateKey> = (*state.previous_states).clone();
-            previous_states.insert(state.key.normalised());
+            previous_states.insert(state.key.clone());
 
             let updated_previous_states = Arc::new(previous_states);
 
-            let elephant_states = all_new_states.pop().unwrap();
-            let me_states = all_new_states.pop().unwrap();
-
-            let mut merged_next_states = Vec::new();
-            let mut seen_next_states: HashSet<StateKey> = HashSet::new();
-
-            for elephant_idx in 0..elephant_states.len() {
-                for me_idx in 0..me_states.len() {
-                    let next_state_key = StateKey {
-                        my_current_location: me_states[me_idx].my_current_location,
-                        elephant_current_location: elephant_states[elephant_idx].elephant_current_location,
-                        open_valves_mask: me_states[me_idx].open_valves_mask | elephant_states[elephant_idx].open_valves_mask,
-                    };
-
-                    let normal = next_state_key.normalised();
-                    if !seen_next_states.contains(&normal) {
-                        seen_next_states.insert(normal);
-                        merged_next_states.push(next_state_key);
-                    }
-                }
-            }
-
-            for next_state_key in merged_next_states.into_iter() {
-                if state.previous_states.contains(&next_state_key.normalised()) {
+            for next_state_key in new_states.into_iter() {
+                if state.previous_states.contains(&next_state_key) {
                     // Seen this state before on this path.
                     continue;
                 }
 
                 let mut next_state = State {
-                    key: next_state_key.normalised(),
+                    key: next_state_key.clone(),
 
                     current_minute: state.current_minute + 1,
 
@@ -2387,11 +2364,13 @@ mod day16_pt2 {
                 };
 
                 let remaining_minutes = (MAX_MINUTES - next_state.current_minute);
+
                 next_state.projected_score = state.pressure_released + (valves.pressure_per_second(next_state.key.open_valves_mask) * remaining_minutes);
 
-                let high_score = high_scores.get(&next_state.key.normalised());
-                if high_score.is_none() || high_score.unwrap() <= &next_state.projected_score {
-                    high_scores.insert(next_state.key.normalised(), next_state.projected_score);
+                let high_score = high_scores.get(&next_state.key);
+                // FIXME: < wrong here.  Should be <=
+                if high_score.is_none() || high_score.unwrap() < &next_state.projected_score {
+                    high_scores.insert(next_state.key.clone(), next_state.projected_score);
                     queue.push(next_state);
                 }
             }
@@ -2403,7 +2382,7 @@ mod day16_pt2 {
             }
         }
 
-        dbg!(&best_ever_state);
+        // dbg!(&best_ever_state);
         println!("Best pressure: {}", best_ever_pressure);
     }
 }
@@ -2468,6 +2447,6 @@ fn main() {
         day15::part2();
     }
 
-    // day16_pt1::part1();
-    day16_pt2::part2();
+    day16_pt1::part1();
+    // day16_pt2::part2();
 }
