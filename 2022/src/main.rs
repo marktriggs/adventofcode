@@ -1958,7 +1958,7 @@ mod day15 {
     }
 }
 
-mod day16_pt1 {
+mod day16 {
     use crate::shared::*;
 
     #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -1967,24 +1967,6 @@ mod day16_pt1 {
         name: String,
         flow_rate: usize,
         tunnels: Vec<String>,
-    }
-
-    #[derive(Debug, Clone)]
-    struct State {
-        key: StateKey,
-
-        current_minute: usize,
-        pressure_released: usize,
-        projected_score: usize,
-        remaining_minutes: usize,
-
-        previous_states: Arc<HashSet<StateKey>>,
-    }
-
-    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-    struct StateKey {
-        open_valves_mask: usize,
-        current_location: usize,
     }
 
     struct Valves {
@@ -2022,8 +2004,6 @@ mod day16_pt1 {
             self.valves_by_name.get(name).unwrap()
         }
     }
-
-    const MAX_MINUTES: usize = 30;
 
     fn parse_valves() -> Valves {
         let line_regex = Regex::new(r"^Valve ([A-Z]+) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)$").unwrap();
@@ -2084,59 +2064,46 @@ mod day16_pt1 {
         dist
     }
 
-    fn solve(valves: &Valves, dist_map: &Vec<Vec<usize>>, minutes_remaining: usize, state: StateKey, total_pressure_released: usize, seen_states: &mut HashSet<usize>) -> usize {
-        let this_valve = valves.get(state.current_location);
+    fn solve(valves: &Valves,
+             dist_map: &Vec<Vec<usize>>,
+             minutes_remaining: usize,
+             current_location: usize,
+             open_valves_bitset: usize,
+             total_pressure_released: usize,
+             scoreboard: &mut HashMap<usize, usize>) -> usize {
+        let this_valve = valves.get(current_location);
 
-        let mut max_pressure_released = total_pressure_released + (minutes_remaining * valves.pressure_per_minute(state.open_valves_mask));
+        let mut max_pressure_released = total_pressure_released + (minutes_remaining * valves.pressure_per_minute(open_valves_bitset));
 
-        let is_valve_open = state.open_valves_mask & (1 << this_valve.id) > 0;
+        // If this is our best score for this set of valves, record it.
+        {
+            let entry = scoreboard.entry(open_valves_bitset).or_insert(max_pressure_released);
+
+            if max_pressure_released > *entry {
+                *entry = max_pressure_released;
+            }
+        }
 
         if minutes_remaining == 0 {
             return max_pressure_released;
         }
 
-        if this_valve.flow_rate > 0 && !is_valve_open {
-            let next_state = StateKey {
-                open_valves_mask: state.open_valves_mask | (1 << this_valve.id),
-                current_location: state.current_location,
-            };
+        for target_valve in valves.all().iter().filter(|v| v.flow_rate > 0 && open_valves_bitset & (1 << v.id) == 0) {
+            if (minutes_remaining - 1) < dist_map[this_valve.id][target_valve.id] {
+                continue;
+            }
 
-            let pressure = solve(valves, dist_map, minutes_remaining - 1,
-                                 next_state,
-                                 valves.pressure_per_minute(state.open_valves_mask) + total_pressure_released,
-                                 seen_states);
+            let move_cost = dist_map[this_valve.id][target_valve.id] + 1;
+
+            let pressure = solve(valves, dist_map,
+                                 minutes_remaining - move_cost,
+                                 target_valve.id,
+                                 open_valves_bitset | (1 << target_valve.id),
+                                 (valves.pressure_per_minute(open_valves_bitset) * move_cost) + total_pressure_released,
+                                 scoreboard);
 
             if pressure > max_pressure_released {
                 max_pressure_released = pressure;
-            }
-        } else {
-            for target_valve in valves.all().iter().filter(|v| v.flow_rate > 0 && state.open_valves_mask & (1 << v.id) == 0) {
-                if minutes_remaining < dist_map[this_valve.id][target_valve.id] {
-                    continue;
-                }
-
-                let next_state = StateKey {
-                    open_valves_mask: state.open_valves_mask,
-                    current_location: target_valve.id,
-                };
-
-                if !seen_states.contains(&next_state.current_location) {
-                    seen_states.insert(next_state.current_location);
-
-                    let move_cost = dist_map[this_valve.id][target_valve.id];
-
-                    let pressure = solve(valves, dist_map,
-                                         minutes_remaining - move_cost,
-                                         next_state.clone(),
-                                         (valves.pressure_per_minute(state.open_valves_mask) * move_cost) + total_pressure_released,
-                                         seen_states);
-
-                    if pressure > max_pressure_released {
-                        max_pressure_released = pressure;
-                    }
-
-                    seen_states.remove(&next_state.current_location);
-                }
             }
         }
 
@@ -2148,238 +2115,23 @@ mod day16_pt1 {
 
         let dist_map = build_dist_map(&valves);
 
-        let mut seen_states = HashSet::new();
+        let mut scoreboard = HashMap::new();
 
-        let max_pressure = solve(&valves,
-                                 &dist_map,
-                                 MAX_MINUTES,
-                                 StateKey {
-                                     open_valves_mask: 0,
-                                     current_location: valves.get_by_name("AA").id
-                                 },
-                                 0,
-                                 &mut seen_states);
+        let best_score = solve(&valves, &dist_map, 30, valves.get_by_name("AA").id, 0, 0, &mut scoreboard);
 
-        dbg!(max_pressure);
-    }
-}
-
-mod day16_pt2 {
-    use crate::shared::*;
-
-    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-    struct Valve {
-        id: usize,
-        name: String,
-        flow_rate: usize,
-        tunnels: Vec<String>,
+        println!("Max pressure released: {}", best_score);
     }
 
-    #[derive(Debug, Clone)]
-    struct State {
-        key: StateKey,
-
-        current_minute: usize,
-        pressure_released: usize,
-        projected_score: usize,
-        remaining_minutes: usize,
-
-        previous_states: Arc<HashSet<StateKey>>,
-    }
-
-    #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-    struct StateKey {
-        open_valves_mask: usize,
-        current_location: usize,
-    }
-
-    struct Valves {
-        valves: Vec<Valve>,
-        valves_by_id: HashMap<usize, Valve>,
-        valves_by_name: HashMap<String, Valve>,
-    }
-
-    impl Valves {
-        fn all(&self) -> &[Valve] {
-            &self.valves
-        }
-
-        fn len(&self) -> usize {
-            self.valves_by_id.len()
-        }
-
-        fn pressure_per_minute(&self, open_valves_mask: usize) -> usize {
-            let mut total = 0;
-
-            for (id, valve) in &self.valves_by_id {
-                if (open_valves_mask & (1 << id)) > 0 {
-                    total += valve.flow_rate;
-                }
-            }
-
-            total
-        }
-
-        fn get(&self, id: usize) -> &Valve {
-            self.valves_by_id.get(&id).unwrap()
-        }
-
-        fn get_by_name(&self, name: &str) -> &Valve {
-            self.valves_by_name.get(name).unwrap()
-        }
-    }
-
-    const MAX_MINUTES: usize = 26;
-
-    fn parse_valves() -> Valves {
-        let line_regex = Regex::new(r"^Valve ([A-Z]+) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)$").unwrap();
-
-        let mut valves: Vec<Valve> = Vec::new();
-        let mut valves_by_id: HashMap<usize, Valve> = HashMap::new();
-        let mut valves_by_name: HashMap<String, Valve> = HashMap::new();
-
-        let mut id = 0;
-
-        for line in input_lines("input_files/day16.txt") {
-            if let Some(caps) = line_regex.captures(&line) {
-                let valve = Valve {
-                    id,
-                    name: caps[1].to_string(),
-                    flow_rate: caps[2].parse().unwrap(),
-                    tunnels: caps[3].split(", ").map(str::to_string).collect(),
-                };
-
-                id += 1;
-
-                valves.push(valve.clone());
-                valves_by_id.insert(valve.id, valve.clone());
-                valves_by_name.insert(valve.name.clone(), valve);
-            } else {
-                panic!("Input parse error: {}", line);
-            }
-        }
-
-        Valves { valves, valves_by_id, valves_by_name }
-    }
-
-    // Floyd-Warshall
-    fn build_dist_map(valves: &Valves) -> Vec<Vec<usize>> {
-        let mut dist: Vec<Vec<usize>> = (0..valves.len()).map(|_| vec![usize::MAX; valves.len()]).collect();
-
-        for valve in valves.all() {
-            for other_valve_name in &valve.tunnels {
-                let other_valve = valves.get_by_name(other_valve_name);
-
-                dist[valve.id][other_valve.id] = 1;
-                dist[other_valve.id][valve.id] = 1;
-            }
-
-            dist[valve.id][valve.id] = 0;
-        }
-
-        for k in valves.all() {
-            for i in valves.all() {
-                for j in valves.all() {
-                    if dist[i.id][j.id] > (dist[i.id][k.id].saturating_add(dist[k.id][j.id])) {
-                        dist[i.id][j.id] = (dist[i.id][k.id] + dist[k.id][j.id]);
-                    }
-                }
-            }
-        }
-
-        dist
-    }
-
-    fn solve(valves: &Valves, dist_map: &Vec<Vec<usize>>, minutes_remaining: usize, state: StateKey, total_pressure_released: usize, seen_states: &mut HashSet<usize>, scoreboard: &mut HashMap<usize, usize>) -> usize {
-        let this_valve = valves.get(state.current_location);
-
-        let mut max_pressure_released = total_pressure_released + (minutes_remaining * valves.pressure_per_minute(state.open_valves_mask));
-
-        let is_valve_open = state.open_valves_mask & (1 << this_valve.id) > 0;
-
-        let entry = scoreboard.entry(state.open_valves_mask).or_insert(max_pressure_released);
-
-        if max_pressure_released > *entry {
-            *entry = max_pressure_released;
-        }
-
-        if minutes_remaining == 0 {
-            return max_pressure_released;
-        }
-
-        if this_valve.flow_rate > 0 && !is_valve_open {
-            let next_state = StateKey {
-                open_valves_mask: state.open_valves_mask | (1 << this_valve.id),
-                current_location: state.current_location,
-            };
-
-            let pressure = solve(valves, dist_map, minutes_remaining - 1,
-                                 next_state,
-                                 valves.pressure_per_minute(state.open_valves_mask) + total_pressure_released,
-                                 seen_states,
-                                 scoreboard);
-
-            if pressure > max_pressure_released {
-                max_pressure_released = pressure;
-            }
-        } else {
-            for target_valve in valves.all().iter().filter(|v| v.flow_rate > 0 && state.open_valves_mask & (1 << v.id) == 0) {
-                if minutes_remaining < dist_map[this_valve.id][target_valve.id] {
-                    continue;
-                }
-
-                let next_state = StateKey {
-                    open_valves_mask: state.open_valves_mask,
-                    current_location: target_valve.id,
-                };
-
-                if !seen_states.contains(&next_state.current_location) {
-                    seen_states.insert(next_state.current_location);
-
-                    let move_cost = dist_map[this_valve.id][target_valve.id];
-
-                    let pressure = solve(valves, dist_map,
-                                         minutes_remaining - move_cost,
-                                         next_state.clone(),
-                                         (valves.pressure_per_minute(state.open_valves_mask) * move_cost) + total_pressure_released,
-                                         seen_states,
-                                         scoreboard);
-
-                    if pressure > max_pressure_released {
-                        max_pressure_released = pressure;
-                    }
-
-                    seen_states.remove(&next_state.current_location);
-                }
-            }
-        }
-
-        max_pressure_released
-    }
-
-    // wrong: 2732
     pub fn part2() {
         let valves = parse_valves();
 
         let dist_map = build_dist_map(&valves);
 
-        let mut seen_states = HashSet::new();
         let mut scoreboard = HashMap::new();
 
-        solve(&valves,
-              &dist_map,
-              MAX_MINUTES,
-              StateKey {
-                  open_valves_mask: 0,
-                  current_location: valves.get_by_name("AA").id
-              },
-              0,
-              &mut seen_states,
-              &mut scoreboard);
+        solve(&valves, &dist_map, 26, valves.get_by_name("AA").id, 0, 0, &mut scoreboard);
 
         let mut best = 0;
-
-        // dbg!(&scoreboard);
 
         for state1 in scoreboard.keys() {
             for state2 in scoreboard.keys() {
@@ -2394,7 +2146,7 @@ mod day16_pt2 {
             }
         }
 
-        dbg!("Best combined score", best);
+        println!("Best combined score: {}", best);
     }
 }
 
@@ -2459,6 +2211,6 @@ fn main() {
         day15::part2();
     }
 
-    day16_pt1::part1();
-    day16_pt2::part2();
+    day16::part1();
+    day16::part2();
 }
