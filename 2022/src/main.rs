@@ -1539,6 +1539,7 @@ mod day14 {
 
     type Point = (usize, usize);
 
+    #[derive(Clone)]
     enum Tile {
         Rock,
         Sand,
@@ -1660,6 +1661,7 @@ mod day14 {
         println!("Sand dropped: {}", sand_count);
     }
 
+    #[derive(Clone)]
     struct CaveWithFloor {
         grid: HashMap<Point, Tile>,
         min_x: usize,
@@ -1784,6 +1786,67 @@ mod day14 {
 
         println!("Sand dropped: {}", sand_count);
     }
+
+    pub fn dump_pbm() {
+        let mut cave = CaveWithFloor::new();
+
+        for line in input_lines("input_files/day14.txt") {
+            let points: Vec<(usize, usize)> = line.split(" -> ").map(|s| s.split(',').map(|n| n.parse::<usize>().unwrap()).collect_tuple().unwrap()).collect();
+
+            for i in 0..(points.len() - 1) {
+                let start_point = points[i];
+                let end_point = points[i + 1];
+
+                cave.fill_line(start_point, end_point);
+            }
+        }
+
+        let mut min_x = 0;
+        let mut max_x = 0;
+        let mut min_y = 0;
+        let mut max_y = 0;
+
+        let mut stdout = io::stdout().lock();
+
+        for round in (0..2) {
+            let mut cave = cave.clone();
+
+            let mut frame = 0;
+            loop {
+                frame += 1;
+                if cave.drop_sand((500, 0)) {
+                    if round == 1 && frame % 32 == 0 {
+                        stdout.write_all(format!("P6\n{} {}\n255\n",
+                                                 (max_x - min_x) + 1,
+                                                 (max_y - min_y) + 1)
+                                         .as_bytes())
+                            .unwrap();
+
+                        for y in min_y..=max_y {
+                            for x in min_x..=max_x {
+                                stdout.write_all(match cave.grid.get(&(x, y)) {
+                                    Some(&Tile::Rock) => &[0xa5, 0x2a, 0x2a],
+                                    Some(&Tile::Sand) => &[0xfb, 0xbf, 0x77],
+                                    None =>  &[0x00, 0x00, 0x00],
+                                }).unwrap();
+                            }
+                        }
+                    }
+                } else {
+                    // We're full!
+                    break;
+                }
+            }
+
+            if round == 0 {
+                min_x = cave.grid.keys().map(|p| p.0).min().unwrap();
+                max_x = cave.grid.keys().map(|p| p.0).max().unwrap();
+                min_y = cave.grid.keys().map(|p| p.1).min().unwrap();
+                max_y = cave.grid.keys().map(|p| p.1).max().unwrap();
+            }
+        }
+    }
+
 }
 
 
@@ -2209,8 +2272,8 @@ fn main() {
 
         day15::part1();
         day15::part2();
-    }
 
-    day16::part1();
-    day16::part2();
+        day16::part1();
+        day16::part2();
+    }
 }
