@@ -2377,6 +2377,7 @@ mod day17 {
                     position = position.add(jet_adjustment);
                 }
 
+                tick_count += 1;
 
                 // Move down
                 let down_adjustment = Point { x: 0, y: -1 };
@@ -2385,17 +2386,14 @@ mod day17 {
                 } else {
                     // We're now settled.  Lock it in.
                     chamber.place_shape(falling_shape, position);
-                    tick_count += 1;
                     break;
                 }
-
-                tick_count += 1;
             }
 
             shape_count += 1;
 
             // chamber.print();
-            if shape_count > 2021 {
+            if shape_count == 2022 {
                 break;
             }
         }
@@ -2413,7 +2411,22 @@ mod day17 {
 
         let all_shapes = shapes();
 
+        let mut last_height = 0;
+        // let mut differences = Vec::new();
+
         loop {
+            if shape_count % 347000 == 0 {
+                // println!("Height at {}: {}", shape_count, chamber.height);
+
+                if last_height > 0 {
+                    println!("Height: {}", chamber.height);
+                    println!("Difference: {}", chamber.height - last_height);
+                    // differences.push(chamber.height - last_height);
+                }
+
+                last_height = chamber.height;
+            }
+
             let falling_shape = &all_shapes[shape_count % all_shapes.len()];
             let mut position = Point { x: 2, y: (chamber.height + 3) as i64 };
 
@@ -2432,6 +2445,7 @@ mod day17 {
                     position = position.add(jet_adjustment);
                 }
 
+                tick_count += 1;
 
                 // Move down
                 let down_adjustment = Point { x: 0, y: -1 };
@@ -2440,22 +2454,51 @@ mod day17 {
                 } else {
                     // We're now settled.  Lock it in.
                     chamber.place_shape(falling_shape, position);
-                    tick_count += 1;
                     break;
                 }
-
-                tick_count += 1;
             }
 
             shape_count += 1;
 
             // chamber.print();
-            if shape_count > (1000000000000 - 1) {
+            // if shape_count == 1_200_000 {
+            //     break;
+            // }
+
+            if shape_count == 132000 {
                 break;
             }
+
+
         }
 
-        println!("Chamber is {} units tall", chamber.height);
+        println!("Done at {}", chamber.height);
+
+        // let mut xor = 0;
+        // for (idx, t) in differences.iter().enumerate() {
+        //     xor ^= t;
+        //
+        //     if xor == 0 {
+        //         if (idx + 1) % 2 == 0 {
+        //             if differences[0..(idx + 1) / 2] == differences[(idx + 1) / 2.. idx + 1] {
+        //                 println!("Found a cycle: {}", idx);
+        //             }
+        //         }
+        //     }
+        // }
+        //
+        // println!();
+        //
+        // for n in &differences[0..347] {
+        //     println!("{}", n);
+        // }
+        //
+        // println!();
+        //
+        // for n in &differences[347..694] {
+        //     println!("{}", n);
+        // }
+
     }
 }
 
