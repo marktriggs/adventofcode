@@ -2222,25 +2222,27 @@ mod day17 {
     #[derive(Debug)]
     struct Shape {
         pattern: Vec<Vec<char>>,
+        rock_coordinates: Vec<Point>,
     }
 
     impl Shape {
         fn new(rows: &[&str]) -> Shape {
-            Shape {
-                pattern: rows.iter().map(|row| row.chars().collect()).collect()
-            }
-        }
+            let pattern: Vec<Vec<char>> = rows.iter().map(|row| row.chars().collect()).collect();
 
-        fn rock_coordinates(&self) -> Vec<Point> {
-            (0..self.pattern.len()).flat_map(|y| {
-                self.pattern[y].iter().enumerate().flat_map(move |(idx, &ch)| {
+            let row_count = pattern.len();
+
+            let rock_coordinates = (0..pattern.len()).flat_map(|y| {
+                pattern[y].iter().enumerate().flat_map(move |(idx, &ch)| {
                     if ch == '#' {
-                        Some(Point { x: idx as i64, y: (self.pattern.len() - y - 1) as i64 })
+                        Some(Point { x: idx as i64, y: (row_count - y - 1) as i64 })
                     } else {
                         None
                     }
                 })
-            }).collect()
+            }).collect();
+
+
+            Shape { pattern, rock_coordinates }
         }
 
         fn height(&self) -> usize {
@@ -2299,8 +2301,8 @@ mod day17 {
         }
 
         fn can_place(&self, shape: &Shape, position: Point) -> bool {
-            for p in shape.rock_coordinates() {
-                let candidate = position.add(p);
+            for p in &shape.rock_coordinates {
+                let candidate = position.add(*p);
 
                 if candidate.x < 0 || candidate.x >= self.width as i64 || candidate.y < 0 || self.grid.contains(&candidate) {
                     return false;
@@ -2311,8 +2313,8 @@ mod day17 {
         }
 
         fn place_shape(&mut self, shape: &Shape, position: Point) {
-            for p in shape.rock_coordinates() {
-                let absolute_position = position.add(p);
+            for p in &shape.rock_coordinates {
+                let absolute_position = position.add(*p);
 
                 if (absolute_position.y + 1) > self.height.try_into().unwrap() {
                     self.height = (absolute_position.y + 1) as usize;
@@ -2399,11 +2401,61 @@ mod day17 {
         }
 
         println!("Chamber is {} units tall", chamber.height);
-
     }
 
     pub fn part2() {
+        let jets: Vec<char> = read_file("input_files/day17.txt").chars().collect();
 
+        let mut chamber = Chamber::of_width(7);
+
+        let mut shape_count = 0;
+        let mut tick_count = 0;
+
+        let all_shapes = shapes();
+
+        loop {
+            let falling_shape = &all_shapes[shape_count % all_shapes.len()];
+            let mut position = Point { x: 2, y: (chamber.height + 3) as i64 };
+
+            // chamber.print_with_active(falling_shape, position);
+
+            // Iterate this shape until it settles
+            loop {
+                let jet_adjustment = match &jets[tick_count % jets.len()] {
+                    '<' => Point { x: -1, y: 0},
+                    '>' => Point { x: 1, y: 0 },
+                    _ => unreachable!(),
+                };
+
+                // Move left/right
+                if chamber.can_place(falling_shape, position.add(jet_adjustment)) {
+                    position = position.add(jet_adjustment);
+                }
+
+
+                // Move down
+                let down_adjustment = Point { x: 0, y: -1 };
+                if chamber.can_place(falling_shape, position.add(down_adjustment)) {
+                    position = position.add(down_adjustment);
+                } else {
+                    // We're now settled.  Lock it in.
+                    chamber.place_shape(falling_shape, position);
+                    tick_count += 1;
+                    break;
+                }
+
+                tick_count += 1;
+            }
+
+            shape_count += 1;
+
+            // chamber.print();
+            if shape_count > (1000000000000 - 1) {
+                break;
+            }
+        }
+
+        println!("Chamber is {} units tall", chamber.height);
     }
 }
 
@@ -2472,4 +2524,5 @@ fn main() {
     }
 
     day17::part1();
+    day17::part2();
 }
