@@ -11,6 +11,7 @@ extern crate regex;
 extern crate rand;
 extern crate anyhow;
 extern crate itertools;
+extern crate once_cell;
 
 mod shared {
     pub use regex::Regex;
@@ -2213,6 +2214,199 @@ mod day16 {
     }
 }
 
+mod day17 {
+    use once_cell::sync::OnceCell;
+
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Shape {
+        pattern: Vec<Vec<char>>,
+    }
+
+    impl Shape {
+        fn new(rows: &[&str]) -> Shape {
+            Shape {
+                pattern: rows.iter().map(|row| row.chars().collect()).collect()
+            }
+        }
+
+        fn rock_coordinates(&self) -> Vec<Point> {
+            (0..self.pattern.len()).flat_map(|y| {
+                self.pattern[y].iter().enumerate().flat_map(move |(idx, &ch)| {
+                    if ch == '#' {
+                        Some(Point { x: idx as i64, y: (self.pattern.len() - y - 1) as i64 })
+                    } else {
+                        None
+                    }
+                })
+            }).collect()
+        }
+
+        fn height(&self) -> usize {
+            self.pattern.len()
+        }
+    }
+
+    fn shapes() -> &'static [Shape] {
+        static SHAPES: OnceCell<Vec<Shape>> = OnceCell::new();
+
+        SHAPES.get_or_init(|| {
+            vec!(
+                Shape::new(&["####"]),
+
+                Shape::new(&[".#.",
+                             "###",
+                             ".#."]),
+
+                Shape::new(&["..#",
+                             "..#",
+                             "###"]),
+
+                Shape::new(&["#",
+                             "#",
+                             "#",
+                             "#"]),
+
+                Shape::new(&["##",
+                             "##"]),
+            )})
+    }
+
+    #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
+    struct Point { x: i64, y: i64 }
+
+    impl Point {
+        fn add(&self, adjustment: Point) -> Point {
+            Point { x: self.x + adjustment.x, y: self.y + adjustment.y }
+        }
+    }
+
+    #[derive(Clone)]
+    struct Chamber {
+        width: usize,
+        height: usize,
+        grid: HashSet<Point>,
+    }
+
+    impl Chamber {
+        fn of_width(width: usize) -> Chamber {
+            Chamber {
+                width,
+                height: 0,
+                grid: HashSet::new(),
+            }
+        }
+
+        fn can_place(&self, shape: &Shape, position: Point) -> bool {
+            for p in shape.rock_coordinates() {
+                let candidate = position.add(p);
+
+                if candidate.x < 0 || candidate.x >= self.width as i64 || candidate.y < 0 || self.grid.contains(&candidate) {
+                    return false;
+                }
+            }
+
+            true
+        }
+
+        fn place_shape(&mut self, shape: &Shape, position: Point) {
+            for p in shape.rock_coordinates() {
+                let absolute_position = position.add(p);
+
+                if (absolute_position.y + 1) > self.height.try_into().unwrap() {
+                    self.height = (absolute_position.y + 1) as usize;
+                }
+
+                self.grid.insert(absolute_position);
+            }
+        }
+
+        fn print_with_active(&self, shape: &Shape, position: Point) {
+            let mut printme = self.clone();
+
+            printme.place_shape(shape, position);
+
+            printme.print();
+        }
+
+        fn print(&self) {
+            println!();
+            for y in (0..=self.height).rev() {
+                for x in (0..self.width) {
+                    if self.grid.contains(&Point { x: x as i64, y: y as i64 }) {
+                        print!("#");
+                    } else {
+                        print!(".");
+                    }
+                }
+
+                println!();
+            }
+        }
+    }
+
+    pub fn part1() {
+        let jets: Vec<char> = read_file("input_files/day17.txt").chars().collect();
+
+        let mut chamber = Chamber::of_width(7);
+
+        let mut shape_count = 0;
+        let mut tick_count = 0;
+
+        let all_shapes = shapes();
+
+        loop {
+            let falling_shape = &all_shapes[shape_count % all_shapes.len()];
+            let mut position = Point { x: 2, y: (chamber.height + 3) as i64 };
+
+            // chamber.print_with_active(falling_shape, position);
+
+            // Iterate this shape until it settles
+            loop {
+                let jet_adjustment = match &jets[tick_count % jets.len()] {
+                    '<' => Point { x: -1, y: 0},
+                    '>' => Point { x: 1, y: 0 },
+                    _ => unreachable!(),
+                };
+
+                // Move left/right
+                if chamber.can_place(falling_shape, position.add(jet_adjustment)) {
+                    position = position.add(jet_adjustment);
+                }
+
+
+                // Move down
+                let down_adjustment = Point { x: 0, y: -1 };
+                if chamber.can_place(falling_shape, position.add(down_adjustment)) {
+                    position = position.add(down_adjustment);
+                } else {
+                    // We're now settled.  Lock it in.
+                    chamber.place_shape(falling_shape, position);
+                    tick_count += 1;
+                    break;
+                }
+
+                tick_count += 1;
+            }
+
+            shape_count += 1;
+
+            // chamber.print();
+            if shape_count > 2021 {
+                break;
+            }
+        }
+
+        println!("Chamber is {} units tall", chamber.height);
+
+    }
+
+    pub fn part2() {
+
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -2276,4 +2470,6 @@ fn main() {
         day16::part1();
         day16::part2();
     }
+
+    day17::part1();
 }
