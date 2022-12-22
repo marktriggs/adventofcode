@@ -2525,6 +2525,42 @@ mod day18 {
                 Self::from(p2, p1)
             }
         }
+
+        fn min_x(&self) -> i64 {
+            std::cmp::min(self.diag_pt1.x, self.diag_pt2.x)
+        }
+
+        fn min_y(&self) -> i64 {
+            std::cmp::min(self.diag_pt1.y, self.diag_pt2.y)
+        }
+
+        fn min_z(&self) -> i64 {
+            std::cmp::min(self.diag_pt1.z, self.diag_pt2.z)
+        }
+
+        fn max_x(&self) -> i64 {
+            std::cmp::max(self.diag_pt1.x, self.diag_pt2.x)
+        }
+
+        fn max_y(&self) -> i64 {
+            std::cmp::max(self.diag_pt1.y, self.diag_pt2.y)
+        }
+
+        fn max_z(&self) -> i64 {
+            std::cmp::max(self.diag_pt1.z, self.diag_pt2.z)
+        }
+
+        fn shift(&self, transform: (i64, i64, i64)) -> CubeFace {
+            CubeFace::from(Point {
+                x: self.diag_pt1.x + transform.0,
+                y: self.diag_pt1.y + transform.1,
+                z: self.diag_pt1.z + transform.2,
+            }, Point {
+                x: self.diag_pt2.x + transform.0,
+                y: self.diag_pt2.y + transform.1,
+                z: self.diag_pt2.z + transform.2,
+            })
+        }
     }
 
     fn cube_faces(x: i64, y: i64, z: i64) -> Vec<CubeFace> {
@@ -2574,9 +2610,258 @@ mod day18 {
         println!("Total surface area: {}", total);
     }
 
-    pub fn part2() {
+    // This didn't work!  My idea was to project a 2d plane of "rays" in each of the
+    // 6 possible directions, marking which faces were reached.
+    //
+    // This doesn't work for shapes like:
+    //
+    //    X X
+    //    XXX
+    //
+    // Since the inner faces between the two two cubes *are* reachable, but won't be
+    // hit by a l-to-r or r-to-l scan.
+    pub fn failed_part2() {
+        let mut face_counts: HashMap<CubeFace, usize> = HashMap::new();
 
+        for line in input_lines("input_files/day18_sample.txt") {
+            let (x, y, z) = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect_tuple().unwrap();
+
+            for face in cube_faces(x, y, z) {
+                let entry = face_counts.entry(face).or_insert(0);
+                *entry += 1;
+            }
+        }
+
+        let all_faces: HashSet<CubeFace> = face_counts.keys().filter(|k| face_counts.get(k) == Some(&1)).cloned().collect();
+
+        let min_x = all_faces.iter().map(|f| f.min_x()).min().unwrap();
+        let min_y = all_faces.iter().map(|f| f.min_y()).min().unwrap();
+        let min_z = all_faces.iter().map(|f| f.min_z()).min().unwrap();
+
+        let max_x = all_faces.iter().map(|f| f.max_x()).max().unwrap();
+        let max_y = all_faces.iter().map(|f| f.max_y()).max().unwrap();
+        let max_z = all_faces.iter().map(|f| f.max_z()).max().unwrap();
+
+        let mut faces_reached: HashSet<CubeFace> = HashSet::new();
+
+        // Sweep from left to right
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in min_x..=min_x {
+                for y in min_y..=max_y {
+                    for z in min_z..=max_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x, y: y + 1, z: z + 1 }));
+                    }
+                }
+            }
+
+            for _pass in min_x..=max_x {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((1, 0, 0))).collect();
+            }
+        }
+
+        // Sweep from right to left
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in max_x..=max_x {
+                for y in min_y..=max_y {
+                    for z in min_z..=max_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x, y: y + 1, z: z + 1 }));
+                    }
+                }
+            }
+
+            for _pass in min_x..=max_x {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((-1, 0, 0))).collect();
+            }
+        }
+
+        // Sweep from top to bottom
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in min_x..=max_x {
+                for y in max_y..=max_y {
+                    for z in min_z..=max_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x: x + 1, y, z: z + 1 }));
+                    }
+                }
+            }
+
+            for _pass in min_y..=max_y {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((0, -1, 0))).collect();
+            }
+        }
+
+        // Sweep from bottom to top
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in min_x..=max_x {
+                for y in min_y..=min_y {
+                    for z in min_z..=max_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x: x + 1, y, z: z + 1 }));
+                    }
+                }
+            }
+
+            for _pass in min_y..=max_y {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((0, 1, 0))).collect();
+            }
+        }
+
+        // Sweep from front to back
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in min_x..=max_x {
+                for y in min_y..=max_y {
+                    for z in min_z..=min_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x: x + 1, y: y + 1, z }));
+                    }
+                }
+            }
+
+            for _pass in min_z..=max_z {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((0, 0, 1))).collect();
+            }
+        }
+
+        // Sweep from back to front
+        {
+            let mut face_rays: HashSet<CubeFace> = HashSet::new();
+            for x in min_x..=max_x {
+                for y in min_y..=max_y {
+                    for z in max_z..=max_z {
+                        face_rays.insert(CubeFace::from(Point { x, y, z}, Point { x: x + 1, y: y + 1, z }));
+                    }
+                }
+            }
+
+            for _pass in min_z..=max_z {
+                let hits: Vec<CubeFace> = face_rays.intersection(&all_faces).cloned().collect();
+
+                for hit in hits {
+                    face_rays.remove(&hit);
+                    faces_reached.insert(hit);
+                }
+
+                face_rays = face_rays.into_iter().map(|face| face.shift((0, 0, -1))).collect();
+            }
+        }
+
+        dbg!(faces_reached.len());
     }
+
+
+
+    pub fn part2() {
+        let mut face_counts: HashMap<CubeFace, usize> = HashMap::new();
+        let mut cubes: HashSet<Point> = HashSet::new();
+
+        for line in input_lines("input_files/day18.txt") {
+            let (x, y, z) = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect_tuple().unwrap();
+
+            cubes.insert(Point { x, y, z });
+
+            for face in cube_faces(x, y, z) {
+                let entry = face_counts.entry(face).or_insert(0);
+                *entry += 1;
+            }
+        }
+
+        let all_faces: HashSet<CubeFace> = face_counts.keys().filter(|k| face_counts.get(k) == Some(&1)).cloned().collect();
+
+        let min_x = all_faces.iter().map(|f| f.min_x()).min().unwrap();
+        let min_y = all_faces.iter().map(|f| f.min_y()).min().unwrap();
+        let min_z = all_faces.iter().map(|f| f.min_z()).min().unwrap();
+
+        let max_x = all_faces.iter().map(|f| f.max_x()).max().unwrap();
+        let max_y = all_faces.iter().map(|f| f.max_y()).max().unwrap();
+        let max_z = all_faces.iter().map(|f| f.max_z()).max().unwrap();
+
+        let mut queue: VecDeque<Point> = VecDeque::new();
+
+        queue.push_back(Point { x: min_x - 1, y: min_y - 1, z: min_z - 1 });
+
+        let mut filled: HashSet<Point> = HashSet::new();
+        let mut reached_faces: HashSet<CubeFace> = HashSet::new();
+
+        while !queue.is_empty() {
+            let candidate_point = queue.pop_back().unwrap();
+
+            if cubes.contains(&candidate_point) || filled.contains(&candidate_point) {
+                // Can't place it here
+            } else {
+                for face in cube_faces(candidate_point.x, candidate_point.y, candidate_point.z) {
+                    if all_faces.contains(&face) {
+                        reached_faces.insert(face);
+                    }
+                }
+
+                for &x_off in &[-1, 0, 1] {
+                    for &y_off in &[-1, 0, 1] {
+                        for &z_off in &[-1, 0, 1] {
+                            if (x_off * x_off + y_off * y_off + z_off * z_off) != 1 {
+                                continue;
+                            }
+
+                            let x_new = candidate_point.x + x_off as i64;
+                            let y_new = candidate_point.y + y_off as i64;
+                            let z_new = candidate_point.z + z_off as i64;
+
+                            if (x_new < (min_x - 1) || y_new < (min_y - 1)  || z_new < (min_z - 1)) || (x_new > (max_x + 1) || y_new > (max_y + 1)  || z_new > (max_z + 1)) {
+                                // Out of bounds
+                            } else {
+                                queue.push_back(Point {
+                                    x: x_new,
+                                    y: y_new,
+                                    z: z_new,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                filled.insert(candidate_point);
+            }
+        }
+
+        dbg!(&reached_faces.len());
+    }
+
 }
 
 
@@ -2646,5 +2931,6 @@ fn main() {
         day17::part2();
     }
 
-    day18::part1();
+    // day18::part1();
+    day18::part2();
 }
