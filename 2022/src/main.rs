@@ -2502,6 +2502,83 @@ mod day17 {
     }
 }
 
+mod day18 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, Ord, PartialOrd)]
+    struct Point { x: i64, y: i64, z: i64 }
+
+    #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, Ord, PartialOrd)]
+    struct CubeFace {
+        diag_pt1: Point,
+        diag_pt2: Point,
+    }
+
+    impl CubeFace {
+        fn from(p1: Point, p2: Point) -> CubeFace {
+            if p1 <= p2 {
+                CubeFace {
+                    diag_pt1: p1,
+                    diag_pt2: p2,
+                }
+            } else {
+                Self::from(p2, p1)
+            }
+        }
+    }
+
+    fn cube_faces(x: i64, y: i64, z: i64) -> Vec<CubeFace> {
+        vec![
+            // left face
+            CubeFace::from(Point { x, y, z },
+                           Point { x, y: y + 1, z: z + 1 }),
+            // front face
+            CubeFace::from(Point { x, y, z },
+                           Point { x: x + 1, y: y + 1, z }),
+            // bottom face
+            CubeFace::from(Point { x, y, z },
+                           Point { x: x + 1, y, z: z + 1 }),
+            // top face
+            CubeFace::from(Point { x, y: y + 1, z },
+                           Point { x: x + 1, y: y + 1, z: z + 1 }),
+            // back face
+            CubeFace::from(Point { x, y, z: z + 1 },
+                           Point { x: x + 1, y: y + 1, z: z + 1 }),
+            // right face
+            CubeFace::from(Point { x: x + 1, y, z },
+                           Point { x: x + 1, y: y + 1, z: z + 1 }),
+        ]
+
+    }
+
+    pub fn part1() {
+        let mut face_counts: HashMap<CubeFace, usize> = HashMap::new();
+
+        for line in input_lines("input_files/day18.txt") {
+            let (x, y, z) = line.split(',').map(|s| s.parse::<i64>().unwrap()).collect_tuple().unwrap();
+
+            for face in cube_faces(x, y, z) {
+                let entry = face_counts.entry(face).or_insert(0);
+                *entry += 1;
+            }
+        }
+
+        let mut total = 0;
+
+        for (_face, count) in face_counts {
+            if count == 1 {
+                total += 1;
+            }
+        }
+
+        println!("Total surface area: {}", total);
+    }
+
+    pub fn part2() {
+
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -2564,8 +2641,10 @@ fn main() {
 
         day16::part1();
         day16::part2();
+
+        day17::part1();
+        day17::part2();
     }
 
-    day17::part1();
-    day17::part2();
+    day18::part1();
 }
