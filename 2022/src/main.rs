@@ -12,6 +12,7 @@ extern crate rand;
 extern crate anyhow;
 extern crate itertools;
 extern crate once_cell;
+extern crate enum_map;
 
 mod shared {
     pub use regex::Regex;
@@ -2864,6 +2865,213 @@ mod day18 {
 
 }
 
+mod day19 {
+    use crate::shared::*;
+    use self::Material::*;
+    use enum_map::{enum_map, Enum, EnumMap};
+
+    #[derive(Debug, Eq, PartialEq, Clone, Copy, Ord, PartialOrd, Enum, Hash)]
+    enum Material {
+        Ore,
+        Clay,
+        Obsidian,
+        Geode
+    }
+
+    #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+    struct State {
+        production_capability: EnumMap<Material, usize>,
+        inventory: EnumMap<Material, usize>,
+    }
+
+    impl Default for State {
+        fn default() -> Self {
+            Self {
+                production_capability: enum_map!(Ore => 1, _ => 0),
+                inventory: Default::default()
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    struct Blueprint {
+        robot_prices: EnumMap<Material, Vec<(Material, usize)>>,
+    }
+
+    impl Blueprint {
+        fn max_required_materials(&self) -> EnumMap<Material, usize> {
+            let mut result = EnumMap::default();
+
+            for items in self.robot_prices.values() {
+                for (material, amount) in items {
+                    if *amount > result[*material] {
+                        result[*material] = *amount;
+                    }
+                }
+            }
+
+            result
+        }
+    }
+
+
+    fn parse_blueprint(s: &str) -> Blueprint {
+        let line_regex = Regex::new(r"^Blueprint ([0-9]+): Each ore robot costs ([0-9]+) ore. Each clay robot costs ([0-9]+) ore. Each obsidian robot costs ([0-9]+) ore and ([0-9]+) clay. Each geode robot costs ([0-9]+) ore and ([0-9]+) obsidian\.$").unwrap();
+
+        if let Some(caps) = line_regex.captures(s) {
+            let mut result = Blueprint {
+                robot_prices: EnumMap::default(),
+            };
+
+            result.robot_prices[Ore] = vec!((Ore, caps[2].parse().unwrap()));
+            result.robot_prices[Clay] = vec!((Ore, caps[3].parse().unwrap()));
+            result.robot_prices[Obsidian] = vec!((Ore, caps[4].parse().unwrap()),
+                                                 (Clay, caps[5].parse().unwrap()));
+            result.robot_prices[Geode] = vec!((Ore, caps[6].parse().unwrap()),
+                                              (Obsidian, caps[7].parse().unwrap()));
+
+            result
+        } else {
+            panic!("Parse error: {}", s);
+        }
+
+    }
+
+    #[derive(Ord, PartialOrd, PartialEq, Eq, Debug)]
+    enum WaitTime {
+        Minutes(usize),
+        Never,
+    }
+
+    impl WaitTime {
+        fn minutes(&self) -> usize {
+            match self {
+                WaitTime::Minutes(n) => *n,
+                WaitTime::Never => panic!("Can't get minutes from NEVER"),
+            }
+        }
+    }
+
+    // FIXME: optimise
+    #[inline(never)]
+    fn wait_time_for_robot(state: &State, blueprint: &Blueprint, robot: Material) -> WaitTime {
+        let mut result: usize = 0;
+
+        for requirement in &blueprint.robot_prices[robot] {
+            if state.production_capability[requirement.0] == 0 {
+                // we'll never make it!
+                return WaitTime::Never;
+            }
+
+            let amount_needed = requirement.1;
+            let amount_on_hand = state.inventory[requirement.0];
+
+            let shortfall = amount_needed.saturating_sub(amount_on_hand);
+
+            result = std::cmp::max(result, (shortfall as f64 / state.production_capability[requirement.0] as f64).ceil() as usize);
+        }
+
+        WaitTime::Minutes(result)
+    }
+
+
+    #[derive(Debug, Eq, PartialEq)]
+    struct GeodeResult {
+        count: usize,
+        state: State,
+        minutes: usize,
+    }
+
+    fn geode_count(robot_to_build: Material, total_minutes: usize, blueprint: &Blueprint, init_minutes: usize, mut state: State) -> GeodeResult {
+        let next_robot_time = wait_time_for_robot(&state, blueprint, robot_to_build);
+
+        let mut minute = init_minutes;
+
+        if next_robot_time != WaitTime::Never && (minute + next_robot_time.minutes()) < total_minutes {
+            // accrue our inventory, simulating wait time (which is possibly zero)
+            for (material, units) in state.production_capability {
+                state.inventory[material] += units * (next_robot_time.minutes() + 1);
+            }
+
+            // Build our new robot
+            for (material, units_required) in &blueprint.robot_prices[robot_to_build] {
+                state.inventory[*material] -= units_required;
+            }
+
+            state.production_capability[robot_to_build] += 1;
+
+            minute += (next_robot_time.minutes() + 1);
+        }
+
+        GeodeResult {
+            count: state.inventory[Geode] + (total_minutes - minute) * state.production_capability[Geode],
+            minutes: minute,
+            state,
+        }
+    }
+
+
+    // Spend 2 ore to start building a clay-collecting robot.
+    // Spend 2 ore to start building a clay-collecting robot.
+    // Spend 2 ore to start building a clay-collecting robot.
+    // Spend 3 ore and 14 clay to start building an obsidian-collecting robot.
+    // Spend 2 ore to start building a clay-collecting robot.
+    // Spend 3 ore and 14 clay to start building an obsidian-collecting robot.
+    // Spend 2 ore and 7 obsidian to start building a geode-cracking robot.
+    // Spend 2 ore and 7 obsidian to start building a geode-cracking robot.
+    // 2 geode-cracking robots crack 2 geodes; you now have 9 open geodes.
+
+    fn best_score(counts: &mut EnumMap<Material, usize>, blueprint: &Blueprint, max_minutes: usize, minutes: usize, state: &State, last_score: usize) -> usize {
+        if minutes == max_minutes {
+            return last_score;
+        }
+
+        let mut max_score = last_score;
+
+        for material in &[Ore, Clay, Obsidian, Geode] {
+            let count = counts[*material];
+
+            if count > 0 && wait_time_for_robot(state, blueprint, *material) < WaitTime::Minutes(max_minutes - minutes) {
+                counts[*material] -= 1;
+
+                let result = geode_count(*material, max_minutes, blueprint, minutes, state.clone());
+                let score = best_score(counts, blueprint, max_minutes, result.minutes, &result.state, result.count);
+
+                if score > max_score {
+                    max_score = score;
+                }
+
+                counts[*material] += 1;
+            }
+        }
+
+        max_score
+    }
+
+
+    pub fn part1() {
+        for line in input_lines("input_files/day19.txt") {
+            let blueprint = parse_blueprint(&line);
+
+            let mut counts = blueprint.max_required_materials();
+            counts[Geode] = usize::MAX;
+
+            dbg!(best_score(&mut counts, &blueprint, 24, 0, &State::default(), 0));
+        }
+    }
+
+    pub fn part2() {
+        for line in input_lines("input_files/day19.txt").take(3) {
+            let blueprint = parse_blueprint(&line);
+
+            let mut counts = blueprint.max_required_materials();
+            counts[Geode] = usize::MAX;
+
+            dbg!(best_score(&mut counts, &blueprint, 32, 0, &State::default(), 0));
+        }
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -2929,8 +3137,12 @@ fn main() {
 
         day17::part1();
         day17::part2();
+
+        day18::part1();
+        day18::part2();
+
+        day19::part1();
+        day19::part2();
     }
 
-    // day18::part1();
-    day18::part2();
 }
