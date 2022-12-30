@@ -3073,6 +3073,220 @@ mod day19 {
 }
 
 
+mod day20 {
+    use crate::shared::*;
+
+    #[derive(Debug)]
+    struct Element {
+        value: i64,
+    }
+
+    fn posmod(n: i64, d: usize) -> usize {
+        let d = d as i64;
+        (((n % d) + d) % d) as usize
+    }
+
+    pub fn part1() {
+        let mut elements = Vec::new();
+        let mut next_links = Vec::new();
+        let mut prev_links = Vec::new();
+
+        for line in input_lines("input_files/day20.txt") {
+            let n: i64 = line.parse().unwrap();
+
+            elements.push(Element { value: n });
+        }
+
+        for i in 0..elements.len() {
+            let i = i as i64;
+            let len = elements.len();
+
+            next_links.push(posmod((i + 1), len));
+            prev_links.push(posmod((i - 1), len));
+        }
+
+        for i in 0..elements.len() {
+            let offset = elements[i].value % (elements.len() - 1) as i64;
+
+            if offset == 0 {
+                // No move
+                continue;
+            }
+
+            // Work out our new neighbours
+            let (new_next, new_prev) = {
+                let mut idx = i;
+
+                let negative = offset < 0;
+
+                for _ in 0..offset.abs() {
+                    if negative {
+                        idx = prev_links[idx];
+                    } else {
+                        idx = next_links[idx];
+                    }
+
+                    if idx == i {
+                        if negative {
+                            idx = prev_links[idx];
+                        } else {
+                            idx = next_links[idx];
+                        }
+                    }
+                }
+
+                if negative {
+                    (idx, prev_links[idx])
+                } else {
+                    (next_links[idx], idx)
+                }
+            };
+
+            // Remove our element from the list
+            {
+                let old_next = next_links[i];
+                let old_prev = prev_links[i];
+
+                next_links[old_prev] = old_next;
+                prev_links[old_next] = old_prev;
+            }
+
+            // Insert into the right spot
+            next_links[i] = new_next;
+            prev_links[i] = new_prev;
+
+            next_links[new_prev as usize] = i as usize;
+            prev_links[new_next as usize] = i as usize;
+        }
+
+        let start_idx = elements.iter().position(|elt| elt.value == 0).unwrap();
+
+        let mut result = 0;
+        let mut idx = start_idx;
+
+        for i in 0..=3000 {
+            if i == 1000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+            if i == 2000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+            if i == 3000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+
+            idx = next_links[idx] as usize;
+        }
+
+        println!("Coordinates: {}", result);
+    }
+
+    pub fn part2() {
+        let mut elements = Vec::new();
+        let mut next_links = Vec::new();
+        let mut prev_links = Vec::new();
+
+        for line in input_lines("input_files/day20.txt") {
+            let n: i64 = line.parse().unwrap();
+
+            elements.push(Element { value: n * 811589153 });
+        }
+
+        for i in 0..elements.len() {
+            let i = i as i64;
+            let len = elements.len();
+
+            next_links.push(posmod((i + 1), len));
+            prev_links.push(posmod((i - 1), len));
+        }
+
+        for _ in 0..10 {
+            for i in 0..elements.len() {
+                let offset = elements[i].value % (elements.len() - 1) as i64;
+
+                if offset == 0 {
+                    // No move
+                    continue;
+                }
+
+                // Work out our new neighbours
+                let (new_next, new_prev) = {
+                    let mut idx = i;
+
+                    let negative = offset < 0;
+
+                    for _ in 0..offset.abs() {
+                        if negative {
+                            idx = prev_links[idx];
+                        } else {
+                            idx = next_links[idx];
+                        }
+
+                        if idx == i {
+                            if negative {
+                                idx = prev_links[idx];
+                            } else {
+                                idx = next_links[idx];
+                            }
+                        }
+                    }
+
+                    if negative {
+                        (idx, prev_links[idx])
+                    } else {
+                        (next_links[idx], idx)
+                    }
+                };
+
+                // Remove our element from the list
+                {
+                    let old_next = next_links[i];
+                    let old_prev = prev_links[i];
+
+                    next_links[old_prev] = old_next;
+                    prev_links[old_next] = old_prev;
+                }
+
+                // Insert into the right spot
+                next_links[i] = new_next;
+                prev_links[i] = new_prev;
+
+                next_links[new_prev as usize] = i as usize;
+                prev_links[new_next as usize] = i as usize;
+            }
+        }
+
+        let start_idx = elements.iter().position(|elt| elt.value == 0).unwrap();
+
+        let mut result = 0;
+        let mut idx = start_idx;
+
+        for i in 0..=3000 {
+            if i == 1000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+            if i == 2000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+            if i == 3000 {
+                dbg!(elements[idx].value);
+                result += elements[idx].value;
+            }
+
+            idx = next_links[idx] as usize;
+        }
+
+        println!("Coordinates: {}", result);
+    }
+}
+
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -3145,4 +3359,6 @@ fn main() {
         day19::part2();
     }
 
+    // day20::part1();
+    day20::part2();
 }
