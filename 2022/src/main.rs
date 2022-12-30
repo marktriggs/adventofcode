@@ -3286,6 +3286,269 @@ mod day20 {
 }
 
 
+mod day21 {
+    use crate::shared::*;
+
+    #[derive(Eq, PartialEq, Hash, Clone, Debug)]
+    enum Expression {
+        Name(String),
+        Value(usize),
+    }
+
+    #[derive(Eq, PartialEq, Hash, Clone, Debug)]
+    enum Operator {
+        Plus,
+        Minus,
+        Multiply,
+        Divide,
+        Equal,
+    }
+
+    #[derive(Eq, PartialEq, Hash, Clone, Debug)]
+    struct Operation {
+        lhs: Expression,
+        rhs: Expression,
+        op: Operator,
+        dependencies_remaining: usize,
+    }
+
+    impl Operation {
+        fn resolve_dependency(&mut self, name: &str, value: usize) {
+            if self.lhs == Expression::Name(name.to_owned()) {
+                self.lhs = Expression::Value(value);
+                self.dependencies_remaining -= 1;
+            }
+
+            if self.rhs == Expression::Name(name.to_owned()) {
+                self.rhs = Expression::Value(value);
+                self.dependencies_remaining -= 1;
+            }
+        }
+
+        fn evaluate(&self) -> usize {
+            if let Expression::Value(lhs) = self.lhs {
+                if let Expression::Value(rhs) = self.rhs {
+                    if self.op == Operator::Equal {
+                        dbg!(lhs, rhs);
+                    }
+
+                    match self.op {
+                        Operator::Plus => lhs + rhs,
+                        Operator::Minus => lhs - rhs,
+                        Operator::Multiply => lhs * rhs,
+                        Operator::Divide => lhs / rhs,
+                        Operator::Equal => (lhs == rhs) as usize,
+                    }
+                } else {
+                    unreachable!();
+                }
+            } else {
+                unreachable!();
+            }
+        }
+    }
+
+    pub fn part1() {
+        let mut monkeys: HashMap<String, Operation> = HashMap::new();
+        let mut monkey_dependencies: HashMap<String, Vec<String>> = HashMap::new();
+
+        for line in input_lines("input_files/day21.txt") {
+            let (monkey, value) = line.split(": ").collect_tuple().unwrap();
+
+            monkeys.insert(monkey.to_owned(),
+                           if value.chars().next().unwrap().is_ascii_digit() {
+                               // Expression value literal
+                               Operation {
+                                   lhs: Expression::Value(value.parse::<usize>().unwrap()),
+                                   rhs: Expression::Value(1),
+                                   op: Operator::Multiply,
+                                   dependencies_remaining: 0,
+                               }
+                           } else {
+                               let (lhs, op, rhs) = value.split(' ').collect_tuple().unwrap();
+                               Operation {
+                                   lhs: Expression::Name(lhs.to_owned()),
+                                   rhs: Expression::Name(rhs.to_owned()),
+                                   op: match op {
+                                       "+" => Operator::Plus,
+                                       "-" => Operator::Minus,
+                                       "*" => Operator::Multiply,
+                                       "/" => Operator::Divide,
+                                       "=" => Operator::Equal,
+                                       _ => unreachable!(),
+                                   },
+                                   dependencies_remaining: 2,
+                               }
+                           }
+            );
+        }
+
+        // Load dependencies
+        for (monkey, operation) in &monkeys {
+            if operation.dependencies_remaining == 2 {
+                if let Expression::Name(s) = &operation.lhs {
+                    let entry = monkey_dependencies.entry(s.clone()).or_default();
+                    entry.push(monkey.clone());
+                } else {
+                    unreachable!();
+                }
+
+                if let Expression::Name(s) = &operation.rhs {
+                    let entry = monkey_dependencies.entry(s.clone()).or_default();
+                    entry.push(monkey.clone());
+                } else {
+                    unreachable!();
+                }
+            }
+        }
+
+
+        while monkeys.get("root").unwrap().dependencies_remaining > 0 {
+            let mut resolved_monkeys = Vec::new();
+
+            for (name, operation) in &monkeys {
+                if operation.dependencies_remaining == 0 {
+                    resolved_monkeys.push(name.clone());
+                }
+            }
+
+            for name in resolved_monkeys {
+                let operation = monkeys.remove(&name).unwrap();
+
+                let value = operation.evaluate();
+
+                let waiting_monkeys = monkey_dependencies.remove(&name).unwrap();
+
+                for waiter in waiting_monkeys {
+                    monkeys.get_mut(&waiter).unwrap().resolve_dependency(&name, value);
+                }
+            }
+        }
+
+        println!("Root says: {}", monkeys.get("root").unwrap().evaluate());
+    }
+
+    fn render_tree(monkey: &Operation, monkeys: &HashMap<String, Operation>) -> String {
+        let lhs = match &monkey.lhs {
+            Expression::Name(name) => { if name == "humn" { "HUMAN".to_owned() } else { render_tree(monkeys.get(name).unwrap(), monkeys) } },
+            Expression::Value(n) => format!("{}", n),
+        };
+
+        let rhs = match &monkey.rhs {
+            Expression::Name(name) => { if name == "humn" { "HUMAN".to_owned() } else { render_tree(monkeys.get(name).unwrap(), monkeys) } },
+            Expression::Value(n) => format!("{}", n),
+        };
+
+        format!("({} {} {})", lhs,
+                match monkey.op {
+                    Operator::Plus => "+",
+                    Operator::Minus => "-",
+                    Operator::Multiply => "*",
+                    Operator::Divide => "/",
+                    Operator::Equal => "=",
+                },
+                rhs)
+    }
+
+    pub fn part2() {
+        let mut monkeys: HashMap<String, Operation> = HashMap::new();
+        let mut monkey_dependencies: HashMap<String, Vec<String>> = HashMap::new();
+
+        for line in input_lines("input_files/day21.txt") {
+            let (monkey, value) = line.split(": ").collect_tuple().unwrap();
+
+            monkeys.insert(monkey.to_owned(),
+                           if value.chars().next().unwrap().is_ascii_digit() {
+                               // Expression value literal
+                               Operation {
+                                   lhs: Expression::Value(value.parse::<usize>().unwrap()),
+                                   rhs: Expression::Value(1),
+                                   op: Operator::Multiply,
+                                   dependencies_remaining: 0,
+                               }
+                           } else {
+                               let (lhs, mut op, rhs) = value.split(' ').collect_tuple().unwrap();
+
+                               if monkey == "root" {
+                                   op = "=";
+                               }
+
+                               Operation {
+                                   lhs: Expression::Name(lhs.to_owned()),
+                                   rhs: Expression::Name(rhs.to_owned()),
+                                   op: match op {
+                                       "+" => Operator::Plus,
+                                       "-" => Operator::Minus,
+                                       "*" => Operator::Multiply,
+                                       "/" => Operator::Divide,
+                                       "=" => Operator::Equal,
+                                       _ => unreachable!(),
+                                   },
+                                   dependencies_remaining: 2,
+                               }
+                           }
+            );
+        }
+
+        // Load dependencies
+        for (monkey, operation) in &monkeys {
+            if operation.dependencies_remaining == 2 {
+                if let Expression::Name(s) = &operation.lhs {
+                    let entry = monkey_dependencies.entry(s.clone()).or_default();
+                    entry.push(monkey.clone());
+                } else {
+                    unreachable!();
+                }
+
+                if let Expression::Name(s) = &operation.rhs {
+                    let entry = monkey_dependencies.entry(s.clone()).or_default();
+                    entry.push(monkey.clone());
+                } else {
+                    unreachable!();
+                }
+            }
+        }
+
+
+        // rhs is always 77247625979730
+        // let mut monkeys = monkeys.clone();
+        // let mut monkey_dependencies = monkey_dependencies.clone();
+
+        // monkeys.remove("humn");
+
+        loop {
+            let mut progressed = false;
+            let mut resolved_monkeys = Vec::new();
+
+            for (name, operation) in &monkeys {
+                if name != "humn" && operation.dependencies_remaining == 0 {
+                    resolved_monkeys.push(name.clone());
+                }
+            }
+
+            for name in resolved_monkeys {
+                progressed = true;
+                let operation = monkeys.remove(&name).unwrap();
+
+                let value = operation.evaluate();
+
+                let waiting_monkeys = monkey_dependencies.remove(&name).unwrap();
+
+                for waiter in waiting_monkeys {
+                    monkeys.get_mut(&waiter).unwrap().resolve_dependency(&name, value);
+                }
+            }
+
+            if !progressed {
+                break;
+            }
+        }
+
+        // 3952288690726!  Thanks QALC!
+        println!("{}", render_tree(monkeys.get("root").unwrap(), &monkeys));
+    }
+}
+
 
 mod dayn {
     use crate::shared::*;
@@ -3357,8 +3620,12 @@ fn main() {
 
         day19::part1();
         day19::part2();
+
+        day20::part1();
+        day20::part2();
     }
 
-    // day20::part1();
-    day20::part2();
+    // day21::part1();
+    day21::part2();
+
 }
