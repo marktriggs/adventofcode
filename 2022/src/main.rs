@@ -3692,7 +3692,221 @@ mod day22 {
                  });
     }
 
+    fn draw_image(grid: &Vec<Vec<Tile>>) {
+        let mut out = File::create("/home/mst/tmp/grid.pbm").unwrap();
+
+        out.write_all(format!("P6\n{} {}\n255\n",
+                                 grid[0].len(),
+                                 grid.len())
+                         .as_bytes())
+            .unwrap();
+
+        for row in 0..grid.len() {
+            for col in 0..grid[0].len() {
+                out.write_all(match grid[row][col] {
+                    Tile::Open => &[0x00, 0x00, 0x00],
+                    Tile::Wall => &[0x00, 0x00, 0x00],
+                    Tile::Nothing => &[0xFF, 0xFF, 0xFF],
+                }).unwrap();
+            }
+        }
+    }
+
+    fn next_tile_3d(grid: &Vec<Vec<Tile>>, position: (usize, usize), direction: (i64, i64)) -> ((usize, usize), Tile, (i64, i64)) {
+        let mut new_row = position.0 as i64;
+        let mut new_col = position.1 as i64;
+        let mut new_direction = direction;
+
+        loop {
+            new_col += new_direction.0;
+            new_row += new_direction.1;
+
+            let mut needs_remap = false;
+
+            needs_remap |= new_row >= grid.len() as i64;
+            needs_remap |= new_col >= grid[0].len() as i64;
+            needs_remap |= new_row < 0;
+            needs_remap |= new_col < 0;
+            needs_remap |= !needs_remap && grid[new_row as usize][new_col as usize] == Tile::Nothing;
+
+            if needs_remap {
+                let old_col = new_col - new_direction.0;
+                let old_row = new_row - new_direction.1;
+                let old_direction = new_direction;
+
+                if false {
+
+                } else if old_direction == (-1, 0) && old_col == 50 && (0..50).contains(&(old_row as usize)) {
+                    // left 10 (upper)
+                    new_direction = (1, 0);
+                    new_col = 0;
+                    new_row = 100 + (49 - old_row);
+                } else if old_direction == (0, -1) && (0..50).contains(&old_col) && old_row == 100 {
+                    // up 11
+                    new_direction = (1, 0);
+                    new_col = 50;
+                    new_row = 50 + old_col;
+                } else if old_direction == (-1, 0) && old_col == 50 && (50..100).contains(&(old_row as usize)) {
+                    // left 11
+                    new_direction = (0, 1);
+                    new_col = old_row - 50;
+                    new_row = 100;
+                } else if old_direction == (1, 0) && old_col == 99  && (100..150).contains(&(old_row as usize)) {
+                    // right 8 (lower)
+                    new_direction = (-1, 0);
+                    new_col = 149;
+                    new_row = (old_row - 149).abs();
+                } else if old_direction == (1, 0) && old_col == 149 && (0..50).contains(&(old_row as usize)) {
+                    // right 8 (upper)
+                    new_direction = (-1, 0);
+                    new_col = 99;
+                    new_row = (old_row - 149).abs();
+                } else if old_direction == (1, 0) && old_col == 99 && (50..100).contains(&(old_row as usize)) {
+                    // right 7
+                    new_direction = (0, -1);
+                    new_col = old_row + 50;
+                    new_row = 49;
+                } else if old_direction == (0, 1) && (100..150).contains(&old_col) && old_row == 49 {
+                    // down 7
+                    new_direction = (-1, 0);
+                    new_col = 99;
+                    new_row = 50 + (old_col - 100);
+                } else if old_direction == (0, 1) && (50..100).contains(&old_col) && old_row == 149 {
+                    // down 6
+                    new_direction = (-1, 0);
+                    new_col = 49;
+                    new_row = 150 + (old_col - 50);
+                } else if old_direction == (1, 0) && old_col == 49 && (150..200).contains(&(old_row as usize)) {
+                    // right 6
+                    new_direction = (0, -1);
+                    new_row = 149;
+                    new_col = (old_row - 150) + 50;
+                } else if old_direction == (0, -1) && (50..100).contains(&old_col) && old_row == 0 {
+                    // up 12
+                    new_direction = (1, 0);
+                    new_col = 0;
+                    new_row = (old_col - 50) + 150;
+                } else if old_direction == (0, 1) && (0..50).contains(&old_col) && old_row == 199 {
+                    // down 9
+                    new_direction = (0, 1);
+                    new_col = 100 + old_col;
+                    new_row = 0;
+                } else if old_direction == (0, -1) && (100..150).contains(&old_col) && old_row == 0 {
+                    // up 9
+                    new_direction = (0, -1);
+                    new_col = old_col - 100;
+                    new_row = 199;
+                } else if old_direction == (-1, 0) && old_col == 0 && (150..200).contains(&(old_row as usize)) {
+                    // left 12
+                    new_direction = (1, 0);
+                    new_row = 0;
+                    new_col = old_row - 100;
+                } else if old_direction == (-1, 0) && old_col == 0 && (100..150).contains(&(old_row as usize)) {
+                    // left 10 (lower)
+                    new_direction = (1, 0);
+                    new_col = 50;
+                    new_row = (old_row - 149).abs();
+                } else {
+                    panic!("Remap row {} col {} direction {:?}", old_row, old_col, old_direction);
+                }
+
+                println!("Remapped row {} col {} direction {:?} to row {} col {} direction {:?}",
+                         old_row, old_col, old_direction,
+                         new_row, new_col, new_direction);
+
+                return ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction);
+            } else {
+                return ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction);
+            }
+        }
+    }
+
+
+
     pub fn part2() {
+        let (map, description) = read_file_raw("input_files/day22.txt").split("\n\n").map(str::to_owned).collect_tuple().unwrap();
+
+        let grid: Vec<Vec<Tile>> = {
+            let map_width = map.split('\n').map(str::len).max().unwrap();
+
+            map.split('\n').map(|line| {
+                let mut row = " ".repeat(map_width);
+                row.replace_range(0..line.len(), line);
+                row.chars().map(|ch| match ch {
+                    '.' => Tile::Open,
+                    '#' => Tile::Wall,
+                    ' ' => Tile::Nothing,
+                    _ => panic!("Bad input"),
+                }).collect()
+            }).collect()
+        };
+
+        {
+            let row = 50;
+            let col = 50;
+            assert!(grid[row][col] != Tile::Nothing);
+            let mut next_row = row;
+            let mut next_col = col;
+            let mut direction = (-1, 0);
+
+            for _ in 0..(4 * 50) {
+                ((next_row, next_col), _, direction) = next_tile_3d(&grid, (next_row, next_col), direction);
+                dbg!(&(next_row, next_col));
+            }
+
+            assert_eq!((next_row, next_col), (row, col));
+        }
+
+        let mut position = (0, grid[0].iter().position(|&tile| tile == Tile::Open).unwrap());
+        let mut direction: (i64, i64) = (1, 0);
+
+        for instruction in description.trim().replace('R', "_R_").replace('L', "_L_").split('_') {
+            if instruction == "R" {
+                direction = match direction {
+                    (1, 0) => (0, 1),
+                    (0, 1) => (-1, 0),
+                    (-1, 0) => (0, -1),
+                    (0, -1) => (1, 0),
+                    _ => panic!("Directionless!"),
+                };
+            } else if instruction == "L" {
+                direction = match direction {
+                    (1, 0) => (0, -1),
+                    (0, -1) => (-1, 0),
+                    (-1, 0) => (0, 1),
+                    (0, 1) => (1, 0),
+                    _ => panic!("Directionless!"),
+                };
+            } else {
+                let steps = instruction.parse::<usize>().unwrap();
+
+                for _step in 0..steps {
+                    let (next_tile_position, next_tile_type, next_direction) = next_tile_3d(&grid, position, direction);
+
+                    if next_tile_type == Tile::Open {
+                        position = next_tile_position;
+                        direction = next_direction;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // println!("\nMove: {}", instruction);
+            // draw_grid(&grid, position, direction);
+        }
+
+        println!("Final password: {}",
+                 (1000 * (position.0 + 1)) +
+                 (4 * (position.1 + 1)) +
+                 match direction {
+                     (1, 0) => 0,
+                     (-1, 0) => 2,
+                     (0, 1) => 1,
+                     (0, -1) => 3,
+                     _ => panic!("No direction"),
+                 });
+
 
     }
 }
@@ -3776,6 +3990,7 @@ fn main() {
         day21::part2();
     }
 
-    day22::part1();
+    // day22::part1();
+    day22::part2();
 
 }
