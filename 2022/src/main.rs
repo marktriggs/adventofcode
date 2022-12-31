@@ -3550,6 +3550,154 @@ mod day21 {
 }
 
 
+mod day22 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Copy, Clone)]
+    enum Tile {
+        Open,
+        Wall,
+        Nothing,
+    }
+
+    fn next_tile(grid: &Vec<Vec<Tile>>, position: (usize, usize), direction: (i64, i64)) -> ((usize, usize), Tile) {
+        let mut new_row = position.0 as i64;
+        let mut new_col = position.1 as i64;
+
+        loop {
+            new_col += direction.0;
+            new_row += direction.1;
+
+            if new_row >= grid.len() as i64 {
+                new_row = 0;
+            }
+
+            if new_col >= grid[0].len() as i64 {
+                new_col = 0;
+            }
+
+            if new_row < 0 {
+                new_row += grid.len() as i64;
+            }
+
+            if new_col < 0 {
+                new_col += grid[0].len() as i64;
+            }
+
+
+            if grid[new_row as usize][new_col as usize] == Tile::Nothing {
+                // Keep moving until we hit something
+            } else {
+                return ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize]);
+            }
+        }
+    }
+
+    fn draw_grid(grid: &Vec<Vec<Tile>>, position: (usize, usize), direction: (i64, i64)) {
+        for row in 0..grid.len() {
+            for col in 0..grid[0].len() {
+                let cell = {
+                    if (row, col) == position {
+                        match direction {
+                            (1, 0) => '>',
+                            (-1, 0) => '<',
+                            (0, 1) => 'v',
+                            (0, -1) => '^',
+                            _ => panic!("No direction"),
+                        }
+                    } else {
+                        match grid[row][col] {
+                            Tile::Open => '.',
+                            Tile::Wall => '#',
+                            Tile::Nothing => ' ',
+                        }
+                    }
+                };
+
+                print!("{}", cell);
+            }
+            println!();
+        }
+    }
+
+    pub fn part1() {
+        let (map, description) = read_file_raw("input_files/day22.txt").split("\n\n").map(str::to_owned).collect_tuple().unwrap();
+
+        let grid: Vec<Vec<Tile>> = {
+            let map_width = map.split('\n').map(str::len).max().unwrap();
+
+            map.split('\n').map(|line| {
+                let mut row = " ".repeat(map_width);
+                row.replace_range(0..line.len(), line);
+                row.chars().map(|ch| match ch {
+                    '.' => Tile::Open,
+                    '#' => Tile::Wall,
+                    ' ' => Tile::Nothing,
+                    _ => panic!("Bad input"),
+                }).collect()
+            }).collect()
+        };
+
+        let mut position = (0, grid[0].iter().position(|&tile| tile == Tile::Open).unwrap());
+        let mut direction: (i64, i64) = (1, 0);
+
+        // println!("\nSTART");
+        // draw_grid(&grid, position, direction);
+
+
+        for instruction in description.trim().replace('R', "_R_").replace('L', "_L_").split('_') {
+            if instruction == "R" {
+                direction = match direction {
+                    (1, 0) => (0, 1),
+                    (0, 1) => (-1, 0),
+                    (-1, 0) => (0, -1),
+                    (0, -1) => (1, 0),
+                    _ => panic!("Directionless!"),
+                };
+            } else if instruction == "L" {
+                direction = match direction {
+                    (1, 0) => (0, -1),
+                    (0, -1) => (-1, 0),
+                    (-1, 0) => (0, 1),
+                    (0, 1) => (1, 0),
+                    _ => panic!("Directionless!"),
+                };
+            } else {
+                let steps = instruction.parse::<usize>().unwrap();
+
+                for _step in 0..steps {
+                    let (next_tile_position, next_tile_type) = next_tile(&grid, position, direction);
+
+                    if next_tile_type == Tile::Open {
+                        position = next_tile_position;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // println!("\nMove: {}", instruction);
+            // draw_grid(&grid, position, direction);
+        }
+
+        println!("Final password: {}",
+                 (1000 * (position.0 + 1)) +
+                 (4 * (position.1 + 1)) +
+                 match direction {
+                     (1, 0) => 0,
+                     (-1, 0) => 2,
+                     (0, 1) => 1,
+                     (0, -1) => 3,
+                     _ => panic!("No direction"),
+                 });
+    }
+
+    pub fn part2() {
+
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -3623,9 +3771,11 @@ fn main() {
 
         day20::part1();
         day20::part2();
+
+        day21::part1();
+        day21::part2();
     }
 
-    // day21::part1();
-    day21::part2();
+    day22::part1();
 
 }
