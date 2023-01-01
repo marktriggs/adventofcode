@@ -3717,107 +3717,106 @@ mod day22 {
         let mut new_col = position.1 as i64;
         let mut new_direction = direction;
 
-        loop {
-            new_col += new_direction.0;
-            new_row += new_direction.1;
 
-            let mut needs_remap = false;
+        new_col += new_direction.0;
+        new_row += new_direction.1;
 
-            needs_remap |= new_row >= grid.len() as i64;
-            needs_remap |= new_col >= grid[0].len() as i64;
-            needs_remap |= new_row < 0;
-            needs_remap |= new_col < 0;
-            needs_remap |= !needs_remap && grid[new_row as usize][new_col as usize] == Tile::Nothing;
+        let mut needs_remap = false;
 
-            if needs_remap {
-                let old_col = new_col - new_direction.0;
-                let old_row = new_row - new_direction.1;
-                let old_direction = new_direction;
+        needs_remap |= new_row >= grid.len() as i64;
+        needs_remap |= new_col >= grid[0].len() as i64;
+        needs_remap |= new_row < 0;
+        needs_remap |= new_col < 0;
+        needs_remap |= !needs_remap && grid[new_row as usize][new_col as usize] == Tile::Nothing;
 
-                if false {
+        if needs_remap {
+            let old_col = new_col - new_direction.0;
+            let old_row = new_row - new_direction.1;
+            let old_direction = new_direction;
 
-                } else if old_direction == (-1, 0) && old_col == 50 && (0..50).contains(&(old_row as usize)) {
-                    // left 10 (upper)
-                    new_direction = (1, 0);
-                    new_col = 0;
-                    new_row = 100 + (49 - old_row);
-                } else if old_direction == (0, -1) && (0..50).contains(&old_col) && old_row == 100 {
-                    // up 11
-                    new_direction = (1, 0);
-                    new_col = 50;
-                    new_row = 50 + old_col;
-                } else if old_direction == (-1, 0) && old_col == 50 && (50..100).contains(&(old_row as usize)) {
-                    // left 11
-                    new_direction = (0, 1);
-                    new_col = old_row - 50;
-                    new_row = 100;
-                } else if old_direction == (1, 0) && old_col == 99  && (100..150).contains(&(old_row as usize)) {
-                    // right 8 (lower)
-                    new_direction = (-1, 0);
-                    new_col = 149;
-                    new_row = (old_row - 149).abs();
-                } else if old_direction == (1, 0) && old_col == 149 && (0..50).contains(&(old_row as usize)) {
-                    // right 8 (upper)
-                    new_direction = (-1, 0);
-                    new_col = 99;
-                    new_row = (old_row - 149).abs();
-                } else if old_direction == (1, 0) && old_col == 99 && (50..100).contains(&(old_row as usize)) {
-                    // right 7
-                    new_direction = (0, -1);
-                    new_col = old_row + 50;
-                    new_row = 49;
-                } else if old_direction == (0, 1) && (100..150).contains(&old_col) && old_row == 49 {
-                    // down 7
-                    new_direction = (-1, 0);
-                    new_col = 99;
-                    new_row = 50 + (old_col - 100);
-                } else if old_direction == (0, 1) && (50..100).contains(&old_col) && old_row == 149 {
-                    // down 6
-                    new_direction = (-1, 0);
-                    new_col = 49;
-                    new_row = 150 + (old_col - 50);
-                } else if old_direction == (1, 0) && old_col == 49 && (150..200).contains(&(old_row as usize)) {
-                    // right 6
-                    new_direction = (0, -1);
-                    new_row = 149;
-                    new_col = (old_row - 150) + 50;
-                } else if old_direction == (0, -1) && (50..100).contains(&old_col) && old_row == 0 {
-                    // up 12
-                    new_direction = (1, 0);
-                    new_col = 0;
-                    new_row = (old_col - 50) + 150;
-                } else if old_direction == (0, 1) && (0..50).contains(&old_col) && old_row == 199 {
-                    // down 9
-                    new_direction = (0, 1);
-                    new_col = 100 + old_col;
-                    new_row = 0;
-                } else if old_direction == (0, -1) && (100..150).contains(&old_col) && old_row == 0 {
-                    // up 9
-                    new_direction = (0, -1);
-                    new_col = old_col - 100;
-                    new_row = 199;
-                } else if old_direction == (-1, 0) && old_col == 0 && (150..200).contains(&(old_row as usize)) {
-                    // left 12
-                    new_direction = (1, 0);
-                    new_row = 0;
-                    new_col = old_row - 100;
-                } else if old_direction == (-1, 0) && old_col == 0 && (100..150).contains(&(old_row as usize)) {
-                    // left 10 (lower)
-                    new_direction = (1, 0);
-                    new_col = 50;
-                    new_row = (old_row - 149).abs();
-                } else {
-                    panic!("Remap row {} col {} direction {:?}", old_row, old_col, old_direction);
-                }
+            if false {
 
-                println!("Remapped row {} col {} direction {:?} to row {} col {} direction {:?}",
-                         old_row, old_col, old_direction,
-                         new_row, new_col, new_direction);
-
-                return ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction);
+            } else if old_direction == (-1, 0) && old_col == 50 && (0..50).contains(&(old_row as usize)) {
+                // left 10 (upper)
+                new_direction = (1, 0);
+                new_col = 0;
+                new_row = 100 + (49 - old_row);
+            } else if old_direction == (0, -1) && (0..50).contains(&old_col) && old_row == 100 {
+                // up 11
+                new_direction = (1, 0);
+                new_col = 50;
+                new_row = 50 + old_col;
+            } else if old_direction == (-1, 0) && old_col == 50 && (50..100).contains(&(old_row as usize)) {
+                // left 11
+                new_direction = (0, 1);
+                new_col = old_row - 50;
+                new_row = 100;
+            } else if old_direction == (1, 0) && old_col == 99  && (100..150).contains(&(old_row as usize)) {
+                // right 8 (lower)
+                new_direction = (-1, 0);
+                new_col = 149;
+                new_row = (old_row - 149).abs();
+            } else if old_direction == (1, 0) && old_col == 149 && (0..50).contains(&(old_row as usize)) {
+                // right 8 (upper)
+                new_direction = (-1, 0);
+                new_col = 99;
+                new_row = (old_row - 149).abs();
+            } else if old_direction == (1, 0) && old_col == 99 && (50..100).contains(&(old_row as usize)) {
+                // right 7
+                new_direction = (0, -1);
+                new_col = old_row + 50;
+                new_row = 49;
+            } else if old_direction == (0, 1) && (100..150).contains(&old_col) && old_row == 49 {
+                // down 7
+                new_direction = (-1, 0);
+                new_col = 99;
+                new_row = 50 + (old_col - 100);
+            } else if old_direction == (0, 1) && (50..100).contains(&old_col) && old_row == 149 {
+                // down 6
+                new_direction = (-1, 0);
+                new_col = 49;
+                new_row = 150 + (old_col - 50);
+            } else if old_direction == (1, 0) && old_col == 49 && (150..200).contains(&(old_row as usize)) {
+                // right 6
+                new_direction = (0, -1);
+                new_row = 149;
+                new_col = (old_row - 150) + 50;
+            } else if old_direction == (0, -1) && (50..100).contains(&old_col) && old_row == 0 {
+                // up 12
+                new_direction = (1, 0);
+                new_col = 0;
+                new_row = (old_col - 50) + 150;
+            } else if old_direction == (0, 1) && (0..50).contains(&old_col) && old_row == 199 {
+                // down 9
+                new_direction = (0, 1);
+                new_col = 100 + old_col;
+                new_row = 0;
+            } else if old_direction == (0, -1) && (100..150).contains(&old_col) && old_row == 0 {
+                // up 9
+                new_direction = (0, -1);
+                new_col = old_col - 100;
+                new_row = 199;
+            } else if old_direction == (-1, 0) && old_col == 0 && (150..200).contains(&(old_row as usize)) {
+                // left 12
+                new_direction = (1, 0);
+                new_row = 0;
+                new_col = old_row - 100;
+            } else if old_direction == (-1, 0) && old_col == 0 && (100..150).contains(&(old_row as usize)) {
+                // left 10 (lower)
+                new_direction = (1, 0);
+                new_col = 50;
+                new_row = (old_row - 149).abs();
             } else {
-                return ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction);
+                panic!("Remap row {} col {} direction {:?}", old_row, old_col, old_direction);
             }
+
+            println!("Remapped row {} col {} direction {:?} to row {} col {} direction {:?}",
+                     old_row, old_col, old_direction,
+                     new_row, new_col, new_direction);
+
+            ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction)
+        } else {
+            ((new_row as usize, new_col as usize), grid[new_row as usize][new_col as usize], new_direction)
         }
     }
 
@@ -3912,6 +3911,266 @@ mod day22 {
 }
 
 
+mod day23 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+    enum Tile {
+        Elf,
+        Empty,
+    }
+
+    #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+    struct Point {
+        row: i64,
+        col: i64,
+    }
+
+    impl Point {
+        fn adjust(&self, offset: Point) -> Point {
+            Point {
+                row: self.row + offset.row,
+                col: self.col + offset.col,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    enum Direction {
+        North,
+        South,
+        East,
+        West,
+        Northeast,
+        Southeast,
+        Northwest,
+        Southwest,
+    }
+
+    impl Direction {
+        fn point_offset(&self) -> Point {
+            match self {
+                Direction::North => Point { row: -1, col: 0 },
+                Direction::South => Point { row: 1, col: 0 },
+                Direction::East => Point { row: 0, col: 1 },
+                Direction::West => Point { row: 0, col: -1 },
+                Direction::Northeast => Point { row: -1, col: 1 },
+                Direction::Southeast => Point { row: 1, col: 1 },
+                Direction::Northwest => Point { row: -1, col: -1 },
+                Direction::Southwest => Point { row: 1, col: -1 },
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    enum DirectionGroup {
+        North,
+        South,
+        East,
+        West,
+        All,
+    }
+
+    impl DirectionGroup {
+        fn offsets(&self) -> Vec<Point> {
+            use self::Direction::*;
+
+            match self {
+                DirectionGroup::North => vec!(North.point_offset(), Northeast.point_offset(), Northwest.point_offset()),
+                DirectionGroup::South => vec!(South.point_offset(), Southeast.point_offset(), Southwest.point_offset()),
+                DirectionGroup::West => vec!(West.point_offset(), Northwest.point_offset(), Southwest.point_offset()),
+                DirectionGroup::East => vec!(East.point_offset(), Northeast.point_offset(), Southeast.point_offset()),
+                DirectionGroup::All => vec!(
+                    North.point_offset(),
+                    South.point_offset(),
+                    East.point_offset(),
+                    West.point_offset(),
+                    Northeast.point_offset(),
+                    Southeast.point_offset(),
+                    Northwest.point_offset(),
+                    Southwest.point_offset(),
+                ),
+            }
+        }
+
+        fn canonical_direction(&self) -> Direction {
+            use self::Direction::*;
+
+            match self {
+                DirectionGroup::North => North,
+                DirectionGroup::South => South,
+                DirectionGroup::East => East,
+                DirectionGroup::West => West,
+                DirectionGroup::All => panic!("No canonical direction for All"),
+            }
+        }
+    }
+
+
+    fn show_grid(grid: &HashMap<Point, Tile>) {
+        let min_col = grid.keys().map(|p| p.col).min().unwrap();
+        let max_col = grid.keys().map(|p| p.col).max().unwrap();
+        let min_row = grid.keys().map(|p| p.row).min().unwrap();
+        let max_row = grid.keys().map(|p| p.row).max().unwrap();
+
+        for row in min_row..=max_row {
+            for col in min_col..=max_col {
+                let ch = match grid.get(&Point { row: row as i64, col: col as i64 }) {
+                    Some(&Tile::Elf) => '#',
+                    _ => '.',
+                };
+
+                print!("{}", ch);
+            }
+
+            println!();
+        }
+
+        println!();
+    }
+
+
+    pub fn part1() {
+        let mut grid: HashMap<Point, Tile> = HashMap::new();
+
+        for (row, line) in input_lines("input_files/day23.txt").enumerate() {
+            for (col, ch) in line.chars().enumerate() {
+                if ch == '#' {
+                    grid.insert(Point { row: row as i64, col: col as i64 },
+                                Tile::Elf);
+                }
+            }
+        }
+
+        // println!("Initial state");
+        // show_grid(&grid);
+
+        let mut round = 0;
+
+        let directions_to_try = &[DirectionGroup::North, DirectionGroup::South, DirectionGroup::West, DirectionGroup::East];
+
+        loop {
+            let elf_positions: HashSet<Point> = grid.iter().filter(|(_point, &tile)| tile == Tile::Elf).map(|(&point, _)| point).collect();
+
+            // Elves with nobody near them do nothing
+            let slacker_elves: HashSet<Point> = elf_positions.iter().filter(|elf_position| {
+                DirectionGroup::All.offsets().iter().all(|&offset| grid.get(&elf_position.adjust(offset)).unwrap_or(&Tile::Empty) == &Tile::Empty)
+            }).copied().collect();
+
+            let mut move_proposals: HashMap<Point, Vec<Point>> = HashMap::new();
+
+            for working_elf in (elf_positions.difference(&slacker_elves)) {
+                for direction_idx in 0..4 {
+                    let next_direction = &directions_to_try[(round + direction_idx) % directions_to_try.len()];
+
+                    if next_direction.offsets().iter().all(|&offset| grid.get(&working_elf.adjust(offset)).unwrap_or(&Tile::Empty) == &Tile::Empty) {
+                        move_proposals.entry(working_elf.adjust(next_direction.canonical_direction().point_offset())).or_default().push(*working_elf);
+                        break;
+                    }
+                }
+            }
+
+            let mut someone_moved = false;
+
+            for (target_position, interested_elves) in move_proposals {
+                if interested_elves.len() > 1 {
+                    // Nobody moves
+                } else {
+                    // This elf moves
+                    someone_moved = true;
+                    grid.remove(&interested_elves[0]);
+                    grid.insert(target_position, Tile::Elf);
+                }
+            }
+
+            round += 1;
+
+            // println!("End of round {}", round);
+            // show_grid(&grid);
+
+            if !someone_moved {
+                break;
+            }
+
+            if round == 10 {
+                break;
+            }
+        }
+
+        let min_col = grid.keys().map(|p| p.col).min().unwrap();
+        let max_col = grid.keys().map(|p| p.col).max().unwrap();
+        let min_row = grid.keys().map(|p| p.row).min().unwrap();
+        let max_row = grid.keys().map(|p| p.row).max().unwrap();
+
+        println!("Empty tiles: {}", (max_col + 1 - min_col) * (max_row + 1 - min_row) - grid.len() as i64);
+    }
+
+    pub fn part2() {
+        let mut grid: HashMap<Point, Tile> = HashMap::new();
+
+        for (row, line) in input_lines("input_files/day23.txt").enumerate() {
+            for (col, ch) in line.chars().enumerate() {
+                if ch == '#' {
+                    grid.insert(Point { row: row as i64, col: col as i64 },
+                                Tile::Elf);
+                }
+            }
+        }
+
+        // println!("Initial state");
+        // show_grid(&grid);
+
+        let mut round = 0;
+
+        let directions_to_try = &[DirectionGroup::North, DirectionGroup::South, DirectionGroup::West, DirectionGroup::East];
+
+        loop {
+            let elf_positions: HashSet<Point> = grid.iter().filter(|(_point, &tile)| tile == Tile::Elf).map(|(&point, _)| point).collect();
+
+            // Elves with nobody near them do nothing
+            let slacker_elves: HashSet<Point> = elf_positions.iter().filter(|elf_position| {
+                DirectionGroup::All.offsets().iter().all(|&offset| grid.get(&elf_position.adjust(offset)).unwrap_or(&Tile::Empty) == &Tile::Empty)
+            }).copied().collect();
+
+            let mut move_proposals: HashMap<Point, Vec<Point>> = HashMap::new();
+
+            for working_elf in (elf_positions.difference(&slacker_elves)) {
+                for direction_idx in 0..4 {
+                    let next_direction = &directions_to_try[(round + direction_idx) % directions_to_try.len()];
+
+                    if next_direction.offsets().iter().all(|&offset| grid.get(&working_elf.adjust(offset)).unwrap_or(&Tile::Empty) == &Tile::Empty) {
+                        move_proposals.entry(working_elf.adjust(next_direction.canonical_direction().point_offset())).or_default().push(*working_elf);
+                        break;
+                    }
+                }
+            }
+
+            let mut someone_moved = false;
+
+            for (target_position, interested_elves) in move_proposals {
+                if interested_elves.len() > 1 {
+                    // Nobody moves
+                } else {
+                    // This elf moves
+                    someone_moved = true;
+                    grid.remove(&interested_elves[0]);
+                    grid.insert(target_position, Tile::Elf);
+                }
+            }
+
+            round += 1;
+
+            // println!("End of round {}", round);
+            // show_grid(&grid);
+
+            if !someone_moved {
+                println!("Finished at round {}", round);
+                break;
+            }
+        }
+    }
+}
+
 mod dayn {
     use crate::shared::*;
 
@@ -3923,6 +4182,9 @@ mod dayn {
 
     }
 }
+
+
+
 
 fn main() {
     if false {
@@ -3988,9 +4250,11 @@ fn main() {
 
         day21::part1();
         day21::part2();
+
+        day22::part1();
+        day22::part2();
     }
 
-    // day22::part1();
-    day22::part2();
-
+    // day23::part1();
+    day23::part2();
 }
