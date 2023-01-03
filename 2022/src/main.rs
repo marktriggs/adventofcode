@@ -4171,6 +4171,250 @@ mod day23 {
     }
 }
 
+mod day24 {
+    use crate::shared::*;
+
+    #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+    struct Point {
+        row: i64,
+        col: i64,
+    }
+
+    impl Point {
+        fn adjust(&self, offset: Point) -> Point {
+            Point {
+                row: self.row + offset.row,
+                col: self.col + offset.col,
+            }
+        }
+    }
+
+
+    #[derive(Debug, Eq, PartialEq, Copy, Clone)]
+    enum Tile {
+        Wall,
+        RightBlizzard,
+        UpBlizzard,
+        DownBlizzard,
+        LeftBlizzard,
+    }
+
+    #[derive(Clone)]
+    struct Grid {
+        width: usize,
+        height: usize,
+        grid: HashMap<Point, Vec<Tile>>,
+    }
+
+    impl Grid {
+        fn parse(lines: impl Iterator<Item=String>) -> Grid {
+            let mut grid: HashMap<Point, Vec<Tile>> = HashMap::new();
+
+            let mut width = 0;
+            let mut height = 0;
+
+            for (row, line) in lines.enumerate() {
+                height = row + 1;
+                for (col, ch) in line.chars().enumerate() {
+                    width = col + 1;
+
+                    let tile = match ch {
+                        '#' => Tile::Wall,
+                        '<' => Tile::LeftBlizzard,
+                        '^' => Tile::UpBlizzard,
+                        'v' => Tile::DownBlizzard,
+                        '>' => Tile::RightBlizzard,
+                        _ => continue,
+                    };
+
+                    grid.insert(Point { row: row as i64, col: col as i64 },
+                                vec!(tile));
+                }
+            }
+
+            Grid { width, height, grid }
+        }
+
+        fn next_grid(&self) -> Grid {
+            use self::Tile::*;
+            let mut result: HashMap<Point, Vec<Tile>> = HashMap::new();
+
+            for (point, tiles) in &self.grid {
+                if tiles == &[Wall] {
+                    result.insert(*point, tiles.clone());
+                    continue;
+                }
+
+                for tile in tiles {
+                    let mut next_point = point.adjust(match tile {
+                        RightBlizzard => Point { row: 0, col: 1 },
+                        LeftBlizzard => Point { row: 0, col: -1 },
+                        UpBlizzard => Point { row: -1, col: 0 },
+                        DownBlizzard => Point { row: 1, col: 0 },
+                        _ => unreachable!(),
+                    });
+
+                    if self.grid.get(&next_point).is_some() && self.grid.get(&next_point).unwrap() == &[Wall] {
+                        // Wrap around
+                        next_point = match tile {
+                            RightBlizzard => Point { row: next_point.row, col: 1 },
+                            LeftBlizzard => Point { row: next_point.row, col: (self.width - 2) as i64 },
+                            UpBlizzard => Point { row: (self.height - 2) as i64, col: next_point.col },
+                            DownBlizzard => Point { row: 1, col: next_point.col },
+                            _ => unreachable!(),
+                        };
+                    }
+
+                    let entry = result.entry(next_point).or_default();
+
+                    entry.push(*tile);
+                }
+            }
+            Grid {
+                grid: result,
+                ..*self
+            }
+        }
+
+        fn is_empty(&self, position: &Point) -> bool {
+            self.grid.get(position).is_none()
+        }
+    }
+
+    // Idea: floyd-warshall for the 3d space?
+    fn solve(grid: &Grid, position: Point, target: Point, minutes: usize) -> usize {
+        let next = grid.next_grid();
+
+        if position == target {
+            return minutes;
+        }
+
+        if minutes > 18 {
+            return usize::MAX;
+        }
+
+        [
+            Point { row: -1, col: 0 },
+            Point { row: 1, col: 0 },
+            Point { row: 0, col: -1 },
+            Point { row: 0, col: 1 },
+            Point { row: 0, col: 0 },
+        ]
+            .iter()
+            .map(|offset| position.adjust(*offset))
+            .filter(|position| next.is_empty(position))
+            .map(|position| solve(&next, position, target, minutes + 1))
+            .min()
+            .unwrap_or(usize::MAX)
+    }
+
+    #[derive(Hash, Eq, PartialEq, Clone, Copy, Ord, PartialOrd)]
+    struct PointInTime {
+        row: i64,
+        col: i64,
+        time: usize,
+    }
+
+
+    pub fn part1() {
+        let max_time = 500;
+        let grid = Grid::parse(input_lines("input_files/day24.txt"));
+
+        let time_slices: Vec<Grid> = {
+            let mut grid = grid;
+            let mut r = Vec::new();
+
+            r.push(grid.clone());
+
+            for _t in 0..max_time {
+                grid = grid.next_grid();
+                r.push(grid.clone());
+            }
+
+            r
+        };
+
+        let mut all_points = HashSet::new();
+
+        for t in 0..time_slices.len() {
+            for row in 0..time_slices[t].height {
+                for col in 0..time_slices[t].width {
+                    if time_slices[t].is_empty(&Point { row: row as i64, col: col as i64 }) {
+                        // Open tile is relevant to our interests!
+                        all_points.insert(PointInTime { row: row as i64, col: col as i64, time: t });
+                    }
+                }
+            }
+        }
+
+        let mut adjacent_nodes: HashMap<PointInTime, Vec<PointInTime>> = HashMap::new();
+
+        for p in &all_points {
+            for offset in [
+                Point { row: -1, col: 0 },
+                Point { row: 1, col: 0 },
+                Point { row: 0, col: -1 },
+                Point { row: 0, col: 1 },
+                Point { row: 0, col: 0 },
+            ] {
+                let next_point = offset.adjust(Point { row: p.row, col: p.col });
+
+                let candidate = PointInTime {
+                    time: p.time + 1,
+                    row: next_point.row,
+                    col: next_point.col,
+                };
+
+                if all_points.contains(&candidate) {
+                    adjacent_nodes.entry(*p).or_default().push(candidate);
+                }
+            }
+        }
+
+        let start_point = PointInTime { row: 0, col: 1, time: 0};
+
+        let mut dist = HashMap::new();
+        let mut processed = HashSet::new();
+        let mut queue: BinaryHeap<(i64, PointInTime)> = BinaryHeap::new();
+
+        dist.insert(start_point, 0);
+        queue.push((0, start_point));
+
+        while !queue.is_empty() {
+            let min = queue.pop().unwrap();
+            if processed.contains(&min.1) {
+                continue;
+            }
+
+            processed.insert(min.1);
+            if let Some(adjacent) = adjacent_nodes.get(&min.1) {
+                for node in adjacent {
+                    let new_distance = dist.get(&min.1).unwrap_or(&usize::MAX) + 1;
+
+                    if new_distance < *dist.get(node).unwrap_or(&usize::MAX) {
+                        dist.insert(*node, new_distance);
+                        queue.push((- (new_distance as i64), *node));
+                    }
+                }
+            }
+        }
+
+        for i in 1..time_slices.len() {
+            let d =  dist.get(&PointInTime { row: 36, col: 100, time: i});
+
+            if d.is_some() {
+                dbg!(i, d);
+                break;
+            }
+        }
+    }
+
+    pub fn part2() {
+
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -4253,8 +4497,10 @@ fn main() {
 
         day22::part1();
         day22::part2();
+
+        day23::part1();
+        day23::part2();
     }
 
-    // day23::part1();
-    day23::part2();
+    day24::part1();
 }
