@@ -4550,6 +4550,73 @@ mod day24 {
 }
 
 
+mod day25 {
+    use crate::shared::*;
+
+
+    fn base10_to_snafu(n: i64) -> String {
+        let mut digits = Vec::new();
+
+        while snafu_to_base10(digits.iter().copied()) < n {
+            digits.push('2');
+        }
+
+        assert!(snafu_to_base10(digits.iter().copied()) >= n);
+
+        for i in 0..digits.len() {
+            loop {
+                let mut next_digits = digits.clone();
+
+                let next_digit = match next_digits[i] {
+                    '2' => '1',
+                    '1' => '0',
+                    '0' => '-',
+                    '-' => '=',
+                    _ => break,
+                };
+
+                next_digits[i] = next_digit;
+
+                let value = snafu_to_base10(next_digits.iter().copied());
+
+                if value == n {
+                    return next_digits.into_iter().collect();
+                } else if value < n {
+                    break;
+                } else {
+                    digits = next_digits;
+                }
+            }
+        }
+
+        unreachable!();
+    }
+
+    fn snafu_to_base10(chars: impl Iterator<Item=char>) -> i64 {
+        chars.fold(0, |total, ch| {
+            (total * 5) + match ch {
+                '2' => 2,
+                '1' => 1,
+                '0' => 0,
+                '-' => -1,
+                '=' => -2,
+                _ => panic!("bad input"),
+            }
+        })
+    }
+
+    pub fn part1() {
+        let mut sum = 0;
+
+        for line in input_lines("input_files/day25.txt") {
+            sum += snafu_to_base10(line.chars());
+        }
+
+        println!("{}", &base10_to_snafu(sum));
+    }
+}
+
+
 mod dayn {
     use crate::shared::*;
 
@@ -4635,8 +4702,10 @@ fn main() {
 
         day23::part1();
         day23::part2();
+
+        day24::part1();
+        day24::part2();
     }
 
-    // day24::part1();
-    day24::part2();
+    day25::part1();
 }
