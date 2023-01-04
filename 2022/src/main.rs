@@ -4409,7 +4409,142 @@ mod day24 {
         }
     }
 
+    fn build_time_slices(grid: &Grid, minutes: usize) -> Vec<Grid> {
+        let mut grid = grid.clone();
+        let mut r = Vec::new();
+
+        r.push(grid.clone());
+
+        for _t in 0..minutes {
+            grid = grid.next_grid();
+            r.push(grid.clone());
+        }
+
+        r
+    }
+
+    fn help_me_dijkstra(time_slices: &[Grid], start_point: PointInTime) -> HashMap<PointInTime, usize> {
+        let mut all_points = HashSet::new();
+
+        for t in 0..time_slices.len() {
+            for row in 0..time_slices[t].height {
+                for col in 0..time_slices[t].width {
+                    if time_slices[t].is_empty(&Point { row: row as i64, col: col as i64 }) {
+                        // Open tile is relevant to our interests!
+                        all_points.insert(PointInTime { row: row as i64, col: col as i64, time: t });
+                    }
+                }
+            }
+        }
+
+        let mut adjacent_nodes: HashMap<PointInTime, Vec<PointInTime>> = HashMap::new();
+
+        for p in &all_points {
+            for offset in [
+                Point { row: -1, col: 0 },
+                Point { row: 1, col: 0 },
+                Point { row: 0, col: -1 },
+                Point { row: 0, col: 1 },
+                Point { row: 0, col: 0 },
+            ] {
+                let next_point = offset.adjust(Point { row: p.row, col: p.col });
+
+                let candidate = PointInTime {
+                    time: p.time + 1,
+                    row: next_point.row,
+                    col: next_point.col,
+                };
+
+                if all_points.contains(&candidate) {
+                    adjacent_nodes.entry(*p).or_default().push(candidate);
+                }
+            }
+        }
+
+        let mut dist = HashMap::new();
+        let mut processed = HashSet::new();
+        let mut queue: BinaryHeap<(i64, PointInTime)> = BinaryHeap::new();
+
+        dist.insert(start_point, 0);
+        queue.push((0, start_point));
+
+        while !queue.is_empty() {
+            let min = queue.pop().unwrap();
+            if processed.contains(&min.1) {
+                continue;
+            }
+
+            processed.insert(min.1);
+            if let Some(adjacent) = adjacent_nodes.get(&min.1) {
+                for node in adjacent {
+                    let new_distance = dist.get(&min.1).unwrap_or(&usize::MAX) + 1;
+
+                    if new_distance < *dist.get(node).unwrap_or(&usize::MAX) {
+                        dist.insert(*node, new_distance);
+                        queue.push((- (new_distance as i64), *node));
+                    }
+                }
+            }
+        }
+
+        dist
+    }
+
     pub fn part2() {
+        let max_time = 500;
+        let grid = Grid::parse(input_lines("input_files/day24.txt"));
+
+        let mut time_slices = build_time_slices(&grid, max_time);
+
+        {
+            let dist = help_me_dijkstra(&time_slices, PointInTime { row: 0, col: 1, time: 0});
+
+            // First forward pass
+            for i in 1..time_slices.len() {
+                let d =  dist.get(&PointInTime { row: 36, col: 100, time: i});
+
+                if d.is_some() {
+                    dbg!(i, d);
+                    break;
+                }
+            }
+        }
+
+        // Back we go
+        {
+            time_slices = build_time_slices(&time_slices[240], max_time);
+
+            let dist = help_me_dijkstra(&time_slices, PointInTime { row: 36, col: 100, time: 0});
+
+            for i in 1..time_slices.len() {
+                let d =  dist.get(&PointInTime { row: 0, col: 1, time: i});
+
+                if d.is_some() {
+                    dbg!(i, d);
+                    break;
+                }
+            }
+        }
+
+        // (snacks acquired)
+
+        // Second forward pass
+        {
+            time_slices = build_time_slices(&time_slices[237], max_time);
+
+            let dist = help_me_dijkstra(&time_slices, PointInTime { row: 0, col: 1, time: 0});
+
+            for i in 1..time_slices.len() {
+                // let d =  dist.get(&PointInTime { row: 36, col: 100, time: i});
+                let d =  dist.get(&PointInTime { row: 36, col: 100, time: i });
+
+                if d.is_some() {
+                    dbg!(i, d);
+                    break;
+                }
+            }
+        }
+
 
     }
 }
@@ -4502,5 +4637,6 @@ fn main() {
         day23::part2();
     }
 
-    day24::part1();
+    // day24::part1();
+    day24::part2();
 }
