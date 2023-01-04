@@ -4555,13 +4555,13 @@ mod day25 {
 
 
     fn base10_to_snafu(n: i64) -> String {
-        let mut digits = Vec::new();
+        let mut digits: Vec<char> = Vec::new();
 
-        while snafu_to_base10(digits.iter().copied()) < n {
+        while snafu_to_base10(digits.iter()) < n {
             digits.push('2');
         }
 
-        assert!(snafu_to_base10(digits.iter().copied()) >= n);
+        assert!(snafu_to_base10(digits.iter()) >= n);
 
         for i in 0..digits.len() {
             loop {
@@ -4577,7 +4577,7 @@ mod day25 {
 
                 next_digits[i] = next_digit;
 
-                let value = snafu_to_base10(next_digits.iter().copied());
+                let value = snafu_to_base10(next_digits.iter());
 
                 if value == n {
                     return next_digits.into_iter().collect();
@@ -4592,7 +4592,7 @@ mod day25 {
         unreachable!();
     }
 
-    fn snafu_to_base10(chars: impl Iterator<Item=char>) -> i64 {
+    fn snafu_to_base10<'a>(chars: impl Iterator<Item=&'a char>) -> i64 {
         chars.fold(0, |total, ch| {
             (total * 5) + match ch {
                 '2' => 2,
@@ -4609,7 +4609,8 @@ mod day25 {
         let mut sum = 0;
 
         for line in input_lines("input_files/day25.txt") {
-            sum += snafu_to_base10(line.chars());
+            let chars: Vec<char> = line.chars().collect();
+            sum += snafu_to_base10(chars.iter());
         }
 
         println!("{}", &base10_to_snafu(sum));
