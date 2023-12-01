@@ -20,12 +20,12 @@ pub fn day1Pt1() !void {
         var offset: usize = 0;
 
         for (line) |ch| {
-            if (ch >= '0' and ch <= '9') {
+            if (std.ascii.isDigit(ch)) {
                 digits[offset] = ch - '0';
 
                 if (offset == 0) {
                     offset += 1;
-                    digits[offset] = ch - '0';
+                    digits[offset] = digits[offset - 1];
                 }
             }
         }
@@ -40,9 +40,6 @@ pub fn day1Pt1() !void {
 }
 
 pub fn day1Pt2() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    _ = arena;
-
     var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
     var reader = file.reader();
@@ -58,30 +55,27 @@ pub fn day1Pt2() !void {
 
         var i: usize = 0;
         while (i < line.len) {
-            var found_value: bool = false;
-            var value: u8 = 0;
+            var value: ?u8 = null;
 
-            if (line[i] >= '0' and line[i] <= '9') {
+            if (std.ascii.isDigit(line[i])) {
                 value = line[i] - '0';
-                found_value = true;
             }
 
-            if (!found_value) {
+            if (value == null) {
                 for (0.., words) |word_idx, word| {
                     if (std.mem.startsWith(u8, line[i..], word)) {
                         value = @intCast(word_idx + 1);
-                        found_value = true;
                         break;
                     }
                 }
             }
 
-            if (found_value) {
-                digits[offset] = value;
+            if (value != null) {
+                digits[offset] = value.?;
 
                 if (offset == 0) {
                     offset += 1;
-                    digits[offset] = value;
+                    digits[offset] = value.?;
                 }
             }
 
