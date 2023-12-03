@@ -6,9 +6,206 @@ pub fn main() !void {
     // try day1Pt1();
     // try day1Pt2();
 
-    try day2Pt1();
-    try day2Pt2();
+    // try day2Pt1();
+    // try day2Pt2();
+
+    try day3Pt1();
+    try day3Pt2();
+
 }
+
+const Coord2d = struct {
+    row: usize,
+    col: usize,
+};
+
+pub fn day3Pt1() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+
+    var width: usize = 0;
+    var height: usize = 0;
+    var grid = std.ArrayList([]const u8).init(allocator);
+
+    var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
+    while (line_it.next()) |line| {
+        width = line.len;
+        height += 1;
+        try grid.append(line);
+    }
+
+    var grid_dims = Coord2d { .row = height, .col = width };
+
+    std.debug.print("{d} x {d}\n", .{width, height});
+
+    var positions_of_interest = std.AutoHashMap(Coord2d, void).init(allocator);
+
+    {
+        var row: usize = 0;
+        while (row < grid_dims.row): (row += 1) {
+            var col: usize = 0;
+            while (col < grid_dims.col): (col += 1) {
+                var ch = grid.items[row][col];
+                if (!std.ascii.isDigit(ch) and ch != '.') {
+                    // Punctuation of interest
+                    for ([_]i8 { -1, 0, 1}) |row_off| {
+                        for ([_]i8 { -1, 0, 1}) |col_off| {
+                            try positions_of_interest.put(Coord2d {
+                                .row = @intCast(@as(isize, @intCast(row)) + row_off),
+                                .col = @intCast(@as(isize, @intCast(col)) + col_off)
+                                }, {});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Walk the grid, find the numbers we care about, add 'em up
+    var total: usize = 0;
+    {
+        var row: usize = 0;
+        while (row < grid_dims.row): (row += 1) {
+            var col: usize = 0;
+            while (col < grid_dims.col): (col += 1) {
+                if (std.ascii.isDigit(grid.items[row][col])) {
+                    var is_counted = false;
+                    var value: usize = 0;
+
+                    while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
+                        if (positions_of_interest.contains(Coord2d { .row = row, .col = col })) {
+                            is_counted = true;
+                        }
+
+                        value *= 10;
+                        value += grid.items[row][col] - '0';
+                    }
+
+                    if (is_counted) {
+                        total += value;
+                    }
+                }
+            }
+        }
+    }
+
+    std.debug.print("Part 1 total was: {d}\n", . {
+        total
+    });
+}
+
+
+pub fn day3Pt2() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+
+    var width: usize = 0;
+    var height: usize = 0;
+    var grid = std.ArrayList([]const u8).init(allocator);
+
+    var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
+    while (line_it.next()) |line| {
+        width = line.len;
+        height += 1;
+        try grid.append(line);
+    }
+
+    var grid_dims = Coord2d { .row = height, .col = width };
+
+    std.debug.print("{d} x {d}\n", .{width, height});
+
+    var positions_of_interest = std.AutoHashMap(Coord2d, std.ArrayList(usize)).init(allocator);
+
+    var gear_ratios = std.ArrayList(usize).init(allocator);
+    var gear_factor_count = std.ArrayList(usize).init(allocator);
+
+    {
+        var row: usize = 0;
+        while (row < grid_dims.row): (row += 1) {
+            var col: usize = 0;
+            while (col < grid_dims.col): (col += 1) {
+                var ch = grid.items[row][col];
+                if (ch == '*') {
+                    try gear_ratios.append(1);
+                    try gear_factor_count.append(0);
+                    var gear_id = gear_ratios.items.len - 1;
+
+                    // Record our gear ID against the positions of interest
+                    //
+                    // Sometimes one number correspond to two gears, so watching for that too...
+                    for ([_]i8 { -1, 0, 1}) |row_off| {
+                        for ([_]i8 { -1, 0, 1}) |col_off| {
+                            var coord = Coord2d {
+                                .row = @intCast(@as(isize, @intCast(row)) + row_off),
+                                .col = @intCast(@as(isize, @intCast(col)) + col_off)
+                            };
+
+                            if (!positions_of_interest.contains(coord)) {
+                                try positions_of_interest.put(coord, std.ArrayList(usize).init(allocator));
+                            }
+
+                            var coord_positions = positions_of_interest.getPtr(coord).?;
+                            try coord_positions.*.append(gear_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Walk the grid, find the numbers we care about, add them to our gear ratios
+    {
+        var row: usize = 0;
+        while (row < grid_dims.row): (row += 1) {
+            var col: usize = 0;
+            while (col < grid_dims.col): (col += 1) {
+                if (std.ascii.isDigit(grid.items[row][col])) {
+                    var gear_ids = try std.DynamicBitSet.initEmpty(allocator, 0);
+                    var value: usize = 0;
+
+                    while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
+                        var coord = Coord2d { .row = row, .col = col };
+
+                        if (positions_of_interest.contains(coord)) {
+                            for (positions_of_interest.get(coord).?.items) |gear_id| {
+                                if (gear_ids.capacity() < (gear_id + 1)) {
+                                    try gear_ids.resize(gear_id + 1, false);
+                                }
+                                gear_ids.set(gear_id);
+                            }
+                        }
+
+                        value *= 10;
+                        value += grid.items[row][col] - '0';
+                    }
+
+                    var bits = gear_ids.iterator(.{});
+                    while (bits.next()) |gear_id| {
+                        gear_ratios.items[gear_id] *= value;
+                        gear_factor_count.items[gear_id] += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    var total: usize = 0;
+    var idx: usize = 0;
+    while (idx < gear_factor_count.items.len): (idx += 1) {
+        if (gear_factor_count.items[idx] == 2) {
+            total += gear_ratios.items[idx];
+        }
+    }
+
+    std.debug.print("Part 2 total gear ratio: {}\n", .{total});
+}
+
 
 const Sample = struct {
     red: u64,
