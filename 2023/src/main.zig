@@ -9,10 +9,135 @@ pub fn main() !void {
     // try day2Pt1();
     // try day2Pt2();
 
-    try day3Pt1();
-    try day3Pt2();
+    // try day3Pt1();
+    // try day3Pt2();
+
+    try day4Pt1();
+    try day4Pt2();
+}
+
+pub fn day4Pt1() !void {
+    var buf: [1024]u8 = undefined;
+
+    var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+    var reader = file.reader();
+
+    var total_score: usize = 0;
+
+    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var score: usize = 0;
+
+        var numbers = blk: {
+            var it = std.mem.splitSequence(u8, line, ": ");
+            _ = it.next();
+            break :blk it.next().?;
+        };
+
+        var sides = std.mem.splitSequence(u8, numbers, " | ");
+        var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
+        {
+            var it = std.mem.window(u8, sides.next().?, 2, 3);
+
+            while (it.next()) |s| {
+                var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+                winning_numbers.set(winner);
+            }
+        }
+
+        var it = std.mem.window(u8, sides.next().?, 2, 3);
+        while (it.next()) |s| {
+            var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+
+            if (winning_numbers.isSet(our_number)) {
+                if (score == 0) {
+                    score = 1;
+                } else {
+                    score *= 2;
+                }
+            }
+        }
+
+        total_score += score;
+    }
+
+    std.debug.print("Part 1 total score was: {d}\n", .{total_score});
 
 }
+
+pub fn day4Pt2() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var buf: [1024]u8 = undefined;
+
+    var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+    var reader = file.reader();
+
+    var card_scores = std.ArrayList(usize).init(allocator);
+
+    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var score: usize = 0;
+
+        var numbers = blk: {
+            var it = std.mem.splitSequence(u8, line, ": ");
+            _ = it.next();
+            break :blk it.next().?;
+        };
+
+        var sides = std.mem.splitSequence(u8, numbers, " | ");
+        var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
+        {
+            var it = std.mem.window(u8, sides.next().?, 2, 3);
+
+            while (it.next()) |s| {
+                var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+                winning_numbers.set(winner);
+            }
+        }
+
+        var it = std.mem.window(u8, sides.next().?, 2, 3);
+        while (it.next()) |s| {
+            var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+
+            if (winning_numbers.isSet(our_number)) {
+                score += 1;
+            }
+        }
+
+        try card_scores.append(score);
+    }
+
+    var queue = std.ArrayList(usize).init(allocator);
+    var cards_handled: usize = 0;
+
+    {
+        var i: usize = 0;
+        while (i < card_scores.items.len): (i += 1) {
+            try queue.append(i);
+        }
+    }
+
+    while (queue.items.len > 0) {
+        var next_item = queue.pop();
+        cards_handled += 1;
+
+        var card_score = card_scores.items[next_item];
+
+        var i: usize = 0;
+        while (i < card_score): (i += 1) {
+            var next_idx = next_item + 1 + i;
+
+            if (next_idx < card_scores.items.len) {
+                try queue.append(next_idx);
+            }
+        }
+    }
+
+    std.debug.print("Part 2 we won a total of {d} cards\n", .{ cards_handled } );
+}
+
 
 const Coord2d = struct {
     row: usize,
@@ -96,7 +221,6 @@ pub fn day3Pt1() !void {
         total
     });
 }
-
 
 pub fn day3Pt2() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
