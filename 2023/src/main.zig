@@ -12,9 +12,112 @@ pub fn main() !void {
     // try day3Pt1();
     // try day3Pt2();
 
-    try day4Pt1();
-    try day4Pt2();
+    // try day4Pt1();
+    // try day4Pt2();
+
+    try day5Pt1();
 }
+
+const MapRange = struct {
+    dst_start: usize,
+    src_start: usize,
+    len: usize,
+};
+
+const Map = struct {
+    ranges: []MapRange,
+
+    fn map(self: *const Map, src_value: usize) usize {
+        for (self.ranges) |range| {
+            if (src_value >= range.src_start and src_value < (range.src_start + range.len)) {
+                // In range
+                return range.dst_start + (src_value - range.src_start);
+            }
+        }
+
+        return src_value;
+    }
+};
+
+pub fn day5Pt1() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var buf: [1024]u8 = undefined;
+    var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    var reader = file.reader();
+
+    var seeds = blk: {
+        var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
+        var tokens = std.mem.splitAny(u8, next_line, ": ");
+        _ = tokens.next();       // label
+        var seeds = std.ArrayList(usize).init(allocator);
+
+        while (tokens.next()) |seed| {
+            if (seed.len > 0) {
+                try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
+            }
+        }
+
+        break :blk seeds;
+    };
+
+    var mappings = std.StringHashMap(Map).init(allocator);
+
+    // Skip empty line
+    try reader.skipUntilDelimiterOrEof('\n');
+
+    while (true) {
+        var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
+        try reader.skipUntilDelimiterOrEof('\n');
+
+        // Read one or more maps
+        var ranges = std.ArrayList(MapRange).init(allocator);
+
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            if (line.len == 0) {
+                break;
+            }
+
+            var it = std.mem.splitAny(u8, line, " ");
+
+            var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+            var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+            var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+
+            try ranges.append(MapRange {
+                .dst_start = dst_start,
+                .src_start = src_start,
+                .len = len,
+            });
+        }
+
+        try mappings.put(label, Map { .ranges = try ranges.toOwnedSlice() });
+    }
+
+    var lowest_location: usize = std.math.maxInt(usize);
+
+    for (seeds.items) |seed| {
+        var mapped: usize = seed;
+
+        mapped = mappings.getPtr("seed-to-soil").?.map(mapped);
+        mapped = mappings.getPtr("soil-to-fertilizer").?.map(mapped);
+        mapped = mappings.getPtr("fertilizer-to-water").?.map(mapped);
+        mapped = mappings.getPtr("water-to-light").?.map(mapped);
+        mapped = mappings.getPtr("light-to-temperature").?.map(mapped);
+        mapped = mappings.getPtr("temperature-to-humidity").?.map(mapped);
+        mapped = mappings.getPtr("humidity-to-location").?.map(mapped);
+
+        if (mapped < lowest_location) {
+            lowest_location = mapped;
+        }
+    }
+
+    std.debug.print("Part 1 lowest location was {d}\n", . {
+        lowest_location
+    });
+}
+
 
 pub fn day4Pt1() !void {
     var buf: [1024]u8 = undefined;
