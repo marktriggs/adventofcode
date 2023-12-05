@@ -16,6 +16,7 @@ pub fn main() !void {
     // try day4Pt2();
 
     try day5Pt1();
+    try day5Pt2();
 }
 
 const MapRange = struct {
@@ -114,6 +115,109 @@ pub fn day5Pt1() !void {
     }
 
     std.debug.print("Part 1 lowest location was {d}\n", . {
+        lowest_location
+    });
+}
+
+
+pub fn day5Pt2() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var buf: [1024]u8 = undefined;
+    var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    var reader = file.reader();
+
+    var seed_ranges = blk: {
+        var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
+        var tokens = std.mem.splitAny(u8, next_line, ": ");
+        _ = tokens.next();       // label
+        var seeds = std.ArrayList(usize).init(allocator);
+
+        while (tokens.next()) |seed| {
+            if (seed.len > 0) {
+                try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
+            }
+        }
+
+        break :blk seeds;
+    };
+
+    var mappings = std.StringHashMap(Map).init(allocator);
+
+    // Skip empty line
+    try reader.skipUntilDelimiterOrEof('\n');
+
+    while (true) {
+        var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
+        try reader.skipUntilDelimiterOrEof('\n');
+
+        // Read one or more maps
+        var ranges = std.ArrayList(MapRange).init(allocator);
+
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            if (line.len == 0) {
+                break;
+            }
+
+            var it = std.mem.splitAny(u8, line, " ");
+
+            var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+            var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+            var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+
+            try ranges.append(MapRange {
+                .dst_start = dst_start,
+                .src_start = src_start,
+                .len = len,
+            });
+        }
+
+        try mappings.put(label, Map { .ranges = try ranges.toOwnedSlice() });
+    }
+
+    var lowest_location: usize = std.math.maxInt(usize);
+
+    var map0 = mappings.getPtr("seed-to-soil").?;
+    var map1 = mappings.getPtr("soil-to-fertilizer").?;
+    var map2 = mappings.getPtr("fertilizer-to-water").?;
+    var map3 = mappings.getPtr("water-to-light").?;
+    var map4 = mappings.getPtr("light-to-temperature").?;
+    var map5 = mappings.getPtr("temperature-to-humidity").?;
+    var map6 = mappings.getPtr("humidity-to-location").?;
+
+    // Still a bit slow, but ran in about 2 minutes.  It feels like I probably could
+    // have merged all the mappings into a single mapping from seed to location up
+    // front, but I didn't, so hah.
+    var i: usize = 0;
+    while (i < seed_ranges.items.len): (i += 2) {
+        var range_start = seed_ranges.items[i];
+        var range_len = seed_ranges.items[i + 1];
+
+        var r: usize = 0;
+        while (r < range_len): (r += 1) {
+            var seed = range_start + r;
+
+            var mapped: usize = seed;
+
+            mapped = map0.map(mapped);
+            mapped = map1.map(mapped);
+            mapped = map2.map(mapped);
+            mapped = map3.map(mapped);
+            mapped = map4.map(mapped);
+            mapped = map5.map(mapped);
+            mapped = map6.map(mapped);
+
+            if (mapped < lowest_location) {
+                std.debug.print("New best: {d}\n", . {
+                    mapped
+                });
+                lowest_location = mapped;
+            }
+        }
+    }
+
+    std.debug.print("Part 2 lowest location was {d}\n", . {
         lowest_location
     });
 }
