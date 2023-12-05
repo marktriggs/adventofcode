@@ -22,18 +22,52 @@ pub fn main() !void {
 const MapRange = struct {
     dst_start: usize,
     src_start: usize,
+    src_end: usize,
     len: usize,
 };
 
 const Map = struct {
     ranges: []MapRange,
 
+    fn new(allocator: std.mem.Allocator, ranges: *[]MapRange) !Map {
+        var sorted_ranges = try allocator.dupe(MapRange, ranges.*);
+
+        std.sort.heap(MapRange, sorted_ranges, {}, lessThanSrcStart);
+
+        return Map {
+            .ranges = sorted_ranges,
+        };
+    }
+
+    fn searchRanges(context: void, src_value: usize, range: MapRange) std.math.Order {
+        _ = context;
+
+        if (src_value < range.src_start) {
+            return .lt;
+        } else if (src_value >= range.src_end) {
+            return .gt;
+        } else {
+            return .eq;
+        }
+    }
+
+    fn lessThanSrcStart(context: void, a: MapRange, b: MapRange) bool {
+        _ = context;
+        return a.src_start < b.src_start;
+    }
+
     fn map(self: *const Map, src_value: usize) usize {
-        for (self.ranges) |range| {
-            if (src_value >= range.src_start and src_value < (range.src_start + range.len)) {
-                // In range
-                return range.dst_start + (src_value - range.src_start);
-            }
+        var idx = std.sort.binarySearch(MapRange,
+                              src_value,
+                              self.ranges,
+                              {},
+                              searchRanges);
+
+        if (idx == null) {
+            return src_value;
+        } else {
+            var range = self.ranges[idx.?];
+            return range.dst_start + (src_value - range.src_start);
         }
 
         return src_value;
@@ -89,11 +123,12 @@ pub fn day5Pt1() !void {
             try ranges.append(MapRange {
                 .dst_start = dst_start,
                 .src_start = src_start,
+                .src_end = src_start + len,
                 .len = len,
             });
         }
 
-        try mappings.put(label, Map { .ranges = try ranges.toOwnedSlice() });
+        try mappings.put(label, try Map.new(allocator, &ranges.items));
     }
 
     var lowest_location: usize = std.math.maxInt(usize);
@@ -169,11 +204,12 @@ pub fn day5Pt2() !void {
             try ranges.append(MapRange {
                 .dst_start = dst_start,
                 .src_start = src_start,
+                .src_end = src_start + len,
                 .len = len,
             });
         }
 
-        try mappings.put(label, Map { .ranges = try ranges.toOwnedSlice() });
+        try mappings.put(label, try Map.new(allocator, &ranges.items));
     }
 
     var lowest_location: usize = std.math.maxInt(usize);
@@ -186,9 +222,6 @@ pub fn day5Pt2() !void {
     var map5 = mappings.getPtr("temperature-to-humidity").?;
     var map6 = mappings.getPtr("humidity-to-location").?;
 
-    // Still a bit slow, but ran in about 2 minutes.  It feels like I probably could
-    // have merged all the mappings into a single mapping from seed to location up
-    // front, but I didn't, so hah.
     var i: usize = 0;
     while (i < seed_ranges.items.len): (i += 2) {
         var range_start = seed_ranges.items[i];
