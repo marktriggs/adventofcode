@@ -18,7 +18,8 @@ pub fn main() !void {
     // try day5Pt1();
     // try day5Pt2();
 
-    try day6Pt1();
+    // try day6Pt1();
+    try day6Pt2();
 }
 
 const RaceResult = struct {
@@ -59,6 +60,27 @@ pub fn day6Pt1() !void {
     }
 
     std.debug.print("Part 1 result: {}\n", .{result});
+}
+
+pub fn day6Pt2() !void {
+    // 71503
+    // var race = RaceResult { .race_time_ms = 71530, .winning_distance_mm = 940200 };
+
+    var race = RaceResult { .race_time_ms = 41968894, .winning_distance_mm = 214178911271055 };
+
+    var win_count: usize = 0;
+
+    var hold_ms: usize = 1;
+    while (hold_ms < race.race_time_ms): (hold_ms += 1) {
+        var distance_travelled_mm = (race.race_time_ms - hold_ms) * hold_ms;
+
+        if (distance_travelled_mm > race.winning_distance_mm) {
+            // std.debug.print("Can win race by holding for {d} ms (travelled {d} mm)\n", .{hold_ms, distance_travelled_mm});
+            win_count += 1;
+        }
+    }
+
+    std.debug.print("Part 2 win count: {}\n", .{win_count});
 }
 
 
