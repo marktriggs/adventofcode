@@ -1,4 +1,4 @@
-// (cd /mnt/ssd/mst-home/projects/adventofcode/2023/src && zig run main.zig)
+// (cd /mnt/ssd/mst-home/projects/adventofcode/2023/src && zig build-exe -O ReleaseFast main.zig && ./main)
 
 const std = @import("std");
 
@@ -15,9 +15,53 @@ pub fn main() !void {
     // try day4Pt1();
     // try day4Pt2();
 
-    try day5Pt1();
-    try day5Pt2();
+    // try day5Pt1();
+    // try day5Pt2();
+
+    try day6Pt1();
 }
+
+const RaceResult = struct {
+    race_time_ms: usize,
+    winning_distance_mm: usize,
+};
+
+pub fn day6Pt1() !void {
+    // var races = [_]RaceResult {
+    //     RaceResult { .race_time_ms = 7, .winning_distance_mm = 9 },
+    //     RaceResult { .race_time_ms = 15, .winning_distance_mm = 40 },
+    //     RaceResult { .race_time_ms = 30, .winning_distance_mm = 200 },
+    // };
+
+    var races = [_]RaceResult {
+        RaceResult { .race_time_ms = 41, .winning_distance_mm = 214 },
+        RaceResult { .race_time_ms = 96, .winning_distance_mm = 1789 },
+        RaceResult { .race_time_ms = 88, .winning_distance_mm = 1127 },
+        RaceResult { .race_time_ms = 94, .winning_distance_mm = 1055 },
+    };
+
+    var result: usize = 1;
+
+    for (races) |race| {
+        var win_count: usize = 0;
+
+        var hold_ms: usize = 1;
+        while (hold_ms < race.race_time_ms): (hold_ms += 1) {
+            var distance_travelled_mm = (race.race_time_ms - hold_ms) * hold_ms;
+
+            if (distance_travelled_mm > race.winning_distance_mm) {
+                // std.debug.print("Can win race by holding for {d} ms (travelled {d} mm)\n", .{hold_ms, distance_travelled_mm});
+                win_count += 1;
+            }
+        }
+
+        result *= win_count;
+    }
+
+    std.debug.print("Part 1 result: {}\n", .{result});
+}
+
+
 
 const MapRange = struct {
     dst_start: usize,
