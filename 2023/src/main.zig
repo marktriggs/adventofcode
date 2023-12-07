@@ -21,7 +21,8 @@ pub fn main() !void {
     // try day6Pt1();
     // try day6Pt2();
 
-    try day7Pt1();
+    // try day7Pt1();
+    try day7Pt2();
 
 }
 
@@ -140,6 +141,140 @@ pub fn day7Pt1() !void {
     }
 
     std.debug.print("Part 1 total: {}\n", . {
+        total
+    });
+}
+
+
+const HandPt2 = struct {
+    const CardOrdering = "J23456789TQKA";
+
+    cards: []const u8,
+
+    fn handType(self: *const HandPt2) HandType {
+        var card_frequencies = std.mem.zeroes([256]usize);
+
+        var wildcard_count: usize = 0;
+
+        for (self.cards) |card| {
+            if (card == 'J') {
+                wildcard_count += 1;
+            } else {
+                card_frequencies[card] += 1;
+            }
+        }
+
+        // Apply wildcards: just boost the highest card frequency until we run out
+        while (wildcard_count > 0): (wildcard_count -= 1) {
+            var max_frequency: usize = 0;
+
+            for (card_frequencies) |f| {
+                if (f > max_frequency) {
+                    max_frequency = f;
+                }
+            }
+
+            var i: usize = 0;
+            while (i < card_frequencies.len): (i += 1) {
+                if (card_frequencies[i] == max_frequency) {
+                    card_frequencies[i] += 1;
+                    break;
+                }
+            }
+        }
+
+        var frequency_frequencies = std.mem.zeroes([6]usize);
+
+        for (card_frequencies) |freq| {
+            if (freq > 0) {
+                frequency_frequencies[freq] += 1;
+            }
+        }
+
+        if (frequency_frequencies[5] == 1) { return HandType.five_of_a_kind; }
+        if (frequency_frequencies[4] == 1) { return HandType.four_of_a_kind; }
+        if (frequency_frequencies[3] == 1 and frequency_frequencies[2] == 1) { return HandType.full_house; }
+        if (frequency_frequencies[3] == 1) { return HandType.three_of_a_kind; }
+        if (frequency_frequencies[2] == 2) { return HandType.two_pair; }
+        if (frequency_frequencies[2] == 1) { return HandType.one_pair; }
+
+        return HandType.high_card;
+    }
+
+    fn isLessThan(self: *const HandPt2, other: *const HandPt2) bool {
+        var self_type = self.handType();
+        var other_type = other.handType();
+
+        if (self_type == other_type) {
+            var i: usize = 0;
+            while (i < self.cards.len): (i += 1) {
+                if (std.mem.indexOfScalar(u8, CardOrdering, self.cards[i]).? == std.mem.indexOfScalar(u8, CardOrdering, other.cards[i]).?) {
+                    // continue
+                } else {
+                    return std.mem.indexOfScalar(u8, CardOrdering, self.cards[i]).? < std.mem.indexOfScalar(u8, CardOrdering, other.cards[i]).?;
+                }
+            }
+        } else {
+            return @intFromEnum(self_type) < @intFromEnum(other_type);
+        }
+
+        unreachable();
+    }
+};
+
+const HandBidPt2 = struct {
+    hand: HandPt2,
+    bid: usize,
+
+    fn compareHandBid(context: void, a: HandBidPt2, b: HandBidPt2) bool {
+        _ = context;
+
+        return a.hand.isLessThan(&b.hand);
+    }
+};
+
+
+pub fn day7Pt2() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var file = try std.fs.cwd().openFile("input_files/day7.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+    var buf: [1024]u8 = undefined;
+    var reader = file.reader();
+    var hand_bids = std.ArrayList(HandBidPt2).init(allocator);
+
+    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var it = std.mem.splitSequence(u8, line, " ");
+
+        var cards = it.next().?;
+        var bid = it.next().?;
+
+        try hand_bids.append(HandBidPt2 {
+            .hand = HandPt2 { .cards = try allocator.dupe(u8, cards) },
+            .bid = try std.fmt.parseUnsigned(usize, bid, 10),
+        });
+    }
+
+    std.sort.heap(HandBidPt2, hand_bids.items, {}, HandBidPt2.compareHandBid);
+
+    var total: usize  = 0;
+    var count: usize  = 0;
+    for (hand_bids.items) |hand_bid| {
+        count += 1;
+
+        std.debug.print("{s} - {any} - bid:{d} - ({d} * {d})\n", .{
+            hand_bid.hand.cards,
+            hand_bid.hand.handType(),
+            hand_bid.bid,
+            count,
+            hand_bid.bid,
+        });
+
+        total += hand_bid.bid * count;
+    }
+
+    std.debug.print("Part 2 total: {}\n", . {
         total
     });
 }
