@@ -19,8 +19,131 @@ pub fn main() !void {
     // try day5Pt2();
 
     // try day6Pt1();
-    try day6Pt2();
+    // try day6Pt2();
+
+    try day7Pt1();
+
 }
+
+const HandType = enum(u8) {
+    high_card,
+    one_pair,
+    two_pair,
+    three_of_a_kind,
+    full_house,
+    four_of_a_kind,
+    five_of_a_kind,
+};
+
+
+const Hand = struct {
+    const CardOrdering = "23456789TJQKA";
+
+    cards: []const u8,
+
+    fn handType(self: *const Hand) HandType {
+        var card_frequencies = std.mem.zeroes([256]usize);
+
+        for (self.cards) |card| {
+            card_frequencies[card] += 1;
+        }
+
+        var frequency_frequencies = std.mem.zeroes([6]usize);
+
+        for (card_frequencies) |freq| {
+            if (freq > 0) {
+                frequency_frequencies[freq] += 1;
+            }
+        }
+
+        if (frequency_frequencies[5] == 1) { return HandType.five_of_a_kind; }
+        if (frequency_frequencies[4] == 1) { return HandType.four_of_a_kind; }
+        if (frequency_frequencies[3] == 1 and frequency_frequencies[2] == 1) { return HandType.full_house; }
+        if (frequency_frequencies[3] == 1) { return HandType.three_of_a_kind; }
+        if (frequency_frequencies[2] == 2) { return HandType.two_pair; }
+        if (frequency_frequencies[2] == 1) { return HandType.one_pair; }
+
+        return HandType.high_card;
+    }
+
+    fn isLessThan(self: *const Hand, other: *const Hand) bool {
+        var self_type = self.handType();
+        var other_type = other.handType();
+
+        if (self_type == other_type) {
+            var i: usize = 0;
+            while (i < self.cards.len): (i += 1) {
+                if (std.mem.indexOfScalar(u8, CardOrdering, self.cards[i]).? == std.mem.indexOfScalar(u8, CardOrdering, other.cards[i]).?) {
+                    // continue
+                } else {
+                    return std.mem.indexOfScalar(u8, CardOrdering, self.cards[i]).? < std.mem.indexOfScalar(u8, CardOrdering, other.cards[i]).?;
+                }
+            }
+        } else {
+            return @intFromEnum(self_type) < @intFromEnum(other_type);
+        }
+
+        unreachable();
+    }
+};
+
+const HandBid = struct {
+    hand: Hand,
+    bid: usize,
+
+    fn compareHandBid(context: void, a: HandBid, b: HandBid) bool {
+        _ = context;
+
+        return a.hand.isLessThan(&b.hand);
+    }
+};
+
+
+pub fn day7Pt1() !void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var allocator = arena.allocator();
+
+    var file = try std.fs.cwd().openFile("input_files/day7.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+    var buf: [1024]u8 = undefined;
+    var reader = file.reader();
+    var hand_bids = std.ArrayList(HandBid).init(allocator);
+
+    while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var it = std.mem.splitSequence(u8, line, " ");
+
+        var cards = it.next().?;
+        var bid = it.next().?;
+
+        try hand_bids.append(HandBid {
+            .hand = Hand { .cards = try allocator.dupe(u8, cards) },
+            .bid = try std.fmt.parseUnsigned(usize, bid, 10),
+        });
+    }
+
+    std.sort.heap(HandBid, hand_bids.items, {}, HandBid.compareHandBid);
+
+    var total: usize  = 0;
+    var count: usize  = 0;
+    for (hand_bids.items) |hand_bid| {
+        count += 1;
+
+        std.debug.print("{s} - {any} - bid:{d} - ({d} * {d})\n", .{
+            hand_bid.hand.cards,
+            hand_bid.hand.handType(),
+            hand_bid.bid,
+            count,
+            hand_bid.bid,
+        });
+
+        total += hand_bid.bid * count;
+    }
+
+    std.debug.print("Part 1 total: {}\n", . {
+        total
+    });
+}
+
 
 const RaceResult = struct {
     race_time_ms: usize,
