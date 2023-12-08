@@ -25,6 +25,7 @@ pub fn main() !void {
     // try Day7.Pt2.day7Pt2();
 
     try Day8.day8Pt1();
+    try Day8.day8Pt2();
 
 }
 
@@ -81,6 +82,82 @@ const Day8 = struct {
         }
 
         std.debug.print("Part 1: found the exit in {d} steps\n", .{step_count});
+    }
+
+
+    const Path = struct {
+        current_node: []const u8,
+    };
+
+    pub fn day8Pt2() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var file = try std.fs.cwd().openFile("input_files/day8.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+        var reader = file.reader();
+        var buf: [1024]u8 = undefined;
+
+        var directions = try allocator.dupe(u8, (try reader.readUntilDelimiterOrEof(&buf, '\n')).?);
+
+        // Skip the blank line
+        _ = try reader.readUntilDelimiterOrEof(&buf, '\n');
+
+        var mappings = std.StringHashMap(Direction).init(allocator);
+
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            var tokens = std.mem.tokenizeAny(u8, line, " =(),");
+
+            var src = try allocator.dupe(u8, tokens.next().?);
+            var lhs = try allocator.dupe(u8, tokens.next().?);
+            var rhs = try allocator.dupe(u8, tokens.next().?);
+
+            try mappings.put(src, Direction { .left = lhs, .right = rhs });
+        }
+
+        var paths = std.ArrayList(Path).init(allocator);
+
+        var keys = mappings.keyIterator();
+        while (keys.next()) |node| {
+            if (std.mem.endsWith(u8, node.*, "A")) {
+                try paths.append(Path { .current_node = node.* });
+            }
+        }
+
+        var idx: usize = 0;
+        var step_count: usize = 0;
+
+        while (true) {
+            var all_at_end = true;
+            for (paths.items) |path| {
+                if (!std.mem.endsWith(u8, path.current_node, "Z")) {
+                    all_at_end = false;
+                }
+            }
+
+            if (all_at_end) {
+                break;
+            }
+
+            var path_idx: usize = 0;
+            while (path_idx < paths.items.len): (path_idx += 1) {
+                var path = &paths.items[path_idx];
+                var next_mapping = mappings.getPtr(path.current_node).?;
+                if (directions[idx] == 'L') {
+                    path.current_node = next_mapping.left;
+                } else {
+                    path.current_node = next_mapping.right;
+                }
+            }
+
+            step_count += 1;
+            idx += 1;
+            if (idx >= directions.len) {
+                idx = 0;
+            }
+        }
+
+        std.debug.print("Part 2: found the exit in {d} steps\n", .{step_count});
     }
 };
 
