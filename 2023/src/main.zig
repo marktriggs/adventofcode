@@ -3,28 +3,87 @@
 const std = @import("std");
 
 pub fn main() !void {
-    try Day1.day1Pt1();
-    try Day1.day1Pt2();
+    // try Day1.day1Pt1();
+    // try Day1.day1Pt2();
+    //
+    // try Day2.day2Pt1();
+    // try Day2.day2Pt2();
+    //
+    // try Day3.day3Pt1();
+    // try Day3.day3Pt2();
+    //
+    // try Day4.day4Pt1();
+    // try Day4.day4Pt2();
+    //
+    // try Day5.day5Pt1();
+    // try Day5.day5Pt2();
+    //
+    // try Day6.day6Pt1();
+    // try Day6.day6Pt2();
+    //
+    // try Day7.Pt1.day7Pt1();
+    // try Day7.Pt2.day7Pt2();
 
-    try Day2.day2Pt1();
-    try Day2.day2Pt2();
-
-    try Day3.day3Pt1();
-    try Day3.day3Pt2();
-
-    try Day4.day4Pt1();
-    try Day4.day4Pt2();
-
-    try Day5.day5Pt1();
-    try Day5.day5Pt2();
-
-    try Day6.day6Pt1();
-    try Day6.day6Pt2();
-
-    try Day7.Pt1.day7Pt1();
-    try Day7.Pt2.day7Pt2();
+    try Day8.day8Pt1();
 
 }
+
+const Day8 = struct {
+
+    const Direction = struct {
+        left: []u8,
+        right: []u8,
+    };
+
+    pub fn day8Pt1() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var file = try std.fs.cwd().openFile("input_files/day8.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+        var reader = file.reader();
+        var buf: [1024]u8 = undefined;
+
+        var directions = try allocator.dupe(u8, (try reader.readUntilDelimiterOrEof(&buf, '\n')).?);
+
+        // Skip the blank line
+        _ = try reader.readUntilDelimiterOrEof(&buf, '\n');
+
+        var mappings = std.StringHashMap(Direction).init(allocator);
+
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            var tokens = std.mem.tokenizeAny(u8, line, " =(),");
+
+            var src = try allocator.dupe(u8, tokens.next().?);
+            var lhs = try allocator.dupe(u8, tokens.next().?);
+            var rhs = try allocator.dupe(u8, tokens.next().?);
+
+            try mappings.put(src, Direction { .left = lhs, .right = rhs });
+        }
+
+        var step_count: usize = 0;
+
+        var idx: usize = 0;
+        var current_node: []const u8 = "AAA";
+        while (!std.mem.eql(u8, current_node, "ZZZ")) {
+            step_count += 1;
+            var next_mapping = mappings.getPtr(current_node).?;
+            if (directions[idx] == 'L') {
+                current_node = next_mapping.left;
+            } else {
+                current_node = next_mapping.right;
+            }
+
+            idx += 1;
+            if (idx >= directions.len) {
+                idx = 0;
+            }
+        }
+
+        std.debug.print("Part 1: found the exit in {d} steps\n", .{step_count});
+    }
+};
+
 
 const Day7 = struct {
 
