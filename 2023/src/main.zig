@@ -31,6 +31,130 @@ pub fn main() !void {
 
 const Day8 = struct {
 
+    // Dumping a bunch of notes in here because I ended up solving PT2 by hand:
+
+
+    // Path 4 first cycles at node295 idx4 after 12087 steps with cycle length of 12083.  End is 12079 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 5 first cycles at node349 idx2 after 13209 steps with cycle length of 13207.  End is 13205 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 2 first cycles at node35 idx2 after 17143 steps with cycle length of 17141.  End is 17139 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 1 first cycles at node699 idx4 after 18831 steps with cycle length of 18827.  End is 18823 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 0 first cycles at node122 idx7 after 20520 steps with cycle length of 20513.  End is 20506 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 3 first cycles at node324 idx2 after 22201 steps with cycle length of 22199.  End is 22197 steps from start of cycle (cycle contains 1 end nodes)
+    //
+    // Path 4 reached end at T 24166
+    // Path 5 reached end at T 26414
+    // Path 2 reached end at T 34282
+    // Path 1 reached end at T 37654
+    // Path 0 reached end at T 41026
+    // Path 3 reached end at T 44398
+    //
+    //
+    // let's look at T = 24166
+    //
+    //   Path 4 is at its end (cycle start: 12087; position in cycle (- 24166 12087) 12079 which is end)
+    //   Path 5 is (cycle start: 13209; position in cycle (- 24166 13209) 10957 which is (- 13205 10957) 2248 steps away from end)
+    //   Path 2 is (cycle start: 17143; position in cycle (- 24166 17143) 7023 which is (- 17139 7023) 10116 steps away from end)
+    //   Path 1 is (cycle start: 18831; position in cycle (- 24166 18831) 5335 which is (- 18823 5335) 13488 steps away from end)
+    //   Path 0 is (cycle start: 20520; position in cycle (- 24166 20520) 3646 which is (- 20506 3646) 16860 steps away from end)
+    //   Path 3 is (cycle start: 22201; position in cycle (- 24166 22201) 1965 which is (- 22197 1965) 20232 steps away from end)
+    //
+    // path 4 has a cycle length of 12083
+    //
+    //
+    //
+    // Paths we're tracking:
+    //
+    // Path 4 first cycles at node295 idx4 after 12087 steps with cycle length of 12083.  End is 12079 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 5 first cycles at node349 idx2 after 13209 steps with cycle length of 13207.  End is 13205 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 2 first cycles at node35 idx2 after 17143 steps with cycle length of 17141.  End is 17139 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 1 first cycles at node699 idx4 after 18831 steps with cycle length of 18827.  End is 18823 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 0 first cycles at node122 idx7 after 20520 steps with cycle length of 20513.  End is 20506 steps from start of cycle (cycle contains 1 end nodes)
+    // Path 3 first cycles at node324 idx2 after 22201 steps with cycle length of 22199.  End is 22197 steps from start of cycle (cycle contains 1 end nodes)
+    //
+    // Path 4: cycle start: 12087.  cycle length 12083 steps.  End is 12079 steps from start of cycle
+    // Path 5: cycle start: 13209.  cycle length 13207 steps.  End is 13205 steps from start of cycle
+    // Path 2: cycle start: 17143.  cycle length 17141 steps.  End is 17139 steps from start of cycle
+    // Path 1: cycle start: 18831.  cycle length 18827 steps.  End is 18823 steps from start of cycle
+    // Path 0: cycle start: 20520.  cycle length 20513 steps.  End is 20506 steps from start of cycle
+    // Path 3: cycle start: 22201.  cycle length 22199 steps.  End is 22197 steps from start of cycle
+    //
+    //
+    // at T = 24166, Path 4 hits its end position for the first time.  At this time:
+    //
+    // Path 4 is at position (- 24166 12087) 12079 in its cycle
+    // Path 5 is at position (- 24166 13209) 10957 in its cycle
+    // Path 2 is at position (- 24166 17143) 7023 in its cycle
+    // Path 1 is at position (- 24166 18831) 5335 in its cycle
+    // Path 0 is at position (- 24166 20520) 3646 in its cycle
+    // Path 3 is at position (- 24166 22201) 1965 in its cycle
+    //
+    //
+    // Path 5's end position is 13205 steps from the start of its cycle.  We can keep adding multiples of Path 4's cycle length (12083) to advance Path 5
+    //
+    // We are done when:
+    //
+    //   10957 + (12083 * N) % 13207 == 13205
+    //
+    // That's N = 45
+    //
+    // So we advance T += (* 12083 45) 543735
+    //
+    // At T = (+ 24166 543735) = 567901
+    //
+    // Path 4 is at position 12079
+    // Path 5 is at position 13205
+    //
+    // Path 2 has moved as well.  It was at 7023, and now it's at:
+    //
+    //   (7023 + 543735) % 17141  = 2246
+    //
+    // Path 2 will be in position when:
+    //
+    //   2246 + (LCM(12083, 13207) * N) % 17141 = 17139
+    //
+    // LCM(12083, 13207) is 567901
+    //
+    // Solving for N...
+    //
+    // N = 1124
+    //
+    // So we advance T += (* 1124 567901) = 638320724
+    //
+    // At T = (+ 567901 638320724) 638888625
+    //
+    // Path 4 is at position 12079
+    // Path 5 is at position 13205
+    // Path 2 is at position 17139
+    //
+    // Path 1 has moved.  Back at T = 24166, it was at position 5335, and now it's at
+    //
+    //   (% (+ 5535 543735 638320724) 18827) 13403
+    //
+    // Path 1 will be in position when:
+    //
+    //   13403 + (LCM(12083, 13207, 17141) * N) % 13403 = 18823
+    //
+    // LCM(12083, 13207, 17141) = 34641961
+    //
+    // Solving for N
+    //
+    //
+    // NOTE: At this point, solving for N in the above turned out to be hard.  Seems
+    // like it was a very large N.  But then I noticed that:
+    //
+    // LCM(12083, 13207) is 567901
+    //
+    // and that was exactly the amount I'd worked out to tick T by.  Could it be
+    // that the T value we're looking for is just the LCM of all of the cycle
+    // lengths?
+    //
+    // Answer: YES INDEED.  It seems that the input was engineered to make this work
+    // out, but besides noticing the pattern and having a guess, I'm still not sure
+    // what the "right" way of knowing this was.
+    //
+    //
+    // Part2: 13,385,272,668,829
+    //
     const Pt1 = struct {
         const Direction = struct {
             left: []u8,
@@ -124,7 +248,6 @@ const Day8 = struct {
                     var rhs = try allocator.dupe(u8, tokens.next().?);
 
                     if (!string_table.contains(src)) {
-                        std.debug.print("Interning src '{s}'\n", .{src});
                         try string_table.put(src, next_string_id);
                         next_string_id += 1;
                     }
@@ -139,13 +262,11 @@ const Day8 = struct {
 
 
                     if (!string_table.contains(lhs)) {
-                        std.debug.print("Interning lhs '{s}'\n", .{lhs});
                         try string_table.put(lhs, next_string_id);
                         next_string_id += 1;
                     }
 
                     if (!string_table.contains(rhs)) {
-                        std.debug.print("Interning rhs '{s}'\n", .{rhs});
                         try string_table.put(rhs, next_string_id);
                         next_string_id += 1;
                     }
@@ -193,6 +314,7 @@ const Day8 = struct {
             cycle_length: ?usize,
             start_cycle_key: ?u32,
             start_cycle_steps: ?usize,
+            steps_to_end: ?usize,
             end_node_count_in_cycle: usize,
         };
 
@@ -209,17 +331,13 @@ const Day8 = struct {
 
             var bits = mappings.start_set.iterator(.{});
             while (bits.next()) |start_id| {
-                std.debug.print("Start node at {d} is {d}\n", . {
-                    paths.items.len,
-                    start_id,
-                });
-
                 try paths.append(Path {
                     .current_node = @intCast(start_id),
                     .visited = try std.DynamicBitSet.initEmpty(allocator, std.math.maxInt(u32)),
                     .cycle_length = null,
                     .start_cycle_key = null,
                     .start_cycle_steps = null,
+                    .steps_to_end = null,
                     .end_node_count_in_cycle = 0,
                 });
             }
@@ -234,6 +352,7 @@ const Day8 = struct {
                         continue;
                     }
 
+
                     var position_key: u32 = (@as(u32, path.current_node) << 16) | @as(u32, @intCast(idx));
                     // std.debug.print("{d} + {d} = {d}\n", .{path.current_node, idx, position_key});
                     if (path.start_cycle_key == null) {
@@ -246,16 +365,19 @@ const Day8 = struct {
                     } else {
                         if (mappings.end_set.isSet(path.current_node)) {
                             path.end_node_count_in_cycle += 1;
+                            path.steps_to_end = step_count - path.start_cycle_steps.?;
+                            std.debug.print("Path {d} reached end at T {d}\n", .{path_idx, step_count});
                         }
 
                         if (position_key == path.start_cycle_key.?) {
                             path.cycle_length = step_count - path.start_cycle_steps.?;
-                            std.debug.print("Path {d} first cycles at node{d} idx{d} after {d} steps with cycle length of {d} (cycle contains {d} end nodes)\n", .{
+                            std.debug.print("Path {d} first cycles at node{d} idx{d} after {d} steps with cycle length of {d}.  End is {d} steps from start of cycle (cycle contains {d} end nodes)\n", .{
                                 path_idx,
                                 path.current_node,
                                 idx,
                                 path.start_cycle_steps.?,
                                 path.cycle_length.?,
+                                path.steps_to_end.?,
                                 path.end_node_count_in_cycle,
                             });
                         }
