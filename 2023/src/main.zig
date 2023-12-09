@@ -24,10 +24,85 @@ pub fn main() !void {
     // try Day7.Pt1.day7Pt1();
     // try Day7.Pt2.day7Pt2();
 
-    try Day8.Pt1.day8Pt1();
-    try Day8.Pt2.day8Pt2();
+    // try Day8.Pt1.day8Pt1();
+    // try Day8.Pt2.day8Pt2();
 
+    try Day9.Pt1.day9Pt1();
 }
+
+const Day9 = struct {
+    const Pt1 = struct {
+
+        fn nextInSequence(allocator: std.mem.Allocator, sequence: []isize) !isize {
+            var last_sequence = sequence;
+            var differences = std.ArrayList([]isize).init(allocator);
+
+            try differences.append(sequence);
+
+            // Calculate the differences until we hit all zeroes
+            while (true) {
+                var successive_differences = std.ArrayList(isize).init(allocator);
+
+                var all_zeroes: bool = true;
+
+                var i: usize = 1;
+                while (i < last_sequence.len): (i += 1) {
+                    var difference = last_sequence[i] - last_sequence[i - 1];
+                    try successive_differences.append(difference);
+
+                    all_zeroes = all_zeroes and (difference == 0);
+                }
+
+                try differences.append(successive_differences.items);
+
+                if (all_zeroes) {
+                    break;
+                }
+
+                last_sequence = successive_differences.items;
+            }
+
+            // Extrapolate upwards
+            var next_elt: isize = 0;
+
+            for (differences.items) |ds| {
+                next_elt += ds[ds.len - 1];
+            }
+
+            return next_elt;
+        }
+
+
+        pub fn day9Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day9.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var total: isize = 0;
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var tokens = std.mem.tokenizeAny(u8, line, " ");
+                var sequence = std.ArrayList(isize).init(allocator);
+
+                while (tokens.next()) |n| {
+                        try sequence.append(try std.fmt.parseInt(isize, n, 10));
+                }
+
+                var next_in_sequence = try nextInSequence(allocator, sequence.items);
+
+                total += next_in_sequence;
+            }
+
+            std.debug.print("Total: {d}\n", . {
+                total
+            });
+        }
+    };
+};
+
 
 const Day8 = struct {
 
