@@ -28,6 +28,7 @@ pub fn main() !void {
     // try Day8.Pt2.day8Pt2();
 
     try Day9.Pt1.day9Pt1();
+    try Day9.Pt2.day9Pt2();
 }
 
 const Day9 = struct {
@@ -92,6 +93,88 @@ const Day9 = struct {
                 }
 
                 var next_in_sequence = try nextInSequence(allocator, sequence.items);
+
+                total += next_in_sequence;
+            }
+
+            std.debug.print("Total: {d}\n", . {
+                total
+            });
+        }
+    };
+
+    const Pt2 = struct {
+
+        fn nextInSequence(allocator: std.mem.Allocator, sequence: []isize) !isize {
+            var last_sequence = sequence;
+            var differences = std.ArrayList([]isize).init(allocator);
+
+            try differences.append(sequence);
+
+            // Calculate the differences until we hit all zeroes
+            while (true) {
+                var successive_differences = std.ArrayList(isize).init(allocator);
+
+                var all_zeroes: bool = true;
+
+                var i: usize = 1;
+                while (i < last_sequence.len): (i += 1) {
+                    var difference = last_sequence[i] - last_sequence[i - 1];
+                    try successive_differences.append(difference);
+
+                    all_zeroes = all_zeroes and (difference == 0);
+                }
+
+                try differences.append(successive_differences.items);
+
+                if (all_zeroes) {
+                    break;
+                }
+
+                last_sequence = successive_differences.items;
+            }
+
+            // Extrapolate upwards and BACKWARDS
+            var next_elt: isize = 0;
+
+            var idx = differences.items.len - 2;
+
+            while (true) {
+                // std.debug.print("  {d} - {d} - {d}\n", .{differences.items[idx][0], next_elt, differences.items[idx][0] - next_elt});
+                next_elt = differences.items[idx][0] - next_elt;
+
+                if (idx > 0) {
+                    idx -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            return next_elt;
+        }
+
+
+        pub fn day9Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day9.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var total: isize = 0;
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var tokens = std.mem.tokenizeAny(u8, line, " ");
+                var sequence = std.ArrayList(isize).init(allocator);
+
+                while (tokens.next()) |n| {
+                        try sequence.append(try std.fmt.parseInt(isize, n, 10));
+                }
+
+                var next_in_sequence = try nextInSequence(allocator, sequence.items);
+
+                // std.debug.print("{s} ... {d}\n", .{line, next_in_sequence});
 
                 total += next_in_sequence;
             }
