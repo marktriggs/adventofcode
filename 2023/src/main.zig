@@ -87,10 +87,6 @@ const Day8 = struct {
     };
 
     const Pt2 = struct {
-        const Path = struct {
-            current_node: u16,
-        };
-
         const Direction = struct {
             left: u16,
             right: u16,
@@ -128,25 +124,28 @@ const Day8 = struct {
                     var rhs = try allocator.dupe(u8, tokens.next().?);
 
                     if (!string_table.contains(src)) {
+                        std.debug.print("Interning src '{s}'\n", .{src});
                         try string_table.put(src, next_string_id);
                         next_string_id += 1;
                     }
 
                     if (std.mem.endsWith(u8, src, "A")) {
-                        start_set.set(next_string_id - 1);
+                        start_set.set(string_table.get(src).?);
                     }
 
                     if (std.mem.endsWith(u8, src, "Z")) {
-                        end_set.set(next_string_id - 1);
+                        end_set.set(string_table.get(src).?);
                     }
 
 
                     if (!string_table.contains(lhs)) {
+                        std.debug.print("Interning lhs '{s}'\n", .{lhs});
                         try string_table.put(lhs, next_string_id);
                         next_string_id += 1;
                     }
 
                     if (!string_table.contains(rhs)) {
+                        std.debug.print("Interning rhs '{s}'\n", .{rhs});
                         try string_table.put(rhs, next_string_id);
                         next_string_id += 1;
                     }
@@ -188,6 +187,15 @@ const Day8 = struct {
             };
         }
 
+        const Path = struct {
+            current_node: u16,
+            visited: std.DynamicBitSet,
+            cycle_length: ?usize,
+            start_cycle_key: ?u32,
+            start_cycle_steps: ?usize,
+            end_node_count_in_cycle: usize,
+        };
+
         pub fn day8Pt2() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -201,31 +209,74 @@ const Day8 = struct {
 
             var bits = mappings.start_set.iterator(.{});
             while (bits.next()) |start_id| {
-                try paths.append(Path { .current_node = @intCast(start_id) });
+                std.debug.print("Start node at {d} is {d}\n", . {
+                    paths.items.len,
+                    start_id,
+                });
+
+                try paths.append(Path {
+                    .current_node = @intCast(start_id),
+                    .visited = try std.DynamicBitSet.initEmpty(allocator, std.math.maxInt(u32)),
+                    .cycle_length = null,
+                    .start_cycle_key = null,
+                    .start_cycle_steps = null,
+                    .end_node_count_in_cycle = 0,
+                });
             }
 
             while (true) {
-                var all_at_end = true;
-                for (paths.items) |path| {
-                    if (!mappings.end_set.isSet(path.current_node)) {
-                        all_at_end = false;
-                        break;
-                    }
-                }
-
-                if (all_at_end) {
-                    break;
-                }
-
                 var path_idx: usize = 0;
+                var all_cycled = true;
                 while (path_idx < paths.items.len): (path_idx += 1) {
                     var path = &paths.items[path_idx];
+
+                    if (path.cycle_length != null) {
+                        continue;
+                    }
+
+                    var position_key: u32 = (@as(u32, path.current_node) << 16) | @as(u32, @intCast(idx));
+                    // std.debug.print("{d} + {d} = {d}\n", .{path.current_node, idx, position_key});
+                    if (path.start_cycle_key == null) {
+                        if (path.visited.isSet(position_key)) {
+                            path.start_cycle_key = @intCast(position_key);
+                            path.start_cycle_steps = step_count;
+                        } else {
+                            path.visited.set(position_key);
+                        }
+                    } else {
+                        if (mappings.end_set.isSet(path.current_node)) {
+                            path.end_node_count_in_cycle += 1;
+                        }
+
+                        if (position_key == path.start_cycle_key.?) {
+                            path.cycle_length = step_count - path.start_cycle_steps.?;
+                            std.debug.print("Path {d} first cycles at node{d} idx{d} after {d} steps with cycle length of {d} (cycle contains {d} end nodes)\n", .{
+                                path_idx,
+                                path.current_node,
+                                idx,
+                                path.start_cycle_steps.?,
+                                path.cycle_length.?,
+                                path.end_node_count_in_cycle,
+                            });
+                        }
+                    }
+
+                    if (path.cycle_length == null) {
+                        all_cycled = false;
+                    }
+
                     var next_mapping = &mappings.map[path.current_node].?;
                     if (mappings.input[idx] == 'L') {
                         path.current_node = next_mapping.left;
-                    } else {
+                    } else if (mappings.input[idx] == 'R')  {
                         path.current_node = next_mapping.right;
+                    } else {
+                        unreachable;
                     }
+                }
+
+                if (all_cycled) {
+                    break;
                 }
 
                 step_count += 1;
@@ -234,8 +285,6 @@ const Day8 = struct {
                     idx = 0;
                 }
             }
-
-            std.debug.print("Part 2: found the exit in {d} steps\n", .{step_count});
         }
     };
 };
