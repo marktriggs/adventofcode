@@ -30,232 +30,299 @@ pub fn main() !void {
     // try Day9.Pt1.day9Pt1();
     // try Day9.Pt2.day9Pt2();
 
-    try Day10.Pt1.day10Pt1();
-
+    // try Day10.day10Pt1();
+    try Day10.day10Pt2();
 }
 
 const Day10 = struct {
-    const Pt1 = struct {
-        const Tile = enum {
-            Vertical,
-            Horizontal,
-            NEBend,
-            NWBend,
-            SWBend,
-            SEBend,
-            Ground,
-            Start,
-        };
+    const Tile = enum {
+        Vertical,
+        Horizontal,
+        NEBend,
+        NWBend,
+        SWBend,
+        SEBend,
+        Ground,
+        Start,
+    };
 
-        const Grid = struct {
-            width: usize,
-            height: usize,
+    const Grid = struct {
+        width: usize,
+        height: usize,
 
-            start_row: usize,
-            start_col: usize,
+        start_row: usize,
+        start_col: usize,
 
-            rows: [][]Tile,
+        rows: [][]Tile,
 
-            fn deriveStartType(self: *const Grid) Tile {
-                std.debug.assert(self.rows[self.start_row][self.start_col] == Tile.Start);
+        fn deriveStartType(self: *const Grid) Tile {
+            std.debug.assert(self.rows[self.start_row][self.start_col] == Tile.Start);
 
-                var top =    if (self.start_row == 0 )                Tile.Ground  else self.rows[self.start_row - 1][self.start_col];
-                var bottom = if ((self.start_row + 1) == self.height) Tile.Ground  else self.rows[self.start_row + 1][self.start_col];
-                var left =   if (self.start_col == 0)                 Tile.Ground  else self.rows[self.start_row][self.start_col - 1];
-                var right =  if ((self.start_col + 1) == self.width)  Tile.Ground  else self.rows[self.start_row][self.start_col + 1];
+            var top =    if (self.start_row == 0 )                Tile.Ground  else self.rows[self.start_row - 1][self.start_col];
+            var bottom = if ((self.start_row + 1) == self.height) Tile.Ground  else self.rows[self.start_row + 1][self.start_col];
+            var left =   if (self.start_col == 0)                 Tile.Ground  else self.rows[self.start_row][self.start_col - 1];
+            var right =  if ((self.start_col + 1) == self.width)  Tile.Ground  else self.rows[self.start_row][self.start_col + 1];
 
-                if (top == Tile.Vertical     and right == Tile.Horizontal) { return Tile.NEBend; }
-                if (top == Tile.Vertical     and right == Tile.NWBend)     { return Tile.NEBend; }
-                if (top == Tile.Vertical     and right == Tile.SWBend)     { return Tile.NEBend; }
-                if (top == Tile.SWBend       and right == Tile.Horizontal) { return Tile.NEBend; }
-                if (top == Tile.SWBend       and right == Tile.NWBend)     { return Tile.NEBend; }
-                if (top == Tile.SWBend       and right == Tile.SWBend)     { return Tile.NEBend; }
-                if (top == Tile.SEBend       and right == Tile.Horizontal) { return Tile.NEBend; }
-                if (top == Tile.SEBend       and right == Tile.NWBend)     { return Tile.NEBend; }
-                if (top == Tile.SEBend       and right == Tile.SWBend)     { return Tile.NEBend; }
-                if (top == Tile.Vertical     and bottom == Tile.Vertical)  { return Tile.Vertical; }
-                if (top == Tile.Vertical     and bottom == Tile.NEBend)    { return Tile.Vertical; }
-                if (top == Tile.Vertical     and bottom == Tile.NWBend)    { return Tile.Vertical; }
-                if (top == Tile.SWBend       and bottom == Tile.Vertical)  { return Tile.Vertical; }
-                if (top == Tile.SWBend       and bottom == Tile.NEBend)    { return Tile.Vertical; }
-                if (top == Tile.SWBend       and bottom == Tile.NWBend)    { return Tile.Vertical; }
-                if (top == Tile.SEBend       and bottom == Tile.Vertical)  { return Tile.Vertical; }
-                if (top == Tile.SEBend       and bottom == Tile.NEBend)    { return Tile.Vertical; }
-                if (top == Tile.SEBend       and bottom == Tile.NWBend)    { return Tile.Vertical; }
-                if (top == Tile.Vertical     and left == Tile.Horizontal)  { return Tile.NWBend; }
-                if (top == Tile.Vertical     and left == Tile.NEBend)      { return Tile.NWBend; }
-                if (top == Tile.Vertical     and left == Tile.SEBend)      { return Tile.NWBend; }
-                if (top == Tile.SWBend       and left == Tile.Horizontal)  { return Tile.NWBend; }
-                if (top == Tile.SWBend       and left == Tile.NEBend)      { return Tile.NWBend; }
-                if (top == Tile.SWBend       and left == Tile.SEBend)      { return Tile.NWBend; }
-                if (top == Tile.SEBend       and left == Tile.Horizontal)  { return Tile.NWBend; }
-                if (top == Tile.SEBend       and left == Tile.NEBend)      { return Tile.NWBend; }
-                if (top == Tile.SEBend       and left == Tile.SEBend)      { return Tile.NWBend; }
-                if (right == Tile.Horizontal and bottom == Tile.Vertical)  { return Tile.SEBend; }
-                if (right == Tile.Horizontal and bottom == Tile.NEBend)    { return Tile.SEBend; }
-                if (right == Tile.Horizontal and bottom == Tile.NWBend)    { return Tile.SEBend; }
-                if (right == Tile.NWBend     and bottom == Tile.Vertical)  { return Tile.SEBend; }
-                if (right == Tile.NWBend     and bottom == Tile.NEBend)    { return Tile.SEBend; }
-                if (right == Tile.NWBend     and bottom == Tile.NWBend)    { return Tile.SEBend; }
-                if (right == Tile.SWBend     and bottom == Tile.Vertical)  { return Tile.SEBend; }
-                if (right == Tile.SWBend     and bottom == Tile.NEBend)    { return Tile.SEBend; }
-                if (right == Tile.SWBend     and bottom == Tile.NWBend)    { return Tile.SEBend; }
-                if (right == Tile.Horizontal and left == Tile.Horizontal)  { return Tile.Horizontal; }
-                if (right == Tile.Horizontal and left == Tile.NEBend)      { return Tile.Horizontal; }
-                if (right == Tile.Horizontal and left == Tile.SEBend)      { return Tile.Horizontal; }
-                if (right == Tile.NWBend     and left == Tile.Horizontal)  { return Tile.Horizontal; }
-                if (right == Tile.NWBend     and left == Tile.NEBend)      { return Tile.Horizontal; }
-                if (right == Tile.NWBend     and left == Tile.SEBend)      { return Tile.Horizontal; }
-                if (right == Tile.SWBend     and left == Tile.Horizontal)  { return Tile.Horizontal; }
-                if (right == Tile.SWBend     and left == Tile.NEBend)      { return Tile.Horizontal; }
-                if (right == Tile.SWBend     and left == Tile.SEBend)      { return Tile.Horizontal; }
-                if (bottom == Tile.Vertical  and left == Tile.Horizontal)  { return Tile.SWBend; }
-                if (bottom == Tile.Vertical  and left == Tile.NEBend)      { return Tile.SWBend; }
-                if (bottom == Tile.Vertical  and left == Tile.SEBend)      { return Tile.SWBend; }
-                if (bottom == Tile.NEBend    and left == Tile.Horizontal)  { return Tile.SWBend; }
-                if (bottom == Tile.NEBend    and left == Tile.NEBend)      { return Tile.SWBend; }
-                if (bottom == Tile.NEBend    and left == Tile.SEBend)      { return Tile.SWBend; }
-                if (bottom == Tile.NWBend    and left == Tile.Horizontal)  { return Tile.SWBend; }
-                if (bottom == Tile.NWBend    and left == Tile.NEBend)      { return Tile.SWBend; }
-                if (bottom == Tile.NWBend    and left == Tile.SEBend)      { return Tile.SWBend; }
+            if (top == Tile.Vertical     and right == Tile.Horizontal) { return Tile.NEBend; }
+            if (top == Tile.Vertical     and right == Tile.NWBend)     { return Tile.NEBend; }
+            if (top == Tile.Vertical     and right == Tile.SWBend)     { return Tile.NEBend; }
+            if (top == Tile.SWBend       and right == Tile.Horizontal) { return Tile.NEBend; }
+            if (top == Tile.SWBend       and right == Tile.NWBend)     { return Tile.NEBend; }
+            if (top == Tile.SWBend       and right == Tile.SWBend)     { return Tile.NEBend; }
+            if (top == Tile.SEBend       and right == Tile.Horizontal) { return Tile.NEBend; }
+            if (top == Tile.SEBend       and right == Tile.NWBend)     { return Tile.NEBend; }
+            if (top == Tile.SEBend       and right == Tile.SWBend)     { return Tile.NEBend; }
+            if (top == Tile.Vertical     and bottom == Tile.Vertical)  { return Tile.Vertical; }
+            if (top == Tile.Vertical     and bottom == Tile.NEBend)    { return Tile.Vertical; }
+            if (top == Tile.Vertical     and bottom == Tile.NWBend)    { return Tile.Vertical; }
+            if (top == Tile.SWBend       and bottom == Tile.Vertical)  { return Tile.Vertical; }
+            if (top == Tile.SWBend       and bottom == Tile.NEBend)    { return Tile.Vertical; }
+            if (top == Tile.SWBend       and bottom == Tile.NWBend)    { return Tile.Vertical; }
+            if (top == Tile.SEBend       and bottom == Tile.Vertical)  { return Tile.Vertical; }
+            if (top == Tile.SEBend       and bottom == Tile.NEBend)    { return Tile.Vertical; }
+            if (top == Tile.SEBend       and bottom == Tile.NWBend)    { return Tile.Vertical; }
+            if (top == Tile.Vertical     and left == Tile.Horizontal)  { return Tile.NWBend; }
+            if (top == Tile.Vertical     and left == Tile.NEBend)      { return Tile.NWBend; }
+            if (top == Tile.Vertical     and left == Tile.SEBend)      { return Tile.NWBend; }
+            if (top == Tile.SWBend       and left == Tile.Horizontal)  { return Tile.NWBend; }
+            if (top == Tile.SWBend       and left == Tile.NEBend)      { return Tile.NWBend; }
+            if (top == Tile.SWBend       and left == Tile.SEBend)      { return Tile.NWBend; }
+            if (top == Tile.SEBend       and left == Tile.Horizontal)  { return Tile.NWBend; }
+            if (top == Tile.SEBend       and left == Tile.NEBend)      { return Tile.NWBend; }
+            if (top == Tile.SEBend       and left == Tile.SEBend)      { return Tile.NWBend; }
+            if (right == Tile.Horizontal and bottom == Tile.Vertical)  { return Tile.SEBend; }
+            if (right == Tile.Horizontal and bottom == Tile.NEBend)    { return Tile.SEBend; }
+            if (right == Tile.Horizontal and bottom == Tile.NWBend)    { return Tile.SEBend; }
+            if (right == Tile.NWBend     and bottom == Tile.Vertical)  { return Tile.SEBend; }
+            if (right == Tile.NWBend     and bottom == Tile.NEBend)    { return Tile.SEBend; }
+            if (right == Tile.NWBend     and bottom == Tile.NWBend)    { return Tile.SEBend; }
+            if (right == Tile.SWBend     and bottom == Tile.Vertical)  { return Tile.SEBend; }
+            if (right == Tile.SWBend     and bottom == Tile.NEBend)    { return Tile.SEBend; }
+            if (right == Tile.SWBend     and bottom == Tile.NWBend)    { return Tile.SEBend; }
+            if (right == Tile.Horizontal and left == Tile.Horizontal)  { return Tile.Horizontal; }
+            if (right == Tile.Horizontal and left == Tile.NEBend)      { return Tile.Horizontal; }
+            if (right == Tile.Horizontal and left == Tile.SEBend)      { return Tile.Horizontal; }
+            if (right == Tile.NWBend     and left == Tile.Horizontal)  { return Tile.Horizontal; }
+            if (right == Tile.NWBend     and left == Tile.NEBend)      { return Tile.Horizontal; }
+            if (right == Tile.NWBend     and left == Tile.SEBend)      { return Tile.Horizontal; }
+            if (right == Tile.SWBend     and left == Tile.Horizontal)  { return Tile.Horizontal; }
+            if (right == Tile.SWBend     and left == Tile.NEBend)      { return Tile.Horizontal; }
+            if (right == Tile.SWBend     and left == Tile.SEBend)      { return Tile.Horizontal; }
+            if (bottom == Tile.Vertical  and left == Tile.Horizontal)  { return Tile.SWBend; }
+            if (bottom == Tile.Vertical  and left == Tile.NEBend)      { return Tile.SWBend; }
+            if (bottom == Tile.Vertical  and left == Tile.SEBend)      { return Tile.SWBend; }
+            if (bottom == Tile.NEBend    and left == Tile.Horizontal)  { return Tile.SWBend; }
+            if (bottom == Tile.NEBend    and left == Tile.NEBend)      { return Tile.SWBend; }
+            if (bottom == Tile.NEBend    and left == Tile.SEBend)      { return Tile.SWBend; }
+            if (bottom == Tile.NWBend    and left == Tile.Horizontal)  { return Tile.SWBend; }
+            if (bottom == Tile.NWBend    and left == Tile.NEBend)      { return Tile.SWBend; }
+            if (bottom == Tile.NWBend    and left == Tile.SEBend)      { return Tile.SWBend; }
 
-                unreachable;
-            }
-
-            fn nextPossibleLocations(self: *const Grid, location: Point) ![2]Point {
-                var current_tile_type = self.rows[location.row][location.col];
-
-                if (current_tile_type == Tile.Start) {
-                    current_tile_type = self.deriveStartType();
-                }
-
-                switch (current_tile_type) {
-                    Tile.Vertical => {
-                        return [_]Point { location.adjust(-1, 0), location.adjust(1, 0) };
-                    },
-                    Tile.Horizontal => {
-                        return [_]Point { location.adjust(0, -1), location.adjust(0, 1) };
-                    },
-                    Tile.NEBend => {
-                        return [_]Point { location.adjust(-1, 0), location.adjust(0, 1) };
-                    },
-                    Tile.NWBend => {
-                        return [_]Point { location.adjust(-1, 0), location.adjust(0, -1) };
-                    },
-                    Tile.SWBend => {
-                        return [_]Point { location.adjust(1, 0), location.adjust(0, -1) };
-                    },
-                    Tile.SEBend => {
-                        return [_]Point { location.adjust(1, 0), location.adjust(0, 1) };
-                    },
-                    else => {
-                        std.debug.print("Unexpected current tile: {any} at location row={d} col={d}\n", .{current_tile_type, location.row, location.col});
-                        unreachable;
-                    },
-                }
-            }
-        };
-
-        fn readGrid(allocator: std.mem.Allocator, path: []const u8) !Grid {
-            var file = try std.fs.cwd().openFile(path, .{ .mode = std.fs.File.OpenMode.read_only });
-            var reader = file.reader();
-            var buf: [1024]u8 = undefined;
-
-            var rows = std.ArrayList([]Tile).init(allocator);
-
-            var start_row: usize = 0;
-            var start_col: usize = 0;
-
-            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-                var row = std.ArrayList(Tile).init(allocator);
-
-                var i: usize = 0;
-                while (i < line.len): (i += 1) {
-                    var tile = switch (line[i]) {
-                        '|' => Tile.Vertical,
-                        '-' => Tile.Horizontal,
-                        'L' => Tile.NEBend,
-                        'J' => Tile.NWBend,
-                        '7' => Tile.SWBend,
-                        'F' => Tile.SEBend,
-                        '.' => Tile.Ground,
-                        'S' => Tile.Start,
-                        else => unreachable,
-                    };
-
-                    if (tile == Tile.Start) {
-                        start_row = rows.items.len;
-                        start_col = row.items.len;
-                    }
-
-                    try row.append(tile);
-                }
-
-                try rows.append(row.items);
-            }
-
-            return Grid {
-                .width = rows.items[0].len,
-                .height = rows.items.len,
-                .rows = rows.items,
-                .start_row = start_row,
-                .start_col = start_col,
-            };
+            unreachable;
         }
 
-        const Point = struct {
-            row: usize,
-            col: usize,
+        fn nextPossibleLocations(self: *const Grid, location: Point) ![2]Point {
+            var current_tile_type = self.rows[location.row][location.col];
 
-            fn adjust(self: *const Point, row_adjust: isize, col_adjust: isize) Point {
-                var new_row = @as(isize, @intCast(self.row)) + row_adjust;
-                var new_col = @as(isize, @intCast(self.col)) + col_adjust;
-
-                return .{
-                    .row = @intCast(new_row),
-                    .col = @intCast(new_col),
-                };
+            if (current_tile_type == Tile.Start) {
+                current_tile_type = self.deriveStartType();
             }
-        };
 
-        pub fn day10Pt1() !void {
-            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-            var allocator = arena.allocator();
+            switch (current_tile_type) {
+                Tile.Vertical => {
+                    return [_]Point { location.adjust(-1, 0), location.adjust(1, 0) };
+                },
+                Tile.Horizontal => {
+                    return [_]Point { location.adjust(0, -1), location.adjust(0, 1) };
+                },
+                Tile.NEBend => {
+                    return [_]Point { location.adjust(-1, 0), location.adjust(0, 1) };
+                },
+                Tile.NWBend => {
+                    return [_]Point { location.adjust(-1, 0), location.adjust(0, -1) };
+                },
+                Tile.SWBend => {
+                    return [_]Point { location.adjust(1, 0), location.adjust(0, -1) };
+                },
+                Tile.SEBend => {
+                    return [_]Point { location.adjust(1, 0), location.adjust(0, 1) };
+                },
+                else => {
+                    std.debug.print("Unexpected current tile: {any} at location row={d} col={d}\n", .{current_tile_type, location.row, location.col});
+                    unreachable;
+                },
+            }
+        }
+    };
 
-            var grid = try readGrid(allocator, "input_files/day10.txt");
+    fn readGrid(allocator: std.mem.Allocator, path: []const u8) !Grid {
+        var file = try std.fs.cwd().openFile(path, .{ .mode = std.fs.File.OpenMode.read_only });
+        var reader = file.reader();
+        var buf: [1024]u8 = undefined;
 
-            // Measure the loop length
-            var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
+        var rows = std.ArrayList([]Tile).init(allocator);
 
-            var location = Point { .row = grid.start_row, .col = grid.start_col };
+        var start_row: usize = 0;
+        var start_col: usize = 0;
 
-            var steps: usize = 0;
-            while (true) {
-                try visited_locations.put(location, true);
-                var next_locations = try grid.nextPossibleLocations(location);
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            var row = std.ArrayList(Tile).init(allocator);
 
-                var moved: bool = false;
-                for (next_locations) |loc| {
-                    if (!visited_locations.contains(loc)) {
-                        std.debug.print("Move from [{d}][{d}] to [{d}][{d}]\n",
-                                        .{ location.row, location.col, loc.row, loc.col });
-                        location = loc;
-                        moved = true;
-                        break;
-                    }
+            var i: usize = 0;
+            while (i < line.len): (i += 1) {
+                var tile = switch (line[i]) {
+                    '|' => Tile.Vertical,
+                    '-' => Tile.Horizontal,
+                    'L' => Tile.NEBend,
+                    'J' => Tile.NWBend,
+                    '7' => Tile.SWBend,
+                    'F' => Tile.SEBend,
+                    '.' => Tile.Ground,
+                    'S' => Tile.Start,
+                    else => unreachable,
+                };
+
+                if (tile == Tile.Start) {
+                    start_row = rows.items.len;
+                    start_col = row.items.len;
                 }
 
-                steps += 1;
+                try row.append(tile);
+            }
 
-                if (!moved) {
+            try rows.append(row.items);
+        }
+
+        return Grid {
+            .width = rows.items[0].len,
+            .height = rows.items.len,
+            .rows = rows.items,
+            .start_row = start_row,
+            .start_col = start_col,
+        };
+    }
+
+    const Point = struct {
+        row: usize,
+        col: usize,
+
+        fn adjust(self: *const Point, row_adjust: isize, col_adjust: isize) Point {
+            var new_row = @as(isize, @intCast(self.row)) + row_adjust;
+            var new_col = @as(isize, @intCast(self.col)) + col_adjust;
+
+            return .{
+                .row = @intCast(new_row),
+                .col = @intCast(new_col),
+            };
+        }
+    };
+
+    pub fn day10Pt1() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var grid = try readGrid(allocator, "input_files/day10.txt");
+
+        // Measure the loop length
+        var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
+
+        var location = Point { .row = grid.start_row, .col = grid.start_col };
+
+        var steps: usize = 0;
+        while (true) {
+            try visited_locations.put(location, true);
+            var next_locations = try grid.nextPossibleLocations(location);
+
+            var moved: bool = false;
+            for (next_locations) |loc| {
+                if (!visited_locations.contains(loc)) {
+                    std.debug.print("Move from [{d}][{d}] to [{d}][{d}]\n",
+                                    .{ location.row, location.col, loc.row, loc.col });
+                    location = loc;
+                    moved = true;
                     break;
                 }
             }
 
-            std.debug.print("Completed loop in {d} steps\n", .{steps});
-            std.debug.print("Furthest distance from origin is {d} steps\n", .{steps / 2});
+            steps += 1;
+
+            if (!moved) {
+                break;
+            }
         }
-    };
+
+        std.debug.print("Completed loop in {d} steps\n", .{steps});
+        std.debug.print("Furthest distance from origin is {d} steps\n", .{steps / 2});
+    }
+
+    pub fn day10Pt2() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var grid = try readGrid(allocator, "input_files/day10.txt");
+
+        // Measure the loop length
+        var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
+
+        var location = Point { .row = grid.start_row, .col = grid.start_col };
+
+        var steps: usize = 0;
+        while (true) {
+            try visited_locations.put(location, true);
+            var next_locations = try grid.nextPossibleLocations(location);
+
+            var moved: bool = false;
+            for (next_locations) |loc| {
+                if (!visited_locations.contains(loc)) {
+                    std.debug.print("Move from [{d}][{d}] to [{d}][{d}]\n",
+                                    .{ location.row, location.col, loc.row, loc.col });
+                    location = loc;
+                    moved = true;
+                    break;
+                }
+            }
+
+            steps += 1;
+
+            if (!moved) {
+                break;
+            }
+        }
+
+        std.debug.print("Output image is {d}x{d}\n", .{ grid.width, grid.height });
+        var bitmap = try std.fs.createFileAbsolute("/home/mst/tmp/grid.data", .{ });
+        defer bitmap.close();
+        var r_idx: usize = 0;
+        while (r_idx < grid.height): (r_idx += 1) {
+            var c_idx: usize = 0;
+            while (c_idx < grid.width): (c_idx += 1) {
+                if (visited_locations.contains(Point { .row = r_idx, .col = c_idx})) {
+                    _ = try bitmap.write(&[_]u8 {0xFF, 0xFF, 0xFF, 0xFF});
+                } else {
+                    _ = try bitmap.write(&[_]u8 {0x00, 0x00, 0x00, 0xFF});
+                }
+            }
+        }
+
+        var file = try std.fs.openFileAbsolute("/home/mst/tmp/grid-shaded.data", .{ .mode = std.fs.File.OpenMode.read_only });
+        var buf: [4]u8 = undefined;
+
+        var contained_pixels: usize = 0;
+
+        while (true) {
+            var len = try file.read(&buf);
+
+            if (len != 4) {
+                break;
+            }
+
+            if (std.mem.eql(u8, &buf, &[_]u8 { 0x00, 0x00, 0x00, 0xFF })) {
+                contained_pixels += 1;
+            }
+        }
+
+        std.debug.print("I count {d} contained pixels\n", .{contained_pixels});
+    }
 };
 
 
