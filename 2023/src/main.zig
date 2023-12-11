@@ -35,7 +35,7 @@ pub fn main() !void {
 }
 
 const Day10 = struct {
-    const Tile = enum {
+    const Tile = enum(u8) {
         Vertical,
         Horizontal,
         NEBend,
@@ -236,8 +236,6 @@ const Day10 = struct {
             var moved: bool = false;
             for (next_locations) |loc| {
                 if (!visited_locations.contains(loc)) {
-                    std.debug.print("Move from [{d}][{d}] to [{d}][{d}]\n",
-                                    .{ location.row, location.col, loc.row, loc.col });
                     location = loc;
                     moved = true;
                     break;
@@ -253,6 +251,53 @@ const Day10 = struct {
 
         std.debug.print("Completed loop in {d} steps\n", .{steps});
         std.debug.print("Furthest distance from origin is {d} steps\n", .{steps / 2});
+    }
+
+    fn sprite(row1: []const u8, row2: []const u8, row3: []const u8, row4: []const u8) [16]u8 {
+        var result: [16]u8 = undefined;
+
+        std.mem.copy(u8, result[0..], row1);
+        std.mem.copy(u8, result[4..], row2);
+        std.mem.copy(u8, result[8..], row3);
+        std.mem.copy(u8, result[12..], row4);
+
+        return result;
+    }
+
+    fn loadShapes() [][16]u8 {
+        var result: [255][16]u8 = undefined;
+
+        result[@intFromEnum(Tile.Vertical)] = sprite(".##.",
+                                                     ".##.",
+                                                     ".##.",
+                                                     ".##.");
+
+        result[@intFromEnum(Tile.Horizontal)] = sprite("....",
+                                                       "####",
+                                                       "####",
+                                                       "....");
+
+        result[@intFromEnum(Tile.NEBend)] = sprite(".##.",
+                                                   ".###",
+                                                   ".###",
+                                                   "....");
+
+        result[@intFromEnum(Tile.NWBend)] = sprite(".##.",
+                                                   "###.",
+                                                   "###.",
+                                                   "....");
+
+        result[@intFromEnum(Tile.SWBend)] = sprite("....",
+                                                   "###.",
+                                                   "###.",
+                                                   ".##.");
+
+        result[@intFromEnum(Tile.SEBend)] = sprite("....",
+                                                   ".###",
+                                                   ".###",
+                                                   ".##.");
+
+        return &result;
     }
 
     pub fn day10Pt2() !void {
@@ -274,8 +319,6 @@ const Day10 = struct {
             var moved: bool = false;
             for (next_locations) |loc| {
                 if (!visited_locations.contains(loc)) {
-                    std.debug.print("Move from [{d}][{d}] to [{d}][{d}]\n",
-                                    .{ location.row, location.col, loc.row, loc.col });
                     location = loc;
                     moved = true;
                     break;
@@ -289,22 +332,70 @@ const Day10 = struct {
             }
         }
 
-        std.debug.print("Output image is {d}x{d}\n", .{ grid.width, grid.height });
-        var bitmap = try std.fs.createFileAbsolute("/home/mst/tmp/grid.data", .{ });
-        defer bitmap.close();
+        var shapes = loadShapes();
+
+        var blank_tile = sprite("xxxx",
+                                "xxxx",
+                                "xxxx",
+                                "xxxx");
+
+        // width x height x pixels per tile x RGBA
+        var bitmap = std.ArrayList(u8).init(allocator);
+        var px_size = grid.width * 4 * grid.height * 4 * 4;
+        while (px_size > 0): (px_size -= 1) {
+            try bitmap.append(0);
+        }
+
         var r_idx: usize = 0;
         while (r_idx < grid.height): (r_idx += 1) {
             var c_idx: usize = 0;
             while (c_idx < grid.width): (c_idx += 1) {
+                var shape = blank_tile;
+
                 if (visited_locations.contains(Point { .row = r_idx, .col = c_idx})) {
-                    _ = try bitmap.write(&[_]u8 {0xFF, 0xFF, 0xFF, 0xFF});
-                } else {
-                    _ = try bitmap.write(&[_]u8 {0x00, 0x00, 0x00, 0xFF});
+                    var tile = grid.rows[r_idx][c_idx];
+
+                    if (tile == Tile.Start) {
+                        tile = grid.deriveStartType();
+                    }
+
+                    shape = shapes[@intFromEnum(tile)];
+                }
+
+
+                // Draw our shape
+                var char_row_idx: usize = 0;
+                while (char_row_idx < 4): (char_row_idx += 1) {
+                    var char_col_idx: usize = 0;
+                    while (char_col_idx < 4): (char_col_idx += 1) {
+                        var ch = shape[(char_row_idx * 4) + char_col_idx];
+
+                        var colour: u32 = 0xFFFFFFFF;
+
+                        if (ch == 'x') {
+                            colour = 0x666666FF;
+                        } else if (ch == '#') {
+                            colour = 0xFF0000FF;
+                        }
+
+                        var write_pos = (r_idx * 4 * grid.width * 16) + (char_row_idx * grid.width * 16) + (c_idx * 4 * 4) + (char_col_idx * 4);
+
+                        bitmap.items[write_pos] = @intCast(colour >> 24 & 0xff);
+                        bitmap.items[write_pos + 1] = @intCast(colour >> 16 & 0xff);
+                        bitmap.items[write_pos + 2] = @intCast(colour >> 8 & 0xff);
+                        bitmap.items[write_pos + 3] = @intCast(colour >> 0 & 0xff);
+                    }
                 }
             }
         }
 
-        var file = try std.fs.openFileAbsolute("/home/mst/tmp/grid-shaded.data", .{ .mode = std.fs.File.OpenMode.read_only });
+        std.debug.print("Writing {d}x{d} bitmap\n", .{ grid.width * 4, grid.height * 4 });
+        var out = try std.fs.createFileAbsolute("/home/mst/tmp/grid.data", .{ });
+        defer out.close();
+
+        _ = try out.write(bitmap.items);
+
+        var file = try std.fs.openFileAbsolute("/home/mst/tmp/grid-bucketed.data", .{ .mode = std.fs.File.OpenMode.read_only });
         var buf: [4]u8 = undefined;
 
         var contained_pixels: usize = 0;
@@ -316,12 +407,12 @@ const Day10 = struct {
                 break;
             }
 
-            if (std.mem.eql(u8, &buf, &[_]u8 { 0x00, 0x00, 0x00, 0xFF })) {
+            if (std.mem.eql(u8, &buf, &[_]u8 { 0x66, 0x66, 0x66, 0xFF })) {
                 contained_pixels += 1;
             }
         }
 
-        std.debug.print("I count {d} contained pixels\n", .{contained_pixels});
+        std.debug.print("I count {d} contained pixels\n", .{contained_pixels / 16});
     }
 };
 
