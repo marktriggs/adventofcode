@@ -34,6 +34,7 @@ pub fn main() !void {
     // try Day10.day10Pt2();
 
     try Day11.day11Pt1();
+    try Day11.day11Pt2();
 }
 
 const Day11 = struct {
@@ -133,6 +134,98 @@ const Day11 = struct {
         }
 
         std.debug.print("Part 1 Total distances: {d}\n", .{total});
+    }
+
+    pub fn day11Pt2() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var file = try std.fs.cwd().openFile("input_files/day11.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+        var reader = file.reader();
+        var buf: [1024]u8 = undefined;
+
+        var populated_rows = try std.DynamicBitSet.initEmpty(allocator, 0);
+        var populated_cols = try std.DynamicBitSet.initEmpty(allocator, 0);
+
+        var galaxies = std.ArrayList(Galaxy).init(allocator);
+
+        var next_id: usize = 1;
+
+        var row: usize = 0;
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line|: (row += 1) {
+            try populated_rows.resize(row + 1, false);
+            try populated_cols.resize(line.len + 1, false);
+
+            var col: usize = 0;
+            while (col < line.len): (col += 1) {
+
+
+                if (line[col] == '#') {
+                    populated_rows.set(row);
+                    populated_cols.set(col);
+
+                    try galaxies.append(Galaxy {
+                        .id = next_id,
+                        .row = row,
+                        .col = col,
+                    });
+
+                    next_id += 1;
+                }
+            }
+        }
+
+        // Expand our galaxy
+        var galaxy_idx: usize = 0;
+        while (galaxy_idx < galaxies.items.len): (galaxy_idx += 1) {
+            var galaxy = &galaxies.items[galaxy_idx];
+
+            var row_adjustment: usize = 0;
+            {
+                var i: usize = 0;
+                while (i < galaxy.row): (i += 1) {
+                    if (!populated_rows.isSet(i)) {
+                        row_adjustment += 999999;
+                    }
+                }
+            }
+
+            var col_adjustment: usize = 0;
+            {
+                var i: usize = 0;
+                while (i < galaxy.col): (i += 1) {
+                    if (!populated_cols.isSet(i)) {
+                        col_adjustment += 999999;
+                    }
+                }
+            }
+
+            galaxy.row += row_adjustment;
+            galaxy.col += col_adjustment;
+        }
+
+        // Calculate shortest paths
+        var total: usize = 0;
+
+        var a: usize = 0;
+        while (a < galaxies.items.len): (a += 1) {
+            var b: usize = a + 1;
+
+            while (b < galaxies.items.len): (b += 1) {
+                // std.debug.print("{d} to {d}: {d}\n",
+                //                 .{
+                //                     galaxies.items[a].id,
+                //                     galaxies.items[b].id,
+                //                     @abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                //                         @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col)))
+                // });
+
+                total += (@abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                              @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col))));
+            }
+        }
+
+        std.debug.print("Part 2 Total distances: {d}\n", .{total});
     }
 };
 
