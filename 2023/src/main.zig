@@ -36,121 +36,292 @@ pub fn main() !void {
     // try Day11.day11Pt1();
     // try Day11.day11Pt2();
 
-    try Day12.day12Pt1();
+    try Day12.Pt1.day12Pt1();
+    try Day12.Pt2.day12Pt2();
 }
 
 const Day12 = struct {
-    pub fn day12Pt1() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const Pt1 = struct {
+        pub fn day12Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var total: usize = 0;
+            var total: usize = 0;
 
-        var file = try std.fs.cwd().openFile("input_files/day12.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var it = std.mem.splitSequence(u8, line, " ");
-            var lhs = it.next().?;
-            var rhs = it.next().?;
+            var file = try std.fs.cwd().openFile("input_files/day12.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var it = std.mem.splitSequence(u8, line, " ");
+                var lhs = it.next().?;
+                var rhs = it.next().?;
 
-            var groups = std.ArrayList(usize).init(allocator);
+                var groups = std.ArrayList(usize).init(allocator);
 
-            var ns = std.mem.splitSequence(u8, rhs, ",");
-            while (ns.next()) |s| {
-                try groups.append(try std.fmt.parseUnsigned(usize, s, 10));
-            }
-
-            total += countArrangements(allocator, lhs, groups.items);
-        }
-
-        std.debug.print("Part 1: arrangements {d}\n", .{total});
-    }
-
-    fn countArrangements(allocator: std.mem.Allocator, remaining_input: []const u8, remaining_groups: []usize) usize {
-        if (remaining_groups.len == 0) {
-            var matches = true;
-            for (remaining_input) |ch| {
-                if (ch == '#') {
-                    matches = false;
+                var ns = std.mem.splitSequence(u8, rhs, ",");
+                while (ns.next()) |s| {
+                    try groups.append(try std.fmt.parseUnsigned(usize, s, 10));
                 }
+
+                total += countArrangements(try allocator.dupe(u8, lhs), groups.items);
             }
 
-            if (matches) {
-                return 1;
-            } else {
-                return 0;
-            }
+            std.debug.print("Part 1: arrangements {d}\n", .{total});
         }
 
-        if (remaining_input.len == 0) {
-            return 0;
-        }
 
-        if (remaining_groups.len == 0) {
-            return 0;
-        }
-
-        var next_group = remaining_groups[0];
-
-        if (remaining_input.len < next_group) {
-            return 0;
-        }
-
-        if (remaining_input[0] == '#') {
-            var matches = true;
-            {
-                var i: usize = 0;
-                while (i < next_group): (i += 1) {
-                    if (remaining_input[i] == '.') {
+        fn countArrangements(remaining_input: []u8, remaining_groups: []usize) usize {
+            if (remaining_groups.len == 0) {
+                var matches = true;
+                for (remaining_input) |ch| {
+                    if (ch == '#') {
                         matches = false;
                     }
                 }
+
+                if (matches) {
+                    return 1;
+                } else {
+                    return 0;
+                }
             }
 
-            if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
-                if (remaining_input.len == next_group) {
-                    if (remaining_groups.len == 1) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                } else {
-                    return countArrangements(allocator, remaining_input[(next_group + 1)..], remaining_groups[1..]);
-                }
-            } else {
+            if (remaining_input.len == 0) {
                 return 0;
             }
-        } else if (remaining_input[0] == '.') {
-            return countArrangements(allocator, remaining_input[1..], remaining_groups);
-        } else if (remaining_input[0] == '?') {
-            var matches = true;
+
+            if (remaining_groups.len == 0) {
+                return 0;
+            }
+
+            var next_group = remaining_groups[0];
+
+            if (remaining_input.len < next_group) {
+                return 0;
+            }
+
+            if (remaining_input[0] == '#') {
+                var matches = true;
+                {
+                    var i: usize = 0;
+                    while (i < next_group): (i += 1) {
+                        if (remaining_input[i] == '.') {
+                            matches = false;
+                        }
+                    }
+                }
+
+                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                    if (remaining_input.len == next_group) {
+                        if (remaining_groups.len == 1) {
+                            return 1;
+                        } else {
+                            return 0;
+                        }
+                    } else {
+                        return countArrangements(remaining_input[(next_group + 1)..], remaining_groups[1..]);
+                    }
+                } else {
+                    return 0;
+                }
+            } else if (remaining_input[0] == '.') {
+                return countArrangements(remaining_input[1..], remaining_groups);
+            } else if (remaining_input[0] == '?') {
+                var matches = true;
+                {
+                    var i: usize = 0;
+                    while (i < next_group): (i += 1) {
+                        if (remaining_input[i] == '.') {
+                            matches = false;
+                        }
+                    }
+                }
+
+                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                    if (remaining_input.len == next_group) {
+                        if (remaining_groups.len == 1) {
+                            return 1;
+                        } else {
+                            return 0;
+                        }
+                    } else {
+                        return countArrangements(remaining_input[(next_group + 1)..], remaining_groups[1..]) + countArrangements(remaining_input[1..], remaining_groups);
+                    }
+                } else {
+                    return countArrangements(remaining_input[1..], remaining_groups);
+                }
+            } else {
+                unreachable;
+            }
+        }
+
+    };
+
+    const Pt2 = struct {
+        pub fn day12Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var total: usize = 0;
+
+            var cache = std.ArrayList(?usize).init(allocator);
             {
                 var i: usize = 0;
-                while (i < next_group): (i += 1) {
-                    if (remaining_input[i] == '.') {
+                while (i <= 65535): (i += 1) {
+                    try cache.append(null);
+                }
+            }
+
+
+            var file = try std.fs.cwd().openFile("input_files/day12.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var it = std.mem.splitSequence(u8, line, " ");
+                var lhs = it.next().?;
+                var rhs = it.next().?;
+
+                var groups = std.ArrayList(usize).init(allocator);
+
+                {
+                    var i: usize = 0;
+                    while (i < 5): (i += 1) {
+                        var ns = std.mem.splitSequence(u8, rhs, ",");
+                        while (ns.next()) |s| {
+                            try groups.append(try std.fmt.parseUnsigned(usize, s, 10));
+                        }
+                    }
+                }
+
+                // Part 2: unfold
+                var expandedLHS = std.ArrayList(u8).init(allocator);
+
+                {
+                    var i: usize = 0;
+                    while (i < 5): (i += 1) {
+                        try expandedLHS.appendSlice(lhs);
+                        if (i != 4) {
+                            try expandedLHS.appendSlice("?");
+                        }
+                    }
+                }
+
+                {
+                    var i: usize = 0;
+                    while (i <= 65535): (i += 1) {
+                        cache.items[i] = null;
+                    }
+                }
+
+                total += countArrangementsMemo(cache.items, expandedLHS.items, groups.items);
+            }
+
+            std.debug.print("Part 2: arrangements {d}\n", .{total});
+        }
+
+        fn countArrangementsMemo(cache: []?usize, remaining_input: []u8, remaining_groups: []usize) usize {
+            std.debug.assert(remaining_input.len < 256);
+            std.debug.assert(remaining_groups.len < 256);
+
+            var cache_key = remaining_input.len << 8 | remaining_groups.len;
+
+            if (cache[cache_key] != null) {
+                return cache[cache_key].?;
+            }
+
+            var result = countArrangements(cache, remaining_input, remaining_groups);
+
+            cache[cache_key] = result;
+
+            return result;
+        }
+
+        fn countArrangements(cache: []?usize, remaining_input: []u8, remaining_groups: []usize) usize {
+            if (remaining_groups.len == 0) {
+                var matches = true;
+                for (remaining_input) |ch| {
+                    if (ch == '#') {
                         matches = false;
                     }
                 }
+
+                if (matches) {
+                    return 1;
+                } else {
+                    return 0;
+                }
             }
 
-            if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
-                if (remaining_input.len == next_group) {
-                    if (remaining_groups.len == 1) {
-                        return 1;
+            if (remaining_input.len == 0) {
+                return 0;
+            }
+
+            if (remaining_groups.len == 0) {
+                return 0;
+            }
+
+            var next_group = remaining_groups[0];
+
+            if (remaining_input.len < next_group) {
+                return 0;
+            }
+
+            if (remaining_input[0] == '#') {
+                var matches = true;
+                {
+                    var i: usize = 0;
+                    while (i < next_group): (i += 1) {
+                        if (remaining_input[i] == '.') {
+                            matches = false;
+                        }
+                    }
+                }
+
+                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                    if (remaining_input.len == next_group) {
+                        if (remaining_groups.len == 1) {
+                            return 1;
+                        } else {
+                            return 0;
+                        }
                     } else {
-                        return 0;
+                        return countArrangementsMemo(cache, remaining_input[(next_group + 1)..], remaining_groups[1..]);
                     }
                 } else {
-                    return countArrangements(allocator, remaining_input[(next_group + 1)..], remaining_groups[1..]) + countArrangements(allocator, remaining_input[1..], remaining_groups);
+                    return 0;
+                }
+            } else if (remaining_input[0] == '.') {
+                return countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
+            } else if (remaining_input[0] == '?') {
+                var matches = true;
+                {
+                    var i: usize = 0;
+                    while (i < next_group): (i += 1) {
+                        if (remaining_input[i] == '.') {
+                            matches = false;
+                        }
+                    }
+                }
+
+                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                    if (remaining_input.len == next_group) {
+                        if (remaining_groups.len == 1) {
+                            return 1;
+                        } else {
+                            return 0;
+                        }
+                    } else {
+                        return countArrangementsMemo(cache, remaining_input[(next_group + 1)..], remaining_groups[1..]) + countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
+                    }
+                } else {
+                    return countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
                 }
             } else {
-                return countArrangements(allocator, remaining_input[1..], remaining_groups);
+                unreachable;
             }
-        } else {
-            unreachable;
         }
-    }
+    };
+
 };
 
 const Day11 = struct {
