@@ -33,9 +33,125 @@ pub fn main() !void {
     // try Day10.day10Pt1();
     // try Day10.day10Pt2();
 
-    try Day11.day11Pt1();
-    try Day11.day11Pt2();
+    // try Day11.day11Pt1();
+    // try Day11.day11Pt2();
+
+    try Day12.day12Pt1();
 }
+
+const Day12 = struct {
+    pub fn day12Pt1() !void {
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        var allocator = arena.allocator();
+
+        var total: usize = 0;
+
+        var file = try std.fs.cwd().openFile("input_files/day12.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+        var reader = file.reader();
+        var buf: [1024]u8 = undefined;
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            var it = std.mem.splitSequence(u8, line, " ");
+            var lhs = it.next().?;
+            var rhs = it.next().?;
+
+            var groups = std.ArrayList(usize).init(allocator);
+
+            var ns = std.mem.splitSequence(u8, rhs, ",");
+            while (ns.next()) |s| {
+                try groups.append(try std.fmt.parseUnsigned(usize, s, 10));
+            }
+
+            total += countArrangements(allocator, lhs, groups.items);
+        }
+
+        std.debug.print("Part 1: arrangements {d}\n", .{total});
+    }
+
+    fn countArrangements(allocator: std.mem.Allocator, remaining_input: []const u8, remaining_groups: []usize) usize {
+        if (remaining_groups.len == 0) {
+            var matches = true;
+            for (remaining_input) |ch| {
+                if (ch == '#') {
+                    matches = false;
+                }
+            }
+
+            if (matches) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+
+        if (remaining_input.len == 0) {
+            return 0;
+        }
+
+        if (remaining_groups.len == 0) {
+            return 0;
+        }
+
+        var next_group = remaining_groups[0];
+
+        if (remaining_input.len < next_group) {
+            return 0;
+        }
+
+        if (remaining_input[0] == '#') {
+            var matches = true;
+            {
+                var i: usize = 0;
+                while (i < next_group): (i += 1) {
+                    if (remaining_input[i] == '.') {
+                        matches = false;
+                    }
+                }
+            }
+
+            if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                if (remaining_input.len == next_group) {
+                    if (remaining_groups.len == 1) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                } else {
+                    return countArrangements(allocator, remaining_input[(next_group + 1)..], remaining_groups[1..]);
+                }
+            } else {
+                return 0;
+            }
+        } else if (remaining_input[0] == '.') {
+            return countArrangements(allocator, remaining_input[1..], remaining_groups);
+        } else if (remaining_input[0] == '?') {
+            var matches = true;
+            {
+                var i: usize = 0;
+                while (i < next_group): (i += 1) {
+                    if (remaining_input[i] == '.') {
+                        matches = false;
+                    }
+                }
+            }
+
+            if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
+                if (remaining_input.len == next_group) {
+                    if (remaining_groups.len == 1) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                } else {
+                    return countArrangements(allocator, remaining_input[(next_group + 1)..], remaining_groups[1..]) + countArrangements(allocator, remaining_input[1..], remaining_groups);
+                }
+            } else {
+                return countArrangements(allocator, remaining_input[1..], remaining_groups);
+            }
+        } else {
+            unreachable;
+        }
+    }
+};
 
 const Day11 = struct {
     const Galaxy = struct {
