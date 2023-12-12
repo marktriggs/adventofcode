@@ -219,7 +219,7 @@ const Day12 = struct {
             std.debug.print("Part 2: arrangements {d}\n", .{total});
         }
 
-        fn countArrangementsMemo(cache: []?usize, remaining_input: []u8, remaining_groups: []usize) usize {
+        fn countArrangementsMemo(cache: []?usize, remaining_input: []const u8, remaining_groups: []const usize) usize {
             std.debug.assert(remaining_input.len < 256);
             std.debug.assert(remaining_groups.len < 256);
 
@@ -236,89 +236,75 @@ const Day12 = struct {
             return result;
         }
 
-        fn countArrangements(cache: []?usize, remaining_input: []u8, remaining_groups: []usize) usize {
+        fn countArrangements(cache: []?usize, remaining_input: []const u8, remaining_groups: []const usize) usize {
             if (remaining_groups.len == 0) {
-                var matches = true;
-                for (remaining_input) |ch| {
-                    if (ch == '#') {
-                        matches = false;
-                    }
-                }
-
-                if (matches) {
-                    return 1;
-                } else {
-                    return 0;
-                }
+                // If there are no groups left, the input should either be . or ? for there to be a match.
+                return if (std.mem.indexOfScalar(u8, remaining_input, '#') == null) 1 else 0;
             }
 
+            // If there's no input left, there is nothing to match.
             if (remaining_input.len == 0) {
-                return 0;
-            }
-
-            if (remaining_groups.len == 0) {
                 return 0;
             }
 
             var next_group = remaining_groups[0];
 
             if (remaining_input.len < next_group) {
+                // Not enough input left?  no match
                 return 0;
             }
 
-            if (remaining_input[0] == '#') {
-                var matches = true;
-                {
-                    var i: usize = 0;
-                    while (i < next_group): (i += 1) {
-                        if (remaining_input[i] == '.') {
-                            matches = false;
-                        }
-                    }
-                }
+            var check_inputs: [2]?u8 = undefined;
 
-                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
-                    if (remaining_input.len == next_group) {
-                        if (remaining_groups.len == 1) {
-                            return 1;
-                        } else {
-                            return 0;
-                        }
-                    } else {
-                        return countArrangementsMemo(cache, remaining_input[(next_group + 1)..], remaining_groups[1..]);
-                    }
-                } else {
-                    return 0;
-                }
-            } else if (remaining_input[0] == '.') {
-                return countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
-            } else if (remaining_input[0] == '?') {
-                var matches = true;
-                {
-                    var i: usize = 0;
-                    while (i < next_group): (i += 1) {
-                        if (remaining_input[i] == '.') {
-                            matches = false;
-                        }
-                    }
-                }
-
-                if (matches and (remaining_input.len == next_group or remaining_input[next_group] != '#')) {
-                    if (remaining_input.len == next_group) {
-                        if (remaining_groups.len == 1) {
-                            return 1;
-                        } else {
-                            return 0;
-                        }
-                    } else {
-                        return countArrangementsMemo(cache, remaining_input[(next_group + 1)..], remaining_groups[1..]) + countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
-                    }
-                } else {
-                    return countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
-                }
+            if (remaining_input[0] == '?') {
+                // Wildcards can be treated as either: try both variations
+                check_inputs[0] = '#';
+                check_inputs[1] = '.';
             } else {
-                unreachable;
+                check_inputs[0] = remaining_input[0];
+                check_inputs[1] = null;
             }
+
+            var result: usize = 0;
+
+            for (check_inputs) |input| {
+                if (input == null) {
+                    continue;
+                }
+
+                switch (input.?) {
+                    '#' => {
+                        if (std.mem.indexOfScalar(u8, remaining_input[0..next_group], '.') != null) {
+                            // If our run contains dots then it isn't a run!
+                            continue;
+                        }
+
+                        if (remaining_input.len == next_group) {
+                            // If our input is totally consumed and we're the last group, then great!
+                            if (remaining_groups.len == 1) {
+                                result += 1;
+                            }
+
+                            continue;
+                        }
+
+                        // If we're not out of input, our run has to end a '.' to be valid.
+                        if (remaining_input[next_group] == '#') {
+                            continue;
+                        }
+
+                        // Skip the length of our run and keep looking
+                        result += countArrangementsMemo(cache, remaining_input[(next_group + 1)..], remaining_groups[1..]);
+                    },
+                    '.' => {
+                        // Skip this input and keep looking
+                        result += countArrangementsMemo(cache, remaining_input[1..], remaining_groups);
+                    },
+                    else => unreachable,
+                }
+            }
+
+            return result;
         }
     };
 
