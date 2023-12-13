@@ -36,9 +36,111 @@ pub fn main() !void {
     // try Day11.day11Pt1();
     // try Day11.day11Pt2();
 
-    try Day12.Pt1.day12Pt1();
-    try Day12.Pt2.day12Pt2();
+    // try Day12.Pt1.day12Pt1();
+    // try Day12.Pt2.day12Pt2();
+
+    try Day13.Pt1.day13Pt1();
 }
+
+const Day13 = struct {
+    const Pt1 = struct {
+        pub fn day13Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day13.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var left_columns: usize = 0;
+            var above_columns: usize = 0;
+
+            var grid_number: usize = 0;
+            while (true) {
+                var grid = std.ArrayList([]u8).init(allocator);
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    if (line.len == 0) {
+                        break;
+                    }
+
+                    try grid.append(try allocator.dupe(u8, line));
+                }
+
+                if (grid.items.len == 0) {
+                    break;
+                }
+
+                grid_number += 1;
+                std.debug.print("Searching grid {d}\n", .{grid_number});
+                // Look for a horizontal mirroring
+                {
+                    var axis: usize = 0;
+                    while (axis < grid.items.len - 1): (axis += 1) {
+                        var len = @min(axis + 1, (grid.items.len - axis - 1));
+
+                        var a = axis;
+                        var b = axis + 1;
+
+                        while (len > 0): (len -= 1) {
+                            if (!std.mem.eql(u8, grid.items[a], grid.items[b])) {
+                                break;
+                            }
+
+                            if (len > 1) {
+                                a -= 1;
+                                b += 1;
+                            }
+                        }
+
+                        if (len == 0) {
+                            // std.debug.print("Found horizontal mirroring at row: {d}\n", .{axis});
+                            above_columns += ((axis + 1) * 100);
+                            break;
+                        }
+                    }
+                }
+
+                // Look for a vertical mirroring
+                {
+                    var axis: usize = 0;
+
+                    while (axis < grid.items[0].len - 1): (axis += 1) {
+                        var mirrored = for (grid.items) |row| {
+                            var len = @min(axis + 1, row.len - axis - 1);
+
+                            var a = axis;
+                            var b = axis + 1;
+
+                            while (len > 0): (len -= 1) {
+                                if (row[a] != row[b]) {
+                                    break;
+                                }
+
+                                if (len > 1) {
+                                    a -= 1;
+                                    b += 1;
+                                }
+                            }
+
+                            if (len > 0) {
+                                break false;
+                            }
+                        } else true;
+
+                        if (mirrored) {
+                            // std.debug.print("Found vertical mirroring at column: {d}\n", .{axis});
+                            left_columns += axis + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            std.debug.print("Part 1 result: {d}\n", .{left_columns + above_columns});
+        }
+    };
+};
 
 const Day12 = struct {
     const Pt1 = struct {
