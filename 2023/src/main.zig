@@ -42,7 +42,8 @@ pub fn main() !void {
     // try Day13.Pt1.day13Pt1();
     // try Day13.Pt2.day13Pt2();
 
-    try Day14.Pt1.day14Pt1();
+    // try Day14.Pt1.day14Pt1();
+    try Day14.Pt2.day14Pt2();
 }
 
 const Day14 = struct {
@@ -105,6 +106,171 @@ const Day14 = struct {
             //         row
             //     });
             // }
+        }
+    };
+
+    const Pt2 = struct {
+        fn stateKey(allocator: std.mem.Allocator, grid: [][]u8) ![]u8 {
+            var result = std.ArrayList(u8).init(allocator);
+
+            var pos: u16 = 0;
+
+            var row: usize = 0;
+            while (row < grid.len): (row += 1) {
+                var col: usize = 0;
+                while (col < grid[0].len): (col += 1) {
+                    if (grid[row][col] == 'O') {
+                        try result.append(@intCast(pos & 0xFF));
+                        try result.append(@intCast((pos >> 8) & 0xFF));
+                        pos = 0;
+                    } else {
+                        pos += 1;
+                    }
+                }
+            }
+
+            return result.items;
+        }
+
+        pub fn day14Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day14.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                   "\n");
+
+                while (it.next()) |row| {
+                    try grid.append(try allocator.dupe(u8, row));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            var seen_states = std.StringHashMap(usize).init(allocator);
+
+            var cycle_found: bool = false;
+
+            var i: usize = 0;
+
+            var target_iterations: usize = 1000000000;
+
+            while (i < target_iterations): (i += 1) {
+                // Slide movable objects north
+                {
+                    var moved = true;
+                    while (moved) {
+                        moved = false;
+
+                        var row: usize = 1;
+                        while (row < height): (row += 1) {
+                            var col: usize = 0;
+                            while (col < width): (col += 1) {
+                                if (grid.items[row][col] == 'O' and grid.items[row - 1][col] == '.') {
+                                    grid.items[row][col] = '.';
+                                    grid.items[row - 1][col] = 'O';
+                                    moved = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Slide movable objects west
+                {
+                    var moved = true;
+                    while (moved) {
+                        moved = false;
+
+                        var row: usize = 0;
+                        while (row < height): (row += 1) {
+                            var col: usize = 1;
+                            while (col < width): (col += 1) {
+                                if (grid.items[row][col] == 'O' and grid.items[row][col - 1] == '.') {
+                                    grid.items[row][col] = '.';
+                                    grid.items[row][col - 1] = 'O';
+                                    moved = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Slide movable objects south
+                {
+                    var moved = true;
+                    while (moved) {
+                        moved = false;
+
+                        var row: usize = 0;
+                        while (row < height - 1): (row += 1) {
+                            var col: usize = 0;
+                            while (col < width): (col += 1) {
+                                if (grid.items[row][col] == 'O' and grid.items[row + 1][col] == '.') {
+                                    grid.items[row][col] = '.';
+                                    grid.items[row + 1][col] = 'O';
+                                    moved = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Slide movable objects east
+                {
+                    var moved = true;
+                    while (moved) {
+                        moved = false;
+
+                        var row: usize = 0;
+                        while (row < height): (row += 1) {
+                            var col: usize = 0;
+                            while (col < width - 1): (col += 1) {
+                                if (grid.items[row][col] == 'O' and grid.items[row][col + 1] == '.') {
+                                    grid.items[row][col] = '.';
+                                    grid.items[row ][col + 1] = 'O';
+                                    moved = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                var key = try stateKey(allocator, grid.items);
+
+                if (seen_states.contains(key)) {
+                    cycle_found = true;
+                    var cycle_length = i - seen_states.get(key).?;
+
+                    while ((i + cycle_length) < target_iterations) {
+                        i += cycle_length;
+                    }
+                }
+
+                if (!cycle_found) {
+                    try seen_states.put(key, i);
+                }
+            }
+
+            var total_load: usize = 0;
+            {
+                var row: usize = 0;
+                while (row < height): (row += 1) {
+                    var col: usize = 0;
+                    while (col < width): (col += 1) {
+                        if (grid.items[row][col] == 'O') {
+                            total_load += (height - row);
+                        }
+                    }
+                }
+            }
+
+            std.debug.print("Part 2 total load: {d}\n", .{ total_load });
         }
     };
 };
