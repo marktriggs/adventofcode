@@ -40,8 +40,75 @@ pub fn main() !void {
     // try Day12.Pt2.day12Pt2();
 
     // try Day13.Pt1.day13Pt1();
-    try Day13.Pt2.day13Pt2();
+    // try Day13.Pt2.day13Pt2();
+
+    try Day14.Pt1.day14Pt1();
 }
+
+const Day14 = struct {
+    const Pt1 = struct {
+        pub fn day14Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day14.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                "\n");
+
+                while (it.next()) |row| {
+                    try grid.append(try allocator.dupe(u8, row));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            // Slide movable objects north
+            {
+                var moved = true;
+                while (moved) {
+                    moved = false;
+
+                    var row: usize = 1;
+                    while (row < height): (row += 1) {
+                        var col: usize = 0;
+                        while (col < width): (col += 1) {
+                            if (grid.items[row][col] == 'O' and grid.items[row - 1][col] == '.') {
+                                grid.items[row][col] = '.';
+                                grid.items[row - 1][col] = 'O';
+                                moved = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            var total_load: usize = 0;
+            var row: usize = 0;
+            while (row < height): (row += 1) {
+                var col: usize = 0;
+                while (col < width): (col += 1) {
+                    if (grid.items[row][col] == 'O') {
+                        total_load += (height - row);
+                    }
+                }
+            }
+
+            std.debug.print("Part 1 total load: {d}\n", .{ total_load });
+
+            // for (grid.items) |row| {
+            //     std.debug.print("{s}\n", .{
+            //         row
+            //     });
+            // }
+        }
+    };
+};
+
 
 const Day13 = struct {
     const Pt1 = struct {
