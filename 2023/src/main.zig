@@ -43,8 +43,124 @@ pub fn main() !void {
     // try Day13.Pt2.day13Pt2();
 
     // try Day14.Pt1.day14Pt1();
-    try Day14.Pt2.day14Pt2();
+    // try Day14.Pt2.day14Pt2();
+
+    try Day15.Pt1.day15Pt1();
+    try Day15.Pt1.day15Pt2();
 }
+
+const Day15 = struct {
+    const Pt1 = struct {
+        fn hash(s: []const u8) usize {
+            var total: usize = 0;
+
+            for (s) |ch| {
+                total += ch;
+                total *= 17;
+                total %= 256;
+            }
+
+            return total;
+        }
+
+        pub fn day15Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day15.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+
+            var trimmed = std.mem.trim(u8, bytes, "\n");
+
+            var it = std.mem.splitScalar(u8, trimmed, ',');
+            var total: usize = 0;
+            while (it.next()) |chunk| {
+                var h = hash(chunk);
+                std.debug.print("Hash: {s} - {d}\n", .{chunk, h});
+                total += h;
+            }
+
+            std.debug.print("Part 1 hash: {d}\n", .{
+                total
+            });
+        }
+
+        const Lens = struct {
+            label: []const u8,
+            value: usize,
+        };
+
+        pub fn day15Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day15.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+
+            var trimmed = std.mem.trim(u8, bytes, "\n");
+
+            var buckets: [256]std.ArrayList(?Lens) = undefined;
+
+            {
+                var i: usize = 0;
+                while (i < buckets.len): (i += 1) {
+                    buckets[i] = std.ArrayList(?Lens).init(allocator);
+                }
+            }
+
+            var it = std.mem.splitScalar(u8, trimmed, ',');
+            while (it.next()) |chunk| {
+                var chunk_it = std.mem.tokenizeAny(u8, chunk, "=-");
+
+                var label = chunk_it.next().?;
+                var bucket = hash(label);
+
+                if (std.mem.endsWith(u8, chunk, "-")) {
+                    // Remove
+                    var i: usize = 0;
+                    while (i < buckets[bucket].items.len): (i += 1) {
+                        if (buckets[bucket].items[i] != null and std.mem.eql(u8, buckets[bucket].items[i].?.label, label)) {
+                            buckets[bucket].items[i] = null;
+                        }
+                    }
+                } else {
+                    // Set
+                    var value = try std.fmt.parseUnsigned(usize, chunk_it.next().?, 10);
+
+                    var found = false;
+                    var i: usize = 0;
+                    while (i < buckets[bucket].items.len): (i += 1) {
+                        if (buckets[bucket].items[i] != null and std.mem.eql(u8, buckets[bucket].items[i].?.label, label)) {
+                            buckets[bucket].items[i].?.value = value;
+                            found = true;
+                        }
+                    }
+
+                    if (!found) {
+                        // Insert
+                        try buckets[bucket].append(Lens { .label = label, .value = value});
+                    }
+                }
+            }
+
+            var focus_power: usize = 0;
+            var box: usize = 0;
+            while (box < buckets.len): (box += 1) {
+                var slot: usize = 0;
+                for (buckets[box].items) |item| {
+                    if (item != null) {
+                        // std.debug.print("label {s}: box {d} slot {d} value {d}\n", .{item.?.label, box + 1, slot + 1, item.?.value});
+                        focus_power += ((box + 1) * (slot + 1) * item.?.value);
+                        slot += 1;
+                    }
+                }
+            }
+
+            std.debug.print("Part 2 total power: {d}\n", .{focus_power});
+        }
+    };
+};
+
 
 const Day14 = struct {
     const Pt1 = struct {
