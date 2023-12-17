@@ -49,6 +49,7 @@ pub fn main() !void {
     // try Day15.Pt1.day15Pt2();
 
     try Day16.Pt1.day16Pt1();
+    // try Day16.Pt2.day16Pt1();
 
 }
 
@@ -64,25 +65,9 @@ const Day16 = struct {
             direction: Point,
         };
 
-        pub fn day16Pt1() !void {
-            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-            var allocator = arena.allocator();
-
-            var file = try std.fs.cwd().openFile("input_files/day16.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-            var grid = std.ArrayList([]u8).init(allocator);
-
-            {
-                var it  = std.mem.tokenizeSequence(u8,
-                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
-                                                   "\n");
-
-                while (it.next()) |row| {
-                    try grid.append(try allocator.dupe(u8, row));
-                }
-            }
-
-            var width = grid.items[0].len;
-            var height = grid.items.len;
+        pub fn solve(allocator: std.mem.Allocator, grid: [][]u8, init_position: Point, init_direction: Point) !usize {
+            var width = grid[0].len;
+            var height = grid.len;
 
             var charged_tiles = try std.DynamicBitSet.initEmpty(allocator, width * height);
             charged_tiles.set(0);
@@ -90,8 +75,13 @@ const Day16 = struct {
             var beams = std.ArrayList(Beam).init(allocator);
 
             // Starts one conceptual square away from our first spot
-            try beams.append(Beam { .position = Point { .row = 0, .col = -1},
-                                   .direction = Point { .row = 0, .col = 1}});
+            var adjusted_position = Point {
+                .row = init_position.row - init_direction.row,
+                .col = init_position.col - init_direction.col,
+            };
+
+            try beams.append(Beam { .position = adjusted_position,
+                                   .direction = init_direction });
 
             var seen_beams = std.AutoHashMap(Beam, void).init(allocator);
             try seen_beams.put(beams.items[0], {});
@@ -118,7 +108,7 @@ const Day16 = struct {
 
                         charged_tiles.set(@as(usize, @intCast(new_row)) * width + @as(usize, @intCast(new_col)));
 
-                        var target_tile = grid.items[@intCast(new_row)][@intCast(new_col)];
+                        var target_tile = grid[@intCast(new_row)][@intCast(new_col)];
                         if (target_tile == '.') {
                             // continue
                             try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = beam.direction});
@@ -200,13 +190,30 @@ const Day16 = struct {
                 }
             }
 
-            std.debug.print("Part 1: number of charged tiles: {d}\n", .{charged_tiles.count()});
+            return charged_tiles.count();
+        }
 
-            // for (grid.items) |row| {
-            //     std.debug.print("{s}\n", .{
-            //         row
-            //     });
-            // }
+
+        pub fn day16Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day16.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                   "\n");
+
+                while (it.next()) |row| {
+                    try grid.append(try allocator.dupe(u8, row));
+                }
+            }
+
+            var charged = try solve(allocator, grid.items, Point { .row = 0, .col = 0 }, Point { .row = 0, .col = 1});
+
+            std.debug.print("Part 1 charged tiles: {d}\n", .{charged});
         }
     };
 };
