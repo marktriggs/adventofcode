@@ -49,7 +49,7 @@ pub fn main() !void {
     // try Day15.Pt1.day15Pt2();
 
     try Day16.Pt1.day16Pt1();
-    // try Day16.Pt2.day16Pt1();
+    try Day16.Pt2.day16Pt2();
 
 }
 
@@ -70,7 +70,6 @@ const Day16 = struct {
             var height = grid.len;
 
             var charged_tiles = try std.DynamicBitSet.initEmpty(allocator, width * height);
-            charged_tiles.set(0);
 
             var beams = std.ArrayList(Beam).init(allocator);
 
@@ -85,8 +84,6 @@ const Day16 = struct {
 
             var seen_beams = std.AutoHashMap(Beam, void).init(allocator);
             try seen_beams.put(beams.items[0], {});
-
-            std.debug.assert(charged_tiles.count() == 1);
 
             var next_beams = std.ArrayList(Beam).init(allocator);
             while (beams.items.len > 0) {
@@ -214,6 +211,75 @@ const Day16 = struct {
             var charged = try solve(allocator, grid.items, Point { .row = 0, .col = 0 }, Point { .row = 0, .col = 1});
 
             std.debug.print("Part 1 charged tiles: {d}\n", .{charged});
+        }
+    };
+
+    const Pt2 = struct {
+        const Point = Day16.Pt1.Point;
+
+        pub fn day16Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day16.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                   "\n");
+
+                while (it.next()) |row| {
+                    try grid.append(try allocator.dupe(u8, row));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            var best_charge: usize = 0;
+
+            var row: usize = 0;
+            while (row < height): (row += 1) {
+                var col: usize = 0;
+                while (col < width): (col += 1) {
+                    if (row == 0) {
+                        if (col == 0) {
+                            // top-left
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                        } else if (col == (width - 1)) {
+                            // top-right
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                        } else {
+                            // top
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                        }
+                    } else if (row == (height - 1)) {
+                        if (col == 0) {
+                            // bottom-left
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                        } else if (col == (width - 1)) {
+                            // bottom-right
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                        } else {
+                            // bottom
+                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                        }
+                    } else if (col == 0) {
+                        // left
+                        best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                    } else if (col == (width - 1)) {
+                        // right
+                        best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                    }
+                }
+            }
+
+            std.debug.print("Part 2 highest charge was: {d}\n", .{best_charge});
         }
     };
 };
