@@ -45,9 +45,171 @@ pub fn main() !void {
     // try Day14.Pt1.day14Pt1();
     // try Day14.Pt2.day14Pt2();
 
-    try Day15.Pt1.day15Pt1();
-    try Day15.Pt1.day15Pt2();
+    // try Day15.Pt1.day15Pt1();
+    // try Day15.Pt1.day15Pt2();
+
+    try Day16.Pt1.day16Pt1();
+
 }
+
+const Day16 = struct {
+    const Pt1 = struct {
+        const Point = struct {
+            row: isize,
+            col: isize
+        };
+
+        const Beam = struct {
+            position: Point,
+            direction: Point,
+        };
+
+        pub fn day16Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day16.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                   "\n");
+
+                while (it.next()) |row| {
+                    try grid.append(try allocator.dupe(u8, row));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            var charged_tiles = try std.DynamicBitSet.initEmpty(allocator, width * height);
+            charged_tiles.set(0);
+
+            var beams = std.ArrayList(Beam).init(allocator);
+
+            // Starts one conceptual square away from our first spot
+            try beams.append(Beam { .position = Point { .row = 0, .col = -1},
+                                   .direction = Point { .row = 0, .col = 1}});
+
+            var seen_beams = std.AutoHashMap(Beam, void).init(allocator);
+            try seen_beams.put(beams.items[0], {});
+
+            std.debug.assert(charged_tiles.count() == 1);
+
+            var next_beams = std.ArrayList(Beam).init(allocator);
+            while (beams.items.len > 0) {
+                next_beams.clearRetainingCapacity();
+
+                // Move each beam
+                {
+                    var i: usize = 0;
+                    while (i < beams.items.len): (i += 1) {
+                        var beam = beams.items[i];
+
+                        var new_row = beam.position.row + beam.direction.row;
+                        var new_col = beam.position.col + beam.direction.col;
+
+                        if (new_row >= height or new_row < 0 or new_col >= width or new_col < 0) {
+                            // Beam is gone
+                            continue;
+                        }
+
+                        charged_tiles.set(@as(usize, @intCast(new_row)) * width + @as(usize, @intCast(new_col)));
+
+                        var target_tile = grid.items[@intCast(new_row)][@intCast(new_col)];
+                        if (target_tile == '.') {
+                            // continue
+                            try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = beam.direction});
+                        } else if (beam.direction.row != 0) {
+                            // Moving vertically
+                            switch (target_tile) {
+                                '|' => {
+                                    // Continue
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = beam.direction});
+                                },
+                                '-' => {
+                                    // Split left/right
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = -1}});
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = 1}});
+                                },
+                                '\\' => {
+                                    if (beam.direction.row == 1) {
+                                        // We're moving down - send right
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = 1}});
+                                    } else {
+                                        // We're moving up - send left
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = -1}});
+                                    }
+                                },
+                                '/' => {
+                                    if (beam.direction.row == 1) {
+                                        // We're moving down - send left
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = -1}});
+                                    } else {
+                                        // We're moving up - send right
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 0, .col = 1}});
+                                    }
+                                },
+                                else => unreachable,
+                            }
+                        } else {
+                            // Moving horizontally
+                            switch (target_tile) {
+                                '-' => {
+                                    // continue
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = beam.direction});
+                                },
+                                '|' => {
+                                    // Split up/down
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = -1, .col = 0}});
+                                    try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 1, .col = 0}});
+                                },
+                                '\\' => {
+                                    if (beam.direction.col == 1) {
+                                        // We're moving right - send down
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 1, .col = 0}});
+                                    } else {
+                                        // We're moving left - send up
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = -1, .col = 0}});
+                                    }
+                                },
+                                '/' => {
+                                    if (beam.direction.col == 1) {
+                                        // We're moving right - send up
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = -1, .col = 0}});
+                                    } else {
+                                        // We're moving left - send down
+                                        try next_beams.append(Beam {.position = Point {.row = new_row, .col = new_col}, .direction = Point {.row = 1, .col = 0}});
+                                    }
+                                },
+                                else => unreachable,
+                            }
+                        }
+                    }
+                }
+
+                beams.clearRetainingCapacity();
+
+                for (next_beams.items) |next_beam| {
+                    if (!seen_beams.contains(next_beam)) {
+                        try seen_beams.put(next_beam, {});
+                        try beams.append(next_beam);
+                    }
+                }
+            }
+
+            std.debug.print("Part 1: number of charged tiles: {d}\n", .{charged_tiles.count()});
+
+            // for (grid.items) |row| {
+            //     std.debug.print("{s}\n", .{
+            //         row
+            //     });
+            // }
+        }
+    };
+};
 
 const Day15 = struct {
     const Pt1 = struct {
