@@ -162,6 +162,34 @@ const Day17 = struct {
 
         };
 
+        const LowestCosts = struct {
+            costs: []?CostWithPenalty,
+
+            fn new(allocator: std.mem.Allocator) !LowestCosts {
+                return LowestCosts {
+                    .costs = try allocator.alloc(?CostWithPenalty, 524288), // "enough"
+                };
+            }
+
+            fn get(self: *const LowestCosts, p: PointLastDirection) ?CostWithPenalty {
+                var row: usize = @intCast(p.point.row);
+                var col: usize = @intCast(p.point.col);
+                var direction: usize = @intFromEnum(p.lastDirection);
+
+                return self.costs[(row * 141 * 4) + (col * 4) + direction];
+            }
+
+            fn put(self: *LowestCosts, p: PointLastDirection, c: CostWithPenalty) void {
+                var row: usize = @intCast(p.point.row);
+                var col: usize = @intCast(p.point.col);
+                var direction: usize = @intFromEnum(p.lastDirection);
+
+                self.costs[(row * 141 * 4) + (col * 4) + direction] = c;
+            }
+
+        };
+
+
         pub fn day17Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -190,7 +218,7 @@ const Day17 = struct {
             var height = grid.items.len;
 
             var crucibles = std.PriorityQueue(Crucible, void, Crucible.compareMinCost).init(allocator, {});
-            var lowest_position_costs = std.AutoHashMap(PointLastDirection, CostWithPenalty).init(allocator);
+            var lowest_position_costs = try LowestCosts.new(allocator);
 
             try crucibles.add(Crucible {
                 .accumulated_cost = 0,
@@ -225,24 +253,23 @@ const Day17 = struct {
                                 return;
                             } else {
                                 var best_cost = lowest_position_costs.get(PointLastDirection.of(new_position, direction));
+                                var new_straight_move_count: u8 = 1;
 
-                                if (best_cost != null and
-                                        best_cost.?.penalty <= crucible.straight_move_count and
-                                        best_cost.?.cost < (crucible.accumulated_cost + target_cost)) {
+                                if (direction == crucible.last_direction) {
+                                    new_straight_move_count = crucible.straight_move_count + 1;
+                                }
+
+                                if (best_cost != null and (best_cost.?.penalty <= new_straight_move_count and best_cost.?.cost < (crucible.accumulated_cost + target_cost))) {
+                                    // No good - we've seen a lower cost at the same (or lower) move penalty
+                                } else if (best_cost != null and (best_cost.?.penalty == new_straight_move_count and best_cost.?.cost == (crucible.accumulated_cost + target_cost))) {
                                     // No good - we've seen a lower cost at the same (or lower) move penalty
                                 } else {
-                                    var new_straight_move_count: u8 = 1;
-
-                                    if (direction == crucible.last_direction) {
-                                        new_straight_move_count = crucible.straight_move_count + 1;
-                                    }
-
                                     if (best_cost == null or
-                                            (crucible.straight_move_count == best_cost.?.penalty and (crucible.accumulated_cost + target_cost) < best_cost.?.cost ) or
-                                            (crucible.straight_move_count < best_cost.?.penalty and (crucible.accumulated_cost + target_cost) <= best_cost.?.cost )) {
-                                        try lowest_position_costs.put(PointLastDirection.of(new_position, direction),
-                                                                      CostWithPenalty.of((crucible.accumulated_cost + target_cost),
-                                                                                         crucible.straight_move_count));
+                                            (new_straight_move_count == best_cost.?.penalty and (crucible.accumulated_cost + target_cost) < best_cost.?.cost ) or
+                                            (new_straight_move_count < best_cost.?.penalty and (crucible.accumulated_cost + target_cost) <= best_cost.?.cost )) {
+                                        lowest_position_costs.put(PointLastDirection.of(new_position, direction),
+                                                                  CostWithPenalty.of((crucible.accumulated_cost + target_cost),
+                                                                                     new_straight_move_count));
                                     }
 
                                     var min_possible_cost = crucible.accumulated_cost + @as(u8, @intCast(target_cost));
