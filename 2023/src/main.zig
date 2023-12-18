@@ -191,7 +191,6 @@ const Day17 = struct {
 
             var crucibles = std.PriorityQueue(Crucible, void, Crucible.compareMinCost).init(allocator, {});
             var lowest_position_costs = std.AutoHashMap(PointLastDirection, CostWithPenalty).init(allocator);
-            var best_end_cost: usize = 99999;
 
             try crucibles.add(Crucible {
                 .accumulated_cost = 0,
@@ -220,14 +219,10 @@ const Day17 = struct {
                         } else {
                             // Cost of direct move
                             var target_cost: usize = grid.items[@intCast(new_position.row)][@intCast(new_position.col)];
-                            var new_last_direction = direction;
 
                             if ((new_position.row == height - 1) and (new_position.col == width - 1)) {
-                                if ((crucible.accumulated_cost + target_cost) < best_end_cost) {
-                                    std.debug.print("Part 1: Made it to the end in {d} steps\n", .{crucible.accumulated_cost + target_cost});
-                                    best_end_cost = crucible.accumulated_cost + target_cost;
-                                    return;
-                                }
+                                std.debug.print("Part 1: Made it to the end in {d} steps\n", .{crucible.accumulated_cost + target_cost});
+                                return;
                             } else {
                                 var best_cost = lowest_position_costs.get(PointLastDirection.of(new_position, direction));
 
@@ -256,7 +251,7 @@ const Day17 = struct {
 
                                     try crucibles.add(Crucible {
                                         .accumulated_cost = crucible.accumulated_cost + @as(u8, @intCast(target_cost)),
-                                        .last_direction = new_last_direction,
+                                        .last_direction = direction,
                                         .straight_move_count = new_straight_move_count,
                                         .position = new_position,
                                         .min_possible_cost = min_possible_cost,
