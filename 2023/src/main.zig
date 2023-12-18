@@ -48,10 +48,191 @@ pub fn main() !void {
     // try Day15.Pt1.day15Pt1();
     // try Day15.Pt1.day15Pt2();
 
-    try Day16.Pt1.day16Pt1();
-    try Day16.Pt2.day16Pt2();
+    // try Day16.Pt1.day16Pt1();
+    // try Day16.Pt2.day16Pt2();
+
+    try Day17.Pt1.day17Pt1();
 
 }
+
+const Day17 = struct {
+    const Pt1 = struct {
+        const Direction = enum(u8) {
+            North,
+            South,
+            East,
+            West,
+
+            fn opposite(self: *const Direction) Direction {
+                return switch (self.*) {
+                    .North => Direction.South,
+                    .East => Direction.West,
+                    .South => Direction.North,
+                    .West => Direction.East,
+                };
+            }
+        };
+
+        const Point = struct {
+            row: i16,
+            col: i16,
+
+            fn move(self: *const Point, direction: Direction) Point {
+                return switch (direction) {
+                    .North => Point { .row = self.row - 1, .col = self.col },
+                    .South => Point { .row = self.row + 1, .col = self.col },
+                    .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                    .West =>  Point { .row = self.row,     .col = self.col - 1 },
+                };
+            }
+
+            fn of(row: i16, col: i16) Point {
+                return Point {
+                    .row = row,
+                    .col = col,
+                };
+            }
+        };
+
+        const Crucible = struct {
+            accumulated_cost: u32,
+            last_direction_idx: u8,
+            last_directions: [3]?Direction,
+            position: Point,
+
+            fn compareCost(context: void, a: Crucible, b: Crucible) bool {
+                _ = context;
+
+                return a.accumulated_cost < b.accumulated_cost;
+            }
+        };
+
+
+        pub fn day17Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day17_sample.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var it  = std.mem.tokenizeSequence(u8,
+                                                   try file.readToEndAlloc(allocator, std.math.maxInt(usize)),
+                                                   "\n");
+
+                while (it.next()) |row| {
+                    var parsed_row = try allocator.dupe(u8, row);
+
+                    var i: usize = 0;
+                    while (i < row.len): (i += 1) {
+                        parsed_row[i] = row[i] - '0';
+                    }
+
+                    try grid.append(try allocator.dupe(u8, parsed_row));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            var crucibles = std.ArrayList(Crucible).init(allocator);
+            var lowest_position_costs = std.AutoHashMap(Point, usize).init(allocator);
+            var best_end_cost: usize = std.math.maxInt(isize);
+
+            try crucibles.append(Crucible {
+                .accumulated_cost = 0,
+                .last_direction_idx = 0,
+                .last_directions = undefined,
+                .position = Point.of(0, 0),
+            });
+
+            var next_crucibles = std.ArrayList(Crucible).init(allocator);
+            while (crucibles.items.len > 0) {
+                next_crucibles.clearRetainingCapacity();
+
+                for (crucibles.items) |crucible| {
+                    var last_direction = crucible.last_directions[crucible.last_direction_idx];
+                    var max_straight_reached = true;
+
+                    if (last_direction == null) {
+                        max_straight_reached = false;
+                    } else {
+                        var offset: usize = 0;
+                        while (offset < crucible.last_directions.len): (offset += 1) {
+                            var idx = @mod(@as(isize, @intCast(crucible.last_direction_idx)) - @as(isize, @intCast(offset)),
+                                           crucible.last_directions.len);
+                            if (crucible.last_directions[@intCast(idx)] != last_direction) {
+                                max_straight_reached = false;
+                            }
+                        }
+                    }
+
+                    // Work out our next possible moves
+                    inline for (std.meta.fields(Direction)) |direction_enum| {
+                        var direction: Direction = @enumFromInt(direction_enum.value);
+
+                        if (max_straight_reached and direction == last_direction) {
+                            // Nope
+                        } else if (last_direction != null and last_direction.?.opposite() == direction) {
+                            // No turning back
+                        } else {
+                            var new_position = crucible.position.move(direction);
+
+                            if ((new_position.row < 0 or new_position.row >= height) or (new_position.col < 0 or new_position.col >= width)) {
+                                // Out of bounds
+                            } else {
+                                var target_cost = grid.items[@intCast(new_position.row)][@intCast(new_position.col)];
+
+                                if ((new_position.row == height - 1) and (new_position.col == width - 1)) {
+                                    if ((crucible.accumulated_cost + target_cost) < best_end_cost) {
+                                        best_end_cost = (crucible.accumulated_cost + target_cost);
+                                        std.debug.print("Part 1: Made it to the end in {d} steps\n", .{best_end_cost});
+                                    }
+                                } else {
+                                    var best_cost = lowest_position_costs.get(new_position) orelse std.math.maxInt(isize);
+
+                                    var fudge = crucible.last_directions.len;
+
+                                    // What's fudge?  Well, a crucible might arrive at a square with a slightly
+                                    // higher cost than a previous crucible, but with better prospects due to not
+                                    // having exhausted its "move in a straight line" budget.  Fudge is the most
+                                    // optimistic estimate of the value of those better prospects.
+                                    if ((crucible.accumulated_cost + target_cost) < (best_cost + fudge) and (crucible.accumulated_cost + target_cost) < (best_end_cost + fudge)) {
+                                        // We'll take it!
+                                        try lowest_position_costs.put(new_position, crucible.accumulated_cost + target_cost);
+
+                                        var new_last_directions = crucible.last_directions;
+                                        var new_last_direction_idx = (crucible.last_direction_idx + 1) % crucible.last_directions.len;
+
+                                        new_last_directions[new_last_direction_idx] = direction;
+
+                                        try next_crucibles.append(Crucible {
+                                            .accumulated_cost = crucible.accumulated_cost + target_cost,
+                                            .last_direction_idx = @intCast(new_last_direction_idx),
+                                            .last_directions = new_last_directions,
+                                            .position = new_position,
+                                        });
+                                    } else {
+                                        // No way
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                crucibles.clearRetainingCapacity();
+
+                std.debug.print("Next crucibles length: {d}\n", .{next_crucibles.items.len});
+
+                var tmp = crucibles;
+                crucibles = next_crucibles;
+                next_crucibles = tmp;
+            }
+        }
+    };
+};
+
 
 const Day16 = struct {
     const Pt1 = struct {
