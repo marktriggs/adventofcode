@@ -96,23 +96,52 @@ const Day17 = struct {
 
         const Crucible = struct {
             accumulated_cost: u32,
-            last_direction_idx: u8,
-            last_directions: [3]?Direction,
+            last_direction: ?Direction,
+            straight_move_count: u32,
             position: Point,
+            min_possible_cost: u32,
 
-            fn compareCost(context: void, a: Crucible, b: Crucible) bool {
+            fn compareMinCost(context: void, a: Crucible, b: Crucible) std.math.Order {
                 _ = context;
 
-                return a.accumulated_cost < b.accumulated_cost;
+                return std.math.order(a.min_possible_cost, b.min_possible_cost);
             }
         };
 
+
+        fn moveCost(grid: [][]u8, point: Point, d1: Direction, d2: Direction, d3: Direction) usize {
+            var destination = point;
+            var total_cost: usize = 0;
+
+            destination = destination.move(d1);
+            if ((destination.row >= grid.len or destination.row < 0) or (destination.col >= grid[0].len or destination.col < 0)) {
+                return std.math.maxInt(usize);
+            }
+
+            total_cost += grid[@as(usize, @intCast(destination.row))][@as(usize, @intCast(destination.col))];
+
+            destination = destination.move(d2);
+            if ((destination.row >= grid.len or destination.row < 0) or (destination.col >= grid[0].len or destination.col < 0)) {
+                return std.math.maxInt(usize);
+            }
+
+            total_cost += grid[@as(usize, @intCast(destination.row))][@as(usize, @intCast(destination.col))];
+
+            destination = destination.move(d3);
+            if ((destination.row >= grid.len or destination.row < 0) or (destination.col >= grid[0].len or destination.col < 0)) {
+                return std.math.maxInt(usize);
+            }
+
+            total_cost += grid[@as(usize, @intCast(destination.row))][@as(usize, @intCast(destination.col))];
+
+            return total_cost;
+        }
 
         pub fn day17Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
-            var file = try std.fs.cwd().openFile("input_files/day17_sample.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var file = try std.fs.cwd().openFile("input_files/day17.txt", .{ .mode = std.fs.File.OpenMode.read_only });
             var grid = std.ArrayList([]u8).init(allocator);
 
             {
@@ -135,99 +164,137 @@ const Day17 = struct {
             var width = grid.items[0].len;
             var height = grid.items.len;
 
-            var crucibles = std.ArrayList(Crucible).init(allocator);
+            var crucibles = std.PriorityQueue(Crucible, void, Crucible.compareMinCost).init(allocator, {});
             var lowest_position_costs = std.AutoHashMap(Point, usize).init(allocator);
-            var best_end_cost: usize = std.math.maxInt(isize);
+            var best_end_cost: usize = 99999;
 
-            try crucibles.append(Crucible {
+            try crucibles.add(Crucible {
                 .accumulated_cost = 0,
-                .last_direction_idx = 0,
-                .last_directions = undefined,
+                .last_direction = null,
+                .straight_move_count = 0,
                 .position = Point.of(0, 0),
+                .min_possible_cost = @as(u32, @intCast(width + height)),
             });
 
-            var next_crucibles = std.ArrayList(Crucible).init(allocator);
-            while (crucibles.items.len > 0) {
-                next_crucibles.clearRetainingCapacity();
+            while (crucibles.len > 0) {
+                var crucible = crucibles.remove();
 
-                for (crucibles.items) |crucible| {
-                    var last_direction = crucible.last_directions[crucible.last_direction_idx];
-                    var max_straight_reached = true;
+                // Work out our next possible moves
+                inline for (std.meta.fields(Direction)) |direction_enum| {
+                    var direction: Direction = @enumFromInt(direction_enum.value);
 
-                    if (last_direction == null) {
-                        max_straight_reached = false;
+                    if (crucible.last_direction != null and crucible.last_direction.?.opposite() == direction) {
+                        // No turning back
                     } else {
-                        var offset: usize = 0;
-                        while (offset < crucible.last_directions.len): (offset += 1) {
-                            var idx = @mod(@as(isize, @intCast(crucible.last_direction_idx)) - @as(isize, @intCast(offset)),
-                                           crucible.last_directions.len);
-                            if (crucible.last_directions[@intCast(idx)] != last_direction) {
-                                max_straight_reached = false;
-                            }
-                        }
-                    }
+                        var new_position = crucible.position.move(direction);
 
-                    // Work out our next possible moves
-                    inline for (std.meta.fields(Direction)) |direction_enum| {
-                        var direction: Direction = @enumFromInt(direction_enum.value);
-
-                        if (max_straight_reached and direction == last_direction) {
-                            // Nope
-                        } else if (last_direction != null and last_direction.?.opposite() == direction) {
-                            // No turning back
+                        if ((new_position.row < 0 or new_position.row >= height) or (new_position.col < 0 or new_position.col >= width)) {
+                            // Out of bounds
                         } else {
-                            var new_position = crucible.position.move(direction);
+                            // Cost of direct move
+                            var target_cost: usize = grid.items[@intCast(new_position.row)][@intCast(new_position.col)];
+                            var new_last_direction = direction;
 
-                            if ((new_position.row < 0 or new_position.row >= height) or (new_position.col < 0 or new_position.col >= width)) {
-                                // Out of bounds
+                            // wiggle
+                            if (crucible.straight_move_count == 3 and direction == crucible.last_direction) {
+                                // our target cost is longer than it would be otherwise.  Here comes fun
+                                switch (direction) {
+                                    .North => {
+                                        // min([E, N, W], [W, N, E])
+                                        var a = moveCost(grid.items, crucible.position, Direction.East, Direction.North, Direction.West);
+                                        var b = moveCost(grid.items, crucible.position, Direction.West, Direction.North, Direction.East);
+
+                                        if (a < b) {
+                                            target_cost = a;
+                                            new_last_direction = Direction.West;
+                                        } else {
+                                            target_cost = b;
+                                            new_last_direction = Direction.East;
+                                        }
+                                    },
+                                    .East => {
+                                        // min([N, E, S], [S, E, N])
+                                        var a = moveCost(grid.items, crucible.position, Direction.North, Direction.East, Direction.South);
+                                        var b = moveCost(grid.items, crucible.position, Direction.South, Direction.East, Direction.North);
+
+                                        if (a < b) {
+                                            target_cost = a;
+                                            new_last_direction = Direction.South;
+                                        } else {
+                                            target_cost = b;
+                                            new_last_direction = Direction.North;
+                                        }
+
+                                    },
+                                    .South => {
+                                        // min([E, S, W], [W, S, E])
+                                        var a = moveCost(grid.items, crucible.position, Direction.East, Direction.South, Direction.West);
+                                        var b = moveCost(grid.items, crucible.position, Direction.West, Direction.South, Direction.East);
+
+                                        if (a < b) {
+                                            target_cost = a;
+                                            new_last_direction = Direction.West;
+                                        } else {
+                                            target_cost = b;
+                                            new_last_direction = Direction.East;
+                                        }
+
+                                    },
+                                    .West => {
+                                        // min([N, W, S], [S, W, N])
+                                        var a = moveCost(grid.items, crucible.position, Direction.North, Direction.West, Direction.South);
+                                        var b = moveCost(grid.items, crucible.position, Direction.South, Direction.West, Direction.North);
+
+                                        if (a < b) {
+                                            target_cost = a;
+                                            new_last_direction = Direction.South;
+                                        } else {
+                                            target_cost = b;
+                                            new_last_direction = Direction.North;
+                                        }
+                                    },
+                                }
+                            }
+
+                            if ((new_position.row == height - 1) and (new_position.col == width - 1)) {
+                                if ((crucible.accumulated_cost + target_cost) < best_end_cost) {
+                                    std.debug.print("Part 1: Made it to the end in {d} steps\n", .{crucible.accumulated_cost + target_cost});
+                                    best_end_cost = crucible.accumulated_cost + target_cost;
+                                }
                             } else {
-                                var target_cost = grid.items[@intCast(new_position.row)][@intCast(new_position.col)];
+                                var best_cost = lowest_position_costs.get(new_position) orelse std.math.maxInt(usize);
 
-                                if ((new_position.row == height - 1) and (new_position.col == width - 1)) {
-                                    if ((crucible.accumulated_cost + target_cost) < best_end_cost) {
-                                        best_end_cost = (crucible.accumulated_cost + target_cost);
-                                        std.debug.print("Part 1: Made it to the end in {d} steps\n", .{best_end_cost});
+                                var new_straight_move_count: u32 = 1;
+
+                                if (direction == crucible.last_direction) {
+                                    // If we didn't just wiggle...
+                                    if (crucible.straight_move_count < 3) {
+                                        new_straight_move_count = crucible.straight_move_count + 1;
                                     }
+                                }
+
+                                if ((crucible.accumulated_cost + target_cost) < best_cost and (crucible.accumulated_cost + target_cost) < best_end_cost) {
+                                    // We'll take it!
+                                    try lowest_position_costs.put(new_position, crucible.accumulated_cost + target_cost);
+
+                                    var min_possible_cost = crucible.accumulated_cost + @as(u8, @intCast(target_cost));
+                                    min_possible_cost += @intCast(width - @as(usize, @intCast(new_position.col)));
+                                    min_possible_cost += @intCast(height - @as(usize, @intCast(new_position.row)));
+
+                                    try crucibles.add(Crucible {
+                                        .accumulated_cost = crucible.accumulated_cost + @as(u8, @intCast(target_cost)),
+                                        .last_direction = new_last_direction,
+                                        .straight_move_count = new_straight_move_count,
+                                        .position = new_position,
+                                        .min_possible_cost = min_possible_cost,
+                                    });
                                 } else {
-                                    var best_cost = lowest_position_costs.get(new_position) orelse std.math.maxInt(isize);
-
-                                    var fudge = crucible.last_directions.len;
-
-                                    // What's fudge?  Well, a crucible might arrive at a square with a slightly
-                                    // higher cost than a previous crucible, but with better prospects due to not
-                                    // having exhausted its "move in a straight line" budget.  Fudge is the most
-                                    // optimistic estimate of the value of those better prospects.
-                                    if ((crucible.accumulated_cost + target_cost) < (best_cost + fudge) and (crucible.accumulated_cost + target_cost) < (best_end_cost + fudge)) {
-                                        // We'll take it!
-                                        try lowest_position_costs.put(new_position, crucible.accumulated_cost + target_cost);
-
-                                        var new_last_directions = crucible.last_directions;
-                                        var new_last_direction_idx = (crucible.last_direction_idx + 1) % crucible.last_directions.len;
-
-                                        new_last_directions[new_last_direction_idx] = direction;
-
-                                        try next_crucibles.append(Crucible {
-                                            .accumulated_cost = crucible.accumulated_cost + target_cost,
-                                            .last_direction_idx = @intCast(new_last_direction_idx),
-                                            .last_directions = new_last_directions,
-                                            .position = new_position,
-                                        });
-                                    } else {
-                                        // No way
-                                    }
+                                    // No way
                                 }
                             }
                         }
                     }
                 }
-
-                crucibles.clearRetainingCapacity();
-
-                std.debug.print("Next crucibles length: {d}\n", .{next_crucibles.items.len});
-
-                var tmp = crucibles;
-                crucibles = next_crucibles;
-                next_crucibles = tmp;
             }
         }
     };
