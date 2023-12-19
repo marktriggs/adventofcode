@@ -52,8 +52,203 @@ pub fn main() !void {
     // try Day16.Pt2.day16Pt2();
 
     // try Day17.Pt1.day17Pt1();
-    try Day17.Pt2.day17Pt2();
+    // try Day17.Pt2.day17Pt2();
+
+    try Day18.Pt1.day18Pt1();
 }
+
+const Day18 = struct {
+    const Pt1 = struct {
+        const Direction = enum(u8) {
+            North,
+            South,
+            East,
+            West,
+
+            fn opposite(self: *const Direction) Direction {
+                return switch (self.*) {
+                    .North => Direction.South,
+                    .East => Direction.West,
+                    .South => Direction.North,
+                    .West => Direction.East,
+                };
+            }
+        };
+
+        const Point = struct {
+            row: isize,
+            col: isize,
+
+            fn move(self: *const Point, direction: Direction) Point {
+                return switch (direction) {
+                    .North => Point { .row = self.row - 1, .col = self.col },
+                    .South => Point { .row = self.row + 1, .col = self.col },
+                    .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                    .West =>  Point { .row = self.row,     .col = self.col - 1 },
+                };
+            }
+
+            fn rowU(self: *const Point) usize {
+                return @intCast(self.row);
+            }
+
+            fn colU(self: *const Point) usize {
+                return @intCast(self.col);
+            }
+
+            fn of(row: isize, col: isize) Point {
+                return Point {
+                    .row = row,
+                    .col = col,
+                };
+            }
+        };
+
+        const Instruction = struct {
+            direction: u8,
+            steps: u32,
+            colour: u32,
+        };
+
+        pub fn day18Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var instructions = std.ArrayList(Instruction).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day18.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, " ()#");
+
+                    var direction = it.next().?;
+                    var steps = try std.fmt.parseUnsigned(u32, it.next().?, 10);
+                    var colour = try std.fmt.parseUnsigned(u32, it.next().?, 16);
+
+                    try instructions.append(Instruction {
+                        .direction = direction[0],
+                        .steps = steps,
+                        .colour = colour,
+                    });
+                }
+            }
+
+            var width: usize = 0;
+            var height: usize = 0;
+            var origin_x: isize = 0;
+            var origin_y: isize = 0;
+            {
+                var min_x: isize = 0;
+                var max_x: isize = 0;
+                var min_y: isize = 0;
+                var max_y: isize = 0;
+
+                var x: isize = 0;
+                var y: isize = 0;
+
+                for (instructions.items) |instruction| {
+                    switch (instruction.direction) {
+                        'U' => y -= instruction.steps,
+                        'D' => y += instruction.steps,
+                        'L' => x -= instruction.steps,
+                        'R' => x += instruction.steps,
+                        else => unreachable,
+                    }
+
+                    min_x = @min(min_x, x);
+                    min_y = @min(min_y, y);
+                    max_x = @max(max_x, x);
+                    max_y = @max(max_y, y);
+                }
+
+                width = @intCast((max_x - min_x) + 1);
+                height = @intCast((max_y - min_y) + 1);
+
+                origin_x = @intCast(@abs(min_x));
+                origin_y = @intCast(@abs(min_y));
+            }
+
+            var grid = try std.ArrayList(u32).initCapacity(allocator, width * height);
+            {
+                var i: usize = 0;
+                while (i < width * height): (i += 1) {
+                    try grid.append(0xFFFFFFFF);
+                }
+            }
+
+            std.debug.print("{} - {}\n", .{origin_x, origin_y});
+
+            // Note: flipped!  Yick
+            var pos = Point.of(origin_y, origin_x);
+            grid.items[pos.rowU() * width + pos.colU()] = 0x000000FF;
+
+            for (instructions.items) |instruction| {
+                var direction =
+                    switch (instruction.direction) {
+                        'U' => Direction.North,
+                        'D' => Direction.South,
+                        'L' => Direction.West,
+                        'R' => Direction.East,
+                        else => unreachable,
+                };
+
+                {
+                    var i: usize = 0;
+                    while (i < instruction.steps): (i += 1) {
+                        pos = pos.move(direction);
+                        if (grid.items[pos.rowU() * width + pos.colU()] == 0xFFFFFFFF) {
+                            grid.items[pos.rowU() * width + pos.colU()] = instruction.colour << 8 | 0xFF;
+                        }
+                    }
+                }
+            }
+
+            {
+                std.debug.print("Writing {d}x{d} bitmap\n", .{ width, height });
+                var out = try std.fs.createFileAbsolute("/home/mst/tmp/cave.data", .{});
+                defer out.close();
+
+                var buf: [4]u8 = undefined;
+                for (grid.items) |pixel| {
+                    buf[0] = @intCast(pixel >> 24 & 0xFF);
+                    buf[1] = @intCast(pixel >> 16 & 0xFF);
+                    buf[2] = @intCast(pixel >>  8 & 0xFF);
+                    buf[3] = @intCast(pixel >>  0 & 0xFF);
+
+                    try out.writeAll(&buf);
+                }
+            }
+
+            // Read it back and count non-white pixels.  Used gimp with the same trick as before
+            {
+                var file = try std.fs.openFileAbsolute("/home/mst/tmp/cave-filled.data", .{ .mode = std.fs.File.OpenMode.read_only });
+                var buf: [4]u8 = undefined;
+
+                var contained_pixels: usize = 0;
+
+                while (true) {
+                    var len = try file.read(&buf);
+
+                    if (len != 4) {
+                        break;
+                    }
+
+                    if (!std.mem.eql(u8, &buf, &[_]u8 { 0xFF, 0xFF, 0xFF, 0xFF })) {
+                        contained_pixels += 1;
+                    }
+                }
+
+                std.debug.print("I count {d} contained pixels\n", . {
+                    contained_pixels
+                });
+            }
+        }
+    };
+};
+
 
 const Day17 = struct {
     const Pt1 = struct {
