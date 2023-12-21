@@ -3,62 +3,63 @@
 const std = @import("std");
 
 pub fn main() !void {
-    // try Day1.day1Pt1();
-    // try Day1.day1Pt2();
+    // try day1.day1Pt1();
+    // try day1.day1Pt2();
     //
-    // try Day2.day2Pt1();
-    // try Day2.day2Pt2();
+    // try day2.day2Pt1();
+    // try day2.day2Pt2();
     //
-    // try Day3.day3Pt1();
-    // try Day3.day3Pt2();
+    // try day3.day3Pt1();
+    // try day3.day3Pt2();
     //
-    // try Day4.day4Pt1();
-    // try Day4.day4Pt2();
+    // try day4.day4Pt1();
+    // try day4.day4Pt2();
     //
-    // try Day5.day5Pt1();
-    // try Day5.day5Pt2();
+    // try day5.day5Pt1();
+    // try day5.day5Pt2();
     //
-    // try Day6.day6Pt1();
-    // try Day6.day6Pt2();
+    // try day6.day6Pt1();
+    // try day6.day6Pt2();
     //
-    // try Day7.Pt1.day7Pt1();
-    // try Day7.Pt2.day7Pt2();
+    // try day7.Pt1.day7Pt1();
+    // try day7.pt2.day7Pt2();
 
-    // try Day8.Pt1.day8Pt1();
-    // try Day8.Pt2.day8Pt2();
+    // try day8.pt1.day8Pt1();
+    // try day8.pt2.day8Pt2();
 
-    // try Day9.Pt1.day9Pt1();
-    // try Day9.Pt2.day9Pt2();
+    // try day9.pt1.day9Pt1();
+    // try day9.pt2.day9Pt2();
 
-    // try Day10.day10Pt1();
-    // try Day10.day10Pt2();
+    // try day10.day10Pt1();
+    // try day10.day10Pt2();
 
-    // try Day11.day11Pt1();
-    // try Day11.day11Pt2();
+    // try day11.day11Pt1();
+    // try day11.day11Pt2();
 
-    // try Day12.Pt1.day12Pt1();
-    // try Day12.Pt2.day12Pt2();
+    // try day12.pt1.day12Pt1();
+    // try day12.pt2.day12Pt2();
 
-    // try Day13.Pt1.day13Pt1();
-    // try Day13.Pt2.day13Pt2();
+    // try day13.pt1.day13Pt1();
+    // try day13.pt2.day13Pt2();
 
-    // try Day14.Pt1.day14Pt1();
-    // try Day14.Pt2.day14Pt2();
+    // try day14.pt1.day14Pt1();
+    // try day14.pt2.day14Pt2();
 
-    // try Day15.Pt1.day15Pt1();
-    // try Day15.Pt1.day15Pt2();
+    // try day15.pt1.day15Pt1();
+    // try day15.pt1.day15Pt2();
 
-    // try Day16.Pt1.day16Pt1();
-    // try Day16.Pt2.day16Pt2();
+    // try day16.pt1.day16Pt1();
+    // try day16.pt2.day16Pt2();
 
-    // try Day17.Pt1.day17Pt1();
-    // try Day17.Pt2.day17Pt2();
+    // try day17.pt1.day17Pt1();
+    // try day17.pt2.day17Pt2();
 
-    try Day18.Pt1.day18Pt1();
+    // try day18.pt1.day18Pt1();
+    try day18.pt2.day18Pt2();
 }
 
-const Day18 = struct {
-    const Pt1 = struct {
+const day18 = struct {
+    const pt1 = struct {
         const Direction = enum(u8) {
             North,
             South,
@@ -247,11 +248,332 @@ const Day18 = struct {
             }
         }
     };
+
+    const pt2 = struct {
+        const Direction = enum(u8) {
+            North,
+            South,
+            East,
+            West,
+
+            fn opposite(self: *const Direction) Direction {
+                return switch (self.*) {
+                    .North => Direction.South,
+                    .East => Direction.West,
+                    .South => Direction.North,
+                    .West => Direction.East,
+                };
+            }
+        };
+
+        const Point = struct {
+            row: isize,
+            col: isize,
+
+            fn move(self: *const Point, direction: Direction) Point {
+                return switch (direction) {
+                    .North => Point { .row = self.row - 1, .col = self.col },
+                    .South => Point { .row = self.row + 1, .col = self.col },
+                    .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                    .West =>  Point { .row = self.row,     .col = self.col - 1 },
+                };
+            }
+
+            fn rowU(self: *const Point) usize {
+                return @intCast(self.row);
+            }
+
+            fn colU(self: *const Point) usize {
+                return @intCast(self.col);
+            }
+
+            fn of(row: isize, col: isize) Point {
+                return Point {
+                    .row = row,
+                    .col = col,
+                };
+            }
+        };
+
+        const Instruction = struct {
+            direction: u8,
+            steps: u32,
+            colour: u32,
+        };
+
+        fn lessThanEdgeOfInterest(context: void, a: EdgeOfInterest, b: EdgeOfInterest) bool {
+            _ = context;
+            return a.col < b.col;
+        }
+
+        const EdgeType = enum(u8) {
+            NorthEast,
+            NorthWest,
+            SouthEast,
+            SouthWest,
+            Vertical,
+        };
+
+        const EdgeOfInterest = struct {
+            col: isize,
+            edge_type: EdgeType,
+
+            fn of(col: isize, edge_type: EdgeType) EdgeOfInterest {
+                return EdgeOfInterest {
+                    .col = col,
+                    .edge_type = edge_type,
+                };
+            }
+        };
+
+        fn lessThan(context: void, a: isize, b: isize) bool {
+            _ = context;
+            return a < b;
+        }
+
+
+        pub fn day18Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var instructions = std.ArrayList(Instruction).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day18.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, " ()#");
+
+                    var _dud_direction = it.next().?;
+                    var _dud_steps = it.next().?;
+                    _ = _dud_direction;
+                    _ = _dud_steps;
+
+                    var hex = it.next().?;
+                    var steps = try std.fmt.parseUnsigned(u32, hex[0..5], 16);
+                    var direction_code = try std.fmt.parseUnsigned(u8, hex[5..], 16);
+                    var direction: u8 = switch (direction_code) {
+                        0 => 'R',
+                        1 => 'D',
+                        2 => 'L',
+                        3 => 'U',
+                        else => unreachable,
+                    };
+
+                    try instructions.append(Instruction {
+                        .direction = direction,
+                        .steps = steps,
+                        .colour = 0x000000FF,
+                    });
+                }
+            }
+
+
+            // Temp
+            // instructions = std.ArrayList(Instruction).init(allocator);
+
+            // pt 1 shape
+            // try instructions.append(Instruction { .direction = 'R', .steps = 6, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'D', .steps = 5, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'L', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'D', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'R', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'D', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'L', .steps = 5, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'U', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'L', .steps = 1, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'U', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'R', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'U', .steps = 3, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'L', .steps = 2, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'U', .steps = 2, .colour = 0 });
+
+            // try instructions.append(Instruction { .direction = 'D', .steps = 5, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'R', .steps = 5, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'U', .steps = 10, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'L', .steps = 5, .colour = 0 });
+            // try instructions.append(Instruction { .direction = 'D', .steps = 5, .colour = 0 });
+
+            // OK fine.  I guess I've hit the limit of how much cheating with gimp I can do here.
+            {
+                var edges_count: isize = 0;
+                var vertical_edges = std.AutoHashMap(isize, std.ArrayList(EdgeOfInterest)).init(allocator);
+
+                {
+                    var pos = Point.of(0, 0);
+                    // Edges we care about: _|  |_  |
+
+
+                    // is our starting point a corner?
+                    {
+                        if (!vertical_edges.contains(pos.row)) {
+                            try vertical_edges.put(pos.row, std.ArrayList(EdgeOfInterest).init(allocator));
+                        }
+
+                        var columns = vertical_edges.getPtr(pos.row).?;
+
+                        if (instructions.items[0].direction == 'U' and instructions.items[instructions.items.len - 1].direction == 'R') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthEast));
+                        } else if (instructions.items[0].direction == 'R' and instructions.items[instructions.items.len - 1].direction == 'D') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthEast));
+                        } else if (instructions.items[0].direction == 'L' and instructions.items[instructions.items.len - 1].direction == 'D') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthWest));
+                        } else if (instructions.items[0].direction == 'U' and instructions.items[instructions.items.len - 1].direction == 'R') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthWest));
+                        } else if (instructions.items[0].direction == 'D' and instructions.items[instructions.items.len - 1].direction == 'L') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthEast));
+                        } else if (instructions.items[0].direction == 'R' and instructions.items[instructions.items.len - 1].direction == 'U') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthEast));
+                        } else if (instructions.items[0].direction == 'D' and instructions.items[instructions.items.len - 1].direction == 'R') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthWest));
+                        } else if (instructions.items[0].direction == 'L' and instructions.items[instructions.items.len - 1].direction == 'U') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthWest));
+                        } else if (instructions.items[0].direction == 'U' and instructions.items[instructions.items.len - 1].direction == 'U') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.Vertical));
+                        } else if (instructions.items[0].direction == 'D' and instructions.items[instructions.items.len - 1].direction == 'D') {
+                            try columns.append(EdgeOfInterest.of(pos.col, EdgeType.Vertical));
+                        }
+                    }
+
+                    var last_direction: u8 = instructions.items[0].direction;
+
+                    for (instructions.items) |instruction| {
+                        if (last_direction != instruction.direction) {
+                            if (!vertical_edges.contains(pos.row)) {
+                                try vertical_edges.put(pos.row, std.ArrayList(EdgeOfInterest).init(allocator));
+                            }
+
+                            var columns = vertical_edges.getPtr(pos.row).?;
+
+                            // We've turned a corner.
+                            if (last_direction == 'D' and instruction.direction == 'R') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthEast));
+                            } else if (last_direction == 'L' and instruction.direction == 'U') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthEast));
+                            } else if (last_direction == 'D' and instruction.direction == 'L') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthWest));
+                            } else if (last_direction == 'R' and instruction.direction == 'U') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.NorthWest));
+                            } else if (last_direction == 'U' and instruction.direction == 'R') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthEast));
+                            } else if (last_direction == 'L' and instruction.direction == 'D') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthEast));
+                            } else if (last_direction == 'U' and instruction.direction == 'L') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthWest));
+                            } else if (last_direction == 'R' and instruction.direction == 'D') {
+                                try columns.append(EdgeOfInterest.of(pos.col, EdgeType.SouthWest));
+                            }
+                        }
+
+                        last_direction = instruction.direction;
+
+                        var movement =
+                            switch (instruction.direction) {
+                                'U' => Direction.North,
+                                'D' => Direction.South,
+                                'L' => Direction.West,
+                                'R' => Direction.East,
+                                else => unreachable,
+                        };
+
+                        {
+                            var i: usize = 0;
+                            while (i < instruction.steps): (i += 1) {
+                                pos = pos.move(movement);
+
+                                if ((instruction.direction == 'U' or instruction.direction == 'D') and (i + 1) < instruction.steps) {
+                                    if (!vertical_edges.contains(pos.row)) {
+                                        try vertical_edges.put(pos.row, std.ArrayList(EdgeOfInterest).init(allocator));
+                                    }
+
+                                    var columns = vertical_edges.getPtr(pos.row).?;
+                                    try columns.append(EdgeOfInterest.of(pos.col, EdgeType.Vertical));
+                                }
+
+                                edges_count += 1;
+                            }
+                        }
+                    }
+                }
+
+                // Sort our lists of columns
+                {
+                    var it = vertical_edges.valueIterator();
+                    while (it.next()) |columns| {
+                        std.sort.heap(EdgeOfInterest, columns.items, {}, lessThanEdgeOfInterest);
+                    }
+                }
+
+                // {
+                //     var keys = vertical_edges.keyIterator();
+                //     var ordered_keys = std.ArrayList(isize).init(allocator);
+                //
+                //     while (keys.next()) |key| {
+                //         try ordered_keys.append(key.*);
+                //     }
+                //
+                //     std.sort.heap(isize, ordered_keys.items, {}, lessThan);
+                //
+                //     for (ordered_keys.items) |key| {
+                //         var columns = vertical_edges.getPtr(key).?;
+                //
+                //         for (columns.items) |edge| {
+                //             std.debug.print("{any}({d})\t", .{edge.edge_type, edge.col});
+                //         }
+                //         std.debug.print("\n", .{});
+                //     }
+                // }
+
+
+                {
+                    var total_count: isize = 0;
+
+                    var it = vertical_edges.valueIterator();
+                    while (it.next()) |columns| {
+                        var counting: bool = false;
+
+                        var i: usize = 1;
+                        while (i < columns.items.len): (i += 1) {
+                            if (columns.items[i - 1].edge_type == EdgeType.NorthEast) {
+                                counting = !counting;
+                            } else if (columns.items[i - 1].edge_type == EdgeType.NorthWest) {
+                                counting = !counting;
+                                if (counting) {
+                                    total_count += (columns.items[i].col - columns.items[i - 1].col - 1);
+                                }
+                            } else if (columns.items[i - 1].edge_type == EdgeType.SouthWest) {
+                                if (counting) {
+                                    total_count += (columns.items[i].col - columns.items[i - 1].col - 1);
+                                }
+                            } else if (columns.items[i - 1].edge_type == EdgeType.SouthEast) {
+                                // meh.  Edge.
+                            } else if (columns.items[i - 1].edge_type == EdgeType.Vertical) {
+                                counting = !counting;
+                                if (counting) {
+                                    total_count += (columns.items[i].col - columns.items[i - 1].col - 1);
+                                }
+                            } else {
+                                std.debug.print("{any} - {any}\n", .{columns.items[i - 1].edge_type, columns.items[i].edge_type});
+                                unreachable;
+                            }
+                        }
+                    }
+
+                    std.debug.print("Inner count: {d}\n", .{ total_count });
+                    std.debug.print("Total count: {d}\n", .{ total_count + edges_count });
+                }
+
+
+            }
+        }
+    };
 };
 
 
-const Day17 = struct {
-    const Pt1 = struct {
+const day17 = struct {
+    const pt1 = struct {
         const Direction = enum(u8) {
             North,
             South,
@@ -459,7 +781,7 @@ const Day17 = struct {
         }
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
         const Direction = enum(u8) {
             North,
             South,
@@ -666,8 +988,8 @@ const Day17 = struct {
 };
 
 
-const Day16 = struct {
-    const Pt1 = struct {
+const day16 = struct {
+    const pt1 = struct {
         const Point = struct {
             row: isize,
             col: isize
@@ -827,8 +1149,8 @@ const Day16 = struct {
         }
     };
 
-    const Pt2 = struct {
-        const Point = Day16.Pt1.Point;
+    const pt2 = struct {
+        const Point = day16.pt1.Point;
 
         pub fn day16Pt2() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -859,35 +1181,35 @@ const Day16 = struct {
                     if (row == 0) {
                         if (col == 0) {
                             // top-left
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                         } else if (col == (width - 1)) {
                             // top-right
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                         } else {
                             // top
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
                         }
                     } else if (row == (height - 1)) {
                         if (col == 0) {
                             // bottom-left
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                         } else if (col == (width - 1)) {
                             // bottom-right
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                         } else {
                             // bottom
-                            best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
                         }
                     } else if (col == 0) {
                         // left
-                        best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                        best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                     } else if (col == (width - 1)) {
                         // right
-                        best_charge = @max(best_charge, try Day16.Pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                        best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                     }
                 }
             }
@@ -897,8 +1219,8 @@ const Day16 = struct {
     };
 };
 
-const Day15 = struct {
-    const Pt1 = struct {
+const day15 = struct {
+    const pt1 = struct {
         fn hash(s: []const u8) usize {
             var total: usize = 0;
 
@@ -1010,8 +1332,8 @@ const Day15 = struct {
 };
 
 
-const Day14 = struct {
-    const Pt1 = struct {
+const day14 = struct {
+    const pt1 = struct {
         pub fn day14Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -1073,7 +1395,7 @@ const Day14 = struct {
         }
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
         fn stateKey(allocator: std.mem.Allocator, grid: [][]u8) ![]u8 {
             var result = std.ArrayList(u8).init(allocator);
 
@@ -1240,8 +1562,8 @@ const Day14 = struct {
 };
 
 
-const Day13 = struct {
-    const Pt1 = struct {
+const day13 = struct {
+    const pt1 = struct {
         pub fn day13Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -1339,7 +1661,7 @@ const Day13 = struct {
         }
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
         pub fn day13Pt2() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -1453,8 +1775,8 @@ const Day13 = struct {
     };
 };
 
-const Day12 = struct {
-    const Pt1 = struct {
+const day12 = struct {
+    const pt1 = struct {
         pub fn day12Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -1570,7 +1892,7 @@ const Day12 = struct {
 
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
         pub fn day12Pt2() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -1723,7 +2045,7 @@ const Day12 = struct {
 
 };
 
-const Day11 = struct {
+const day11 = struct {
     const Galaxy = struct {
         id: usize,
         row: usize,
@@ -1916,7 +2238,7 @@ const Day11 = struct {
 };
 
 
-const Day10 = struct {
+const day10 = struct {
     const Tile = enum(u8) {
         Vertical,
         Horizontal,
@@ -2299,8 +2621,8 @@ const Day10 = struct {
 };
 
 
-const Day9 = struct {
-    const Pt1 = struct {
+const day9 = struct {
+    const pt1 = struct {
 
         fn nextInSequence(allocator: std.mem.Allocator, sequence: []isize) !isize {
             var last_sequence = sequence;
@@ -2371,7 +2693,7 @@ const Day9 = struct {
         }
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
 
         fn nextInSequence(allocator: std.mem.Allocator, sequence: []isize) !isize {
             var last_sequence = sequence;
@@ -2455,7 +2777,7 @@ const Day9 = struct {
 };
 
 
-const Day8 = struct {
+const day8 = struct {
 
     // Dumping a bunch of notes in here because I ended up solving PT2 by hand:
 
@@ -2581,7 +2903,7 @@ const Day8 = struct {
     //
     // Part2: 13,385,272,668,829
     //
-    const Pt1 = struct {
+    const pt1 = struct {
         const Direction = struct {
             left: []u8,
             right: []u8,
@@ -2636,7 +2958,7 @@ const Day8 = struct {
         }
     };
 
-    const Pt2 = struct {
+    const pt2 = struct {
         const Direction = struct {
             left: u16,
             right: u16,
@@ -2838,7 +3160,7 @@ const Day8 = struct {
 };
 
 
-const Day7 = struct {
+const day7 = struct {
 
     const HandType = enum(u8) {
         high_card,
@@ -2851,7 +3173,7 @@ const Day7 = struct {
     };
 
 
-    const Pt1 = struct {
+    const pt1 = struct {
         const Hand = struct {
             const CardOrdering = "23456789TJQKA";
 
@@ -2962,7 +3284,7 @@ const Day7 = struct {
     };
 
 
-    const Pt2 = struct {
+    const pt2 = struct {
         const Hand = struct {
             const CardOrdering = "J23456789TQKA";
 
@@ -3100,7 +3422,7 @@ const Day7 = struct {
 };
 
 
-const Day6 = struct {
+const day6 = struct {
     const RaceResult = struct {
         race_time_ms: usize,
         winning_distance_mm: usize,
@@ -3165,7 +3487,7 @@ const Day6 = struct {
 };
 
 
-const Day5 = struct {
+const day5 = struct {
     const MapRange = struct {
         dst_start: usize,
         src_start: usize,
@@ -3404,7 +3726,7 @@ const Day5 = struct {
 };
 
 
-const Day4 = struct {
+const day4 = struct {
     pub fn day4Pt1() !void {
         var buf: [1024]u8 = undefined;
 
@@ -3529,7 +3851,7 @@ const Day4 = struct {
 };
 
 
-const Day3 = struct {
+const day3 = struct {
     const Coord2d = struct {
         row: usize,
         col: usize,
@@ -3722,7 +4044,7 @@ const Day3 = struct {
     }
 };
 
-const Day2 = struct {
+const day2 = struct {
     const Sample = struct {
         red: u64,
         green: u64,
@@ -3826,7 +4148,7 @@ const Day2 = struct {
     }
 };
 
-const Day1 = struct {
+const day1 = struct {
     pub fn day1Pt1() !void {
         var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
