@@ -55,8 +55,131 @@ pub fn main() !void {
     // try day17.pt2.day17Pt2();
 
     // try day18.pt1.day18Pt1();
-    try day18.pt2.day18Pt2();
+    // try day18.pt2.day18Pt2();
+
+    try day19.pt1.day19Pt1();
 }
+
+const day19 = struct {
+    const pt1 = struct {
+        fn day19Pt1() !void {
+            var file = try std.fs.cwd().openFile("input_files/day19.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var outfile = try std.fs.cwd().createFile("day19pt1.zig", .{});
+            var out = outfile.writer();
+            defer outfile.close();
+
+            _ = try out.writeAll(
+                \\ const std = @import("std");
+                \\
+                \\ const Result = enum {
+                    \\     Accept,
+                    \\     Reject,
+                    \\ };
+                    \\
+                    \\ const Part = struct {
+                    \\     x: i32,
+                    \\     m: i32,
+                    \\     a: i32,
+                    \\     s: i32,
+                    \\ };
+                    \\
+            );
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                if (line.len == 0) {
+                    break;
+                }
+
+                var it = std.mem.tokenizeAny(u8, line, "{},");
+
+                var name = it.next().?;
+
+                if (std.mem.eql(u8, name, "fn")) {
+                    // ERIIIIIIIIIIIIIC!!!!
+                    name = "eric";
+                }
+
+                try std.fmt.format(out, "\n\nfn {s}(part: Part) Result {{\n", .{name});
+
+                while (it.next()) |clause| {
+                    if (std.mem.indexOfAny(u8, clause, "<>") != null) {
+                        var clause_it = std.mem.tokenizeAny(u8, clause, "<>:");
+                        try std.fmt.format(out, "  if (part.{s} {s} {s} )", .{
+                            clause_it.next().?,
+                            if (std.mem.indexOfAny(u8, clause, "<") != null) "<" else ">",
+                            clause_it.next().?
+                        });
+
+                        var then = clause_it.next().?;
+
+                        if (std.mem.eql(u8, then, "A")) {
+                            try std.fmt.format(out, "{{ return Result.Accept; }}\n", .{});
+                        } else if (std.mem.eql(u8, then, "R")) {
+                            try std.fmt.format(out, "{{ return Result.Reject; }}\n", .{});
+                        } else {
+                            if (std.mem.eql(u8, then, "fn")) {
+                                try std.fmt.format(out, "{{ return {s}(part); }}\n", .{"eric"});
+                            } else {
+                                try std.fmt.format(out, "{{ return {s}(part); }}\n", .{then});
+                            }
+                        }
+                    } else if (std.mem.eql(u8, clause, "A")) {
+                        try std.fmt.format(out, "return Result.Accept;\n", .{});
+                    } else if (std.mem.eql(u8, clause, "R")) {
+                        try std.fmt.format(out, "return Result.Reject;\n", .{});
+                    } else {
+                        if (std.mem.eql(u8, clause, "fn")) {
+                            try std.fmt.format(out, "{{ return {s}(part); }}\n", .{"eric"});
+                        } else {
+                            try std.fmt.format(out, "{{ return {s}(part); }}\n", .{clause});
+                        }
+                    }
+                }
+
+                _ = try out.writeAll("\n}\n");
+            }
+
+            _ = try out.writeAll(
+                \\ pub fn main() !void {
+                    \\ var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+                    \\ var allocator = arena.allocator();
+                    \\ var parts = std.ArrayList(Part).init(allocator);
+                    \\
+            );
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |part| {
+                var it = std.mem.tokenizeAny(u8, part, "{,}");
+
+                try std.fmt.format(out, "try parts.append(Part {{", .{});
+                while (it.next()) |field| {
+                    try std.fmt.format(out, ".{s},", .{field});
+                }
+
+                try std.fmt.format(out, "}});\n", .{});
+            }
+
+            _ = try out.writeAll(
+                \\ var total: isize = 0;
+                    \\ for (parts.items) |part| {
+                    \\   if (in(part) == Result.Accept) {
+                    \\     total += part.x;
+                    \\     total += part.m;
+                    \\     total += part.a;
+                    \\     total += part.s;
+                    \\   }
+                    \\ }
+                    \\
+                    \\ std.debug.print("The grand total was: {d}\n", .{total});
+            );
+
+            _ = try out.writeAll("\n}\n");
+        }
+    };
+};
+
 
 const day18 = struct {
     const pt1 = struct {
