@@ -57,7 +57,8 @@ pub fn main() !void {
     // try day18.pt1.day18Pt1();
     // try day18.pt2.day18Pt2();
 
-    try day19.pt1.day19Pt1();
+    // try day19.pt1.day19Pt1();
+    try day19.pt2.day19Pt2();
 }
 
 const day19 = struct {
@@ -176,6 +177,274 @@ const day19 = struct {
             );
 
             _ = try out.writeAll("\n}\n");
+        }
+    };
+
+    const pt2 = struct {
+        const Function = struct {
+            name: []const u8,
+            clauses: []Clause,
+            else_action: Action,
+        };
+
+        const ClauseType = enum {
+            LessThan,
+            GreaterThan,
+        };
+
+        const Clause = struct {
+            clause_type: ClauseType,
+            variable: []const u8,
+            value: u32,
+            action: Action,
+        };
+
+        const ActionType = enum {
+            Accept,
+            Reject,
+            Call,
+        };
+
+        const Action = struct {
+            action_type: ActionType,
+            call_name: ?[]const u8,
+        };
+
+
+        const XMASValues = struct {
+            x: std.DynamicBitSet,
+            m: std.DynamicBitSet,
+            a: std.DynamicBitSet,
+            s: std.DynamicBitSet,
+
+            fn create(allocator: std.mem.Allocator) !XMASValues {
+                return XMASValues {
+                    .x = try std.DynamicBitSet.initEmpty(allocator, 4001),
+                    .m = try std.DynamicBitSet.initEmpty(allocator, 4001),
+                    .a = try std.DynamicBitSet.initEmpty(allocator, 4001),
+                    .s = try std.DynamicBitSet.initEmpty(allocator, 4001),
+                };
+            }
+
+            fn clone(self: *const XMASValues, allocator: std.mem.Allocator) !XMASValues {
+                var result = try XMASValues.create(allocator);
+
+                result.x.setUnion(self.x);
+                result.m.setUnion(self.m);
+                result.a.setUnion(self.a);
+                result.s.setUnion(self.s);
+
+                return result;
+            }
+
+            fn combinations(self: *const XMASValues) usize {
+                return self.x.count() * self.m.count() * self.a.count() * self.s.count();
+            }
+
+            fn removeLessThan(self: *XMASValues, variable: []const u8, value: u32) void {
+                switch (variable[0]) {
+                    'x' => self.x.setRangeValue(.{ .start = 0, .end = value}, false),
+                    'm' => self.m.setRangeValue(.{ .start = 0, .end = value}, false),
+                    'a' => self.a.setRangeValue(.{ .start = 0, .end = value}, false),
+                    's' => self.s.setRangeValue(.{ .start = 0, .end = value}, false),
+                    else => unreachable,
+                }
+            }
+
+            fn keepLessThan(self: *XMASValues, variable: []const u8, value: u32) void {
+                switch (variable[0]) {
+                    'x' => self.x.setRangeValue(.{ .start = value, .end = 4001}, false),
+                    'm' => self.m.setRangeValue(.{ .start = value, .end = 4001}, false),
+                    'a' => self.a.setRangeValue(.{ .start = value, .end = 4001}, false),
+                    's' => self.s.setRangeValue(.{ .start = value, .end = 4001}, false),
+                    else => unreachable,
+                }
+            }
+
+            fn removeGreaterThan(self: *XMASValues, variable: []const u8, value: u32) void {
+                switch (variable[0]) {
+                    'x' => self.x.setRangeValue(.{ .start = value + 1, .end = 4001}, false),
+                    'm' => self.m.setRangeValue(.{ .start = value + 1, .end = 4001}, false),
+                    'a' => self.a.setRangeValue(.{ .start = value + 1, .end = 4001}, false),
+                    's' => self.s.setRangeValue(.{ .start = value + 1, .end = 4001}, false),
+                    else => unreachable,
+                }
+            }
+
+            fn keepGreaterThan(self: *XMASValues, variable: []const u8, value: u32) void {
+                switch (variable[0]) {
+                    'x' => self.x.setRangeValue(.{ .start = 0, .end = value + 1}, false),
+                    'm' => self.m.setRangeValue(.{ .start = 0, .end = value + 1}, false),
+                    'a' => self.a.setRangeValue(.{ .start = 0, .end = value + 1}, false),
+                    's' => self.s.setRangeValue(.{ .start = 0, .end = value + 1}, false),
+                    else => unreachable,
+                }
+            }
+
+
+        };
+
+        // OK FINE.  No more fun I guess.
+        fn day19Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day19.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var functions = std.ArrayList(Function).init(allocator);
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |const_line| {
+                if (const_line.len == 0) {
+                    break;
+                }
+
+                var line = try allocator.dupe(u8, const_line);
+
+                var it = std.mem.tokenizeAny(u8, line, "{},");
+
+                var name = it.next().?;
+
+                var else_action =  Action {
+                    .action_type = ActionType.Accept,
+                    .call_name = null,
+                };
+
+                var clauses = std.ArrayList(Clause).init(allocator);
+
+                while (it.next()) |clause| {
+                    if (std.mem.indexOfAny(u8, clause, "<>") != null) {
+                        var clause_it = std.mem.tokenizeAny(u8, clause, "<>:");
+                        var variable = clause_it.next().?;
+                        var clause_type = if (std.mem.indexOfAny(u8, clause, "<") != null) ClauseType.LessThan else ClauseType.GreaterThan;
+                        var value = try std.fmt.parseUnsigned(u32, clause_it.next().?, 10);
+
+                        var then = clause_it.next().?;
+
+                        var action = Action {
+                            .action_type = ActionType.Accept,
+                            .call_name = null,
+                        };
+
+                        if (std.mem.eql(u8, then, "A")) {
+                            // Got it
+                        } else if (std.mem.eql(u8, then, "R")) {
+                            action = Action {
+                                .action_type = ActionType.Reject,
+                                .call_name = null,
+                            };
+                        } else {
+                            action = Action {
+                                .action_type = ActionType.Call,
+                                .call_name = then,
+                            };
+                        }
+
+                        try clauses.append(Clause {
+                            .clause_type = clause_type,
+                            .variable = variable,
+                            .value = value,
+                            .action = action,
+                        });
+                    } else if (std.mem.eql(u8, clause, "A")) {
+                        // Got it (else_action)
+                    } else if (std.mem.eql(u8, clause, "R")) {
+                        else_action = Action {
+                            .action_type = ActionType.Reject,
+                            .call_name = null,
+                        };
+                    } else {
+                        else_action = Action {
+                            .action_type = ActionType.Call,
+                            .call_name = clause,
+                        };
+                    }
+                }
+
+                try functions.append(Function {
+                    .name = name,
+                    .clauses = clauses.items,
+                    .else_action = else_action,
+                });
+            }
+
+            var functions_by_name = std.StringHashMap(*const Function).init(allocator);
+
+            var i: usize = 0;
+            while (i < functions.items.len): (i += 1) {
+                try functions_by_name.put(functions.items[i].name, &functions.items[i]);
+            }
+
+            var values = try XMASValues.create(allocator);
+
+            // All bits start as on, except for zero which we don't use.
+            values.x.toggleAll();
+            values.m.toggleAll();
+            values.a.toggleAll();
+            values.s.toggleAll();
+            values.x.unset(0);
+            values.m.unset(0);
+            values.a.unset(0);
+            values.s.unset(0);
+
+            std.debug.print("Total: {d}\n", .{try walk(allocator, "in", &functions_by_name, values)});
+        }
+
+        fn walk(allocator: std.mem.Allocator,
+                current_fn: []const u8,
+                functions_by_name: *const std.StringHashMap(*const Function),
+                values: XMASValues) !usize {
+            var function = functions_by_name.getPtr(current_fn).?.*;
+
+            var result: usize = 0;
+
+            var else_values = try values.clone(allocator);
+
+            for (function.clauses) |clause| {
+                switch (clause.clause_type) {
+                    .LessThan => {
+                        var new_values = try else_values.clone(allocator);
+                        else_values.removeLessThan(clause.variable, clause.value);
+
+                        new_values.keepLessThan(clause.variable, clause.value);
+
+                        if (clause.action.action_type == .Accept) {
+                            result += new_values.combinations();
+                        } else if (clause.action.action_type == .Call) {
+                            result += try walk(allocator,
+                                               clause.action.call_name.?,
+                                               functions_by_name,
+                                               new_values);
+                        }
+                    },
+                    .GreaterThan => {
+                        var new_values = try else_values.clone(allocator);
+                        else_values.removeGreaterThan(clause.variable, clause.value);
+                        new_values.keepGreaterThan(clause.variable, clause.value);
+
+                        if (clause.action.action_type == .Accept) {
+                            result += new_values.combinations();
+                        } else if (clause.action.action_type == .Call) {
+                            result += try walk(allocator,
+                                               clause.action.call_name.?,
+                                               functions_by_name,
+                                               new_values);
+                        }
+                    }
+                }
+            }
+
+            if (function.else_action.action_type == .Accept) {
+                result += else_values.combinations();
+            } else if (function.else_action.action_type == .Call) {
+                result += try walk(allocator,
+                                   function.else_action.call_name.?,
+                                   functions_by_name,
+                                   else_values);
+            }
+
+            return result;
         }
     };
 };
