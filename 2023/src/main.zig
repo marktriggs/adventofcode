@@ -61,43 +61,44 @@ pub fn main() !void {
     // try day19.pt2.day19Pt2();
 
     try day20.pt1.day20Pt1();
+    try day20.pt2.day20Pt2();
 }
 
 const day20 = struct {
+    const Pulse = enum {
+        Low,
+        High,
+    };
+
+    const FlipFlop = struct {
+        state_is_on: bool,
+    };
+
+    const Conjunction = struct {
+        last_states: std.StringHashMap(Pulse),
+    };
+
+    const Broadcaster = struct {};
+
+    const ComponentType = enum {
+        flipflop,
+        conjunction,
+        broadcaster,
+    };
+
+    const Component = union(ComponentType) {
+        flipflop: FlipFlop,
+        conjunction: Conjunction,
+        broadcaster: Broadcaster,
+    };
+
+    const PulseMessage = struct {
+        sender: []const u8,
+        recipient: []const u8,
+        pulse: Pulse,
+    };
+
     const pt1 = struct {
-        const Pulse = enum {
-            Low,
-            High,
-        };
-
-        const FlipFlop = struct {
-            state_is_on: bool,
-        };
-
-        const Conjunction = struct {
-            last_states: std.StringHashMap(Pulse),
-        };
-
-        const Broadcaster = struct {};
-
-        const ComponentType = enum {
-            flipflop,
-            conjunction,
-            broadcaster,
-        };
-
-        const Component = union(ComponentType) {
-            flipflop: FlipFlop,
-            conjunction: Conjunction,
-            broadcaster: Broadcaster,
-        };
-
-        const PulseMessage = struct {
-            sender: []const u8,
-            recipient: []const u8,
-            pulse: Pulse,
-        };
-
         fn day20Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -234,6 +235,212 @@ const day20 = struct {
 
 
             std.debug.print("Part 1: {d} low pulses; {d} high pulses\n", .{low_count, high_count});
+        }
+    };
+
+    const pt2 = struct {
+        fn day20Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var components = std.StringHashMap(Component).init(allocator);
+            var targets = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
+
+            var file = try std.fs.cwd().openFile("input_files/day20.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |const_line| {
+                var line = try allocator.dupe(u8, const_line);
+                var it = std.mem.tokenizeAny(u8, line, " ->,");
+
+                var component_name_and_type = it.next().?;
+                var component_targets = std.ArrayList([]const u8).init(allocator);
+
+                while (it.next()) |target| {
+                    try component_targets.append(target);
+                }
+
+                if (std.mem.eql(u8, component_name_and_type, "broadcaster")) {
+                    try components.put("broadcaster", .{ .broadcaster = Broadcaster {} });
+                    try targets.put("broadcaster", component_targets);
+                } else {
+                    var name = component_name_and_type[1..];
+                    switch (component_name_and_type[0]) {
+                        '%' => {
+                            try components.put(name, .{ .flipflop = FlipFlop { .state_is_on = false } });
+                        },
+                        '&' => {
+                            var conjunction = Conjunction {
+                                .last_states = std.StringHashMap(Pulse).init(allocator),
+                            };
+
+                            try components.put(name, .{ .conjunction = conjunction });
+                        },
+                        else => unreachable,
+                    }
+
+                    try targets.put(name, component_targets);
+                }
+            }
+
+            // Conjunctions need to be initialised with states for their inputs
+            {
+                var keys = targets.keyIterator();
+                while (keys.next()) |src| {
+                    for (targets.getPtr(src.*).?.items) |dest| {
+                        if (components.getPtr(dest) == null) {
+                            continue;
+                        }
+
+                        switch (components.getPtr(dest).?.*) {
+                            .conjunction => |*component| {
+                                try component.last_states.put(src.*, Pulse.Low);
+                            },
+                            else => {
+                                // No init required
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            var pulses_to_deliver = std.fifo.LinearFifo(PulseMessage, std.fifo.LinearFifoBufferType.Dynamic).init(allocator);
+
+            var repeat: usize = 0;
+            var rx_received = false;
+            while ((repeat < std.math.maxInt(usize)) and !rx_received): (repeat += 1) {
+                var high_count_debug_pp: bool = false;
+                var high_count_debug_tv: bool = false;
+                var high_count_debug_rl: bool = false;
+                var high_count_debug_zn: bool = false;
+
+                try pulses_to_deliver.writeItem(PulseMessage { .sender = "button", .recipient = "broadcaster", .pulse = Pulse.Low });
+
+                while (pulses_to_deliver.count > 0) {
+                    var next_message = pulses_to_deliver.readItem().?;
+
+                    if (next_message.pulse == Pulse.Low and std.mem.eql(u8, next_message.recipient, "rx")) {
+                        rx_received = true;
+                    }
+
+                    var recipient = components.getPtr(next_message.recipient) orelse continue;
+
+                    switch (recipient.*) {
+                        .broadcaster => {
+                            for (targets.getPtr("broadcaster").?.items) |target| {
+                                try pulses_to_deliver.writeItem(PulseMessage { .sender = "broadcaster", .recipient = target, .pulse = next_message.pulse });
+                            }
+                        },
+                        .flipflop => |*component| {
+                            if (next_message.pulse == Pulse.Low) {
+                                if (component.state_is_on) {
+                                    for (targets.getPtr(next_message.recipient).?.items) |target| {
+                                        try pulses_to_deliver.writeItem(PulseMessage { .sender = next_message.recipient, .recipient = target, .pulse = Pulse.Low});
+                                    }
+                                } else {
+                                    // , "qn", "zr", "vx", "lj", "fl", "pp", "zn", "vh", "cb"
+                                    // inline for (.{"pp", "tv", "rl"}) |n| {
+                                    //     if (std.mem.eql(u8, next_message.recipient, n)) {
+                                    //         std.debug.print("{s} going high on round: {}\n", .{n, repeat + 1});
+                                    //     }
+                                    // }
+
+                                        if (std.mem.eql(u8, next_message.recipient, "pp")) {
+                                            high_count_debug_pp = true;
+                                        }
+                                        if (std.mem.eql(u8, next_message.recipient, "tv")) {
+                                            high_count_debug_tv = true;
+                                        }
+                                        if (std.mem.eql(u8, next_message.recipient, "rl")) {
+                                            high_count_debug_rl = true;
+                                        }
+                                        if (std.mem.eql(u8, next_message.recipient, "zn")) {
+                                            high_count_debug_zn = true;
+                                        }
+
+
+                                    for (targets.getPtr(next_message.recipient).?.items) |target| {
+                                        try pulses_to_deliver.writeItem(PulseMessage { .sender = next_message.recipient, .recipient = target, .pulse = Pulse.High});
+                                    }
+                                }
+
+                                component.state_is_on = !component.state_is_on;
+                            } else {
+                                // High is ignored
+                            }
+                        },
+                        .conjunction => |*component| {
+                            try component.last_states.put(next_message.sender, next_message.pulse);
+
+                            var all_high = true;
+                            var it = component.last_states.valueIterator();
+                            while (it.next()) |last_pulse| {
+                                if (last_pulse.* != Pulse.High) {
+                                    all_high = false;
+                                }
+                            }
+
+                            if (all_high) {
+                                if (std.mem.eql(u8, next_message.recipient, "pf")) {
+                                    std.debug.print("pf hit all high on round {d}\n", .{repeat + 1});
+                                }
+
+                                if (std.mem.eql(u8, next_message.recipient, "xd")) {
+                                    std.debug.print("xd hit all high on round {d}\n", .{repeat + 1});
+                                }
+
+                                if (std.mem.eql(u8, next_message.recipient, "vr")) {
+                                    std.debug.print("vr hit all high on round {d}\n", .{repeat + 1});
+                                }
+
+                                if (std.mem.eql(u8, next_message.recipient, "ts")) {
+                                    std.debug.print("ts hit all high on round {d}\n", .{repeat + 1});
+                                }
+
+
+                                for (targets.getPtr(next_message.recipient).?.items) |target| {
+                                    try pulses_to_deliver.writeItem(PulseMessage { .sender = next_message.recipient, .recipient = target, .pulse = Pulse.Low});
+                                }
+                            } else {
+                                for (targets.getPtr(next_message.recipient).?.items) |target| {
+                                    try pulses_to_deliver.writeItem(PulseMessage { .sender = next_message.recipient, .recipient = target, .pulse = Pulse.High});
+                                }
+                            }
+                        },
+                    }
+                }
+
+                if (high_count_debug_pp and high_count_debug_tv and high_count_debug_rl and high_count_debug_zn) {
+                    std.debug.print("FOUR high on round {d}\n", .{repeat + 1});
+                }
+
+                // inline for (.{"hk", "tv", "rl"}) |n| {
+                //     switch (components.getPtr(n).?.*) {
+                //         .conjunction => |*component| {
+                //             var it = component.last_states.valueIterator();
+                //             var all_high = true;
+                //             while (it.next()) |v| {
+                //                 if (v.* == Pulse.Low) {
+                //                     all_high = false;
+                //                     break;
+                //                 }
+                //             }
+                //
+                //             if (all_high) {
+                //                 std.debug.print("{s} all high on round {d}\n", .{n, repeat});
+                //             }
+                //
+                //         },
+                //         else => unreachable,
+                //     }
+                //
+                // }
+
+            }
+
+            std.debug.print("rx message received in {d} iterations\n", .{repeat});
         }
     };
 };
