@@ -63,48 +63,49 @@ pub fn main() !void {
     // try day20.pt1.day20Pt1();
     // try day20.pt2.day20Pt2();
 
-    try day21.pt1.day21Pt1();
+    // try day21.pt1.day21Pt1();
+    try day21.pt2.day21Pt2();
 }
 
 const day21 = struct {
+    const Direction = enum(u8) {
+        North,
+        South,
+        East,
+        West,
+    };
+
+    const Point = struct {
+        row: isize,
+        col: isize,
+
+        fn move(self: *const Point, direction: Direction) Point {
+            return switch (direction) {
+                .North => Point { .row = self.row - 1, .col = self.col },
+                .South => Point { .row = self.row + 1, .col = self.col },
+                .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                .West =>  Point { .row = self.row,     .col = self.col - 1 },
+            };
+        }
+
+        fn rowU(self: *const Point) usize {
+            return @intCast(self.row);
+        }
+
+        fn colU(self: *const Point) usize {
+            return @intCast(self.col);
+        }
+
+        fn of(row: isize, col: isize) Point {
+            return Point {
+                .row = row,
+                .col = col,
+            };
+        }
+    };
+
+
     const pt1 = struct {
-        const Direction = enum(u8) {
-            North,
-            South,
-            East,
-            West,
-        };
-
-        const Point = struct {
-            row: isize,
-            col: isize,
-
-            fn move(self: *const Point, direction: Direction) Point {
-                return switch (direction) {
-                    .North => Point { .row = self.row - 1, .col = self.col },
-                    .South => Point { .row = self.row + 1, .col = self.col },
-                    .East =>  Point { .row = self.row,     .col = self.col + 1 },
-                    .West =>  Point { .row = self.row,     .col = self.col - 1 },
-                };
-            }
-
-            fn rowU(self: *const Point) usize {
-                return @intCast(self.row);
-            }
-
-            fn colU(self: *const Point) usize {
-                return @intCast(self.col);
-            }
-
-            fn of(row: isize, col: isize) Point {
-                return Point {
-                    .row = row,
-                    .col = col,
-                };
-            }
-        };
-
-
         fn day21Pt1() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
@@ -191,6 +192,150 @@ const day21 = struct {
 
             std.debug.print("Part 1: reachable gardens {d}\n", .{count});
 
+        }
+    };
+
+    const pt2 = struct {
+        fn day21Pt2() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var grid = std.ArrayList([]u8).init(allocator);
+            var start = Point.of(0, 0);
+
+            // Parse our grid and find the start
+            {
+                var file = try std.fs.cwd().openFile("input_files/day21.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                var start_found: bool = false;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var start_pos = std.mem.indexOfScalar(u8, line, 'S');
+
+                    var row = try allocator.dupe(u8, line);
+
+                    if (start_pos != null) {
+                        start = Point.of(@intCast(grid.items.len), @intCast(start_pos.?));
+                        row[start_pos.?] = '.'; // Start is a garden plot
+                        start_found = true;
+                    }
+
+                    try grid.append(row);
+                }
+
+                std.debug.assert(start_found);
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            std.debug.assert(width == height);
+
+            // The set of positions we need to investigate from
+            var front = std.AutoHashMap(Point, void).init(allocator);
+            var next_front = std.AutoHashMap(Point, void).init(allocator);
+            var shortest_paths = std.AutoHashMap(Point, usize).init(allocator);
+
+            try front.put(start, {});
+            try shortest_paths.put(start, 0);
+
+            var diffs_by_mod_width: [131]usize = undefined;
+            var mod_increments: [131]usize = undefined;
+
+            var last_mod_change_step: usize = 0;
+
+            var last_gardens_reachable: usize = 0;
+            var steps: usize = 0;
+            while ( (steps - last_mod_change_step) < width): (steps += 1) {
+                next_front.clearRetainingCapacity();
+
+                var it = front.keyIterator();
+
+                while (it.next()) |pos| {
+                    if (!shortest_paths.contains(pos.*)) {
+                        try shortest_paths.put(pos.*, steps);
+                    }
+
+                    inline for (std.meta.fields(Direction)) |direction_enum| {
+                        var direction: Direction = @enumFromInt(direction_enum.value);
+
+                        var next_pos = pos.move(direction);
+
+                        var adjusted_row = @mod(next_pos.row, @as(isize, @intCast(height)));
+                        var adjusted_col = @mod(next_pos.col, @as(isize, @intCast(width)));
+
+                        var adjusted_pos = Point.of(adjusted_row, adjusted_col);
+
+                        if (grid.items[adjusted_pos.rowU()][adjusted_pos.colU()] == '.') {
+                            try next_front.put(next_pos, {});
+                        }
+                    }
+                }
+
+                var tmp = front;
+                front = next_front;
+                next_front = tmp;
+
+                {
+                    var count: usize = 0;
+
+                    var path_it = shortest_paths.keyIterator();
+                    while (path_it.next()) |point| {
+                        var distance = shortest_paths.get(point.*).?;
+
+                        if ((distance % 2) == (steps % 2)) {
+                            count += 1;
+                        }
+                    }
+
+                    var mod = steps % width;
+                    var old_increment = mod_increments[mod];
+                    mod_increments[mod] = (count - last_gardens_reachable) -| diffs_by_mod_width[mod];
+
+                    if (mod_increments[mod] != old_increment) {
+                        last_mod_change_step = steps;
+                    }
+
+                    diffs_by_mod_width[mod] = (count - last_gardens_reachable);
+
+                    last_gardens_reachable = count;
+                }
+            }
+
+            {
+                var i: usize = 0;
+                while (i < width): (i += 1) {
+                    std.debug.print("mod_increments[{d}]: {d}\n", .{i, mod_increments[i]});
+                }
+            }
+
+            {
+                var i: usize = 0;
+                while (i < width): (i += 1) {
+                    std.debug.print("diffs[{d}]: {d}\n", .{i, diffs_by_mod_width[i]});
+                }
+            }
+
+            steps -= 1;
+
+            std.debug.print("Stable after {d} steps\n", .{steps});
+
+            // Now we can project the remaining steps by projecting the (0..width - 1)
+            // geometric sequences.
+            {
+                while (steps < 26501365) {
+                    steps += 1;
+
+                    var mod = steps % width;
+                    diffs_by_mod_width[mod] += mod_increments[mod];
+
+                    last_gardens_reachable += diffs_by_mod_width[mod];
+                }
+
+                std.debug.print("Part 2: gardens reachable: {d}\n", .{last_gardens_reachable});
+            }
         }
     };
 };
