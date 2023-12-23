@@ -3,69 +3,78 @@
 const std = @import("std");
 
 pub fn main() !void {
-    // try day1.day1Pt1();
-    // try day1.day1Pt2();
+    // try day1.pt1.solve();
+    // try day1.pt2.solve();
     //
-    // try day2.day2Pt1();
-    // try day2.day2Pt2();
+    // try day2.pt1.solve();
+    // try day2.pt2.solve();
     //
-    // try day3.day3Pt1();
-    // try day3.day3Pt2();
+    // try day3.pt1.solve();
+    // try day3.pt2.solve();
     //
-    // try day4.day4Pt1();
-    // try day4.day4Pt2();
+    // try day4.pt1.solve();
+    // try day4.pt2.solve();
     //
-    // try day5.day5Pt1();
-    // try day5.day5Pt2();
+    // try day5.pt1.solve();
+    // try day5.pt2.solve();
     //
-    // try day6.day6Pt1();
-    // try day6.day6Pt2();
+    // try day6.pt1.solve();
+    // try day6.pt2.solve();
     //
-    // try day7.Pt1.day7Pt1();
-    // try day7.pt2.day7Pt2();
+    // try day7.pt1.solve();
+    // try day7.pt2.solve();
+    //
+    // try day8.pt1.solve();
+    // try day8.pt2.solve();
+    //
+    // try day9.pt1.solve();
+    // try day9.pt2.solve();
+    //
+    // try day10.pt1.solve();
+    // try day10.pt2.solve();
+    //
+    // try day11.pt1.solve();
+    // try day11.pt2.solve();
+    //
+    // try day12.pt1.solve();
+    // try day12.pt2.solve();
+    //
+    // try day13.pt1.solve();
+    // try day13.pt2.solve();
+    //
+    // try day14.pt1.solve();
+    // try day14.pt2.solve();
+    //
+    // try day15.pt1.solve();
+    // try day15.pt1.solve();
+    //
+    // try day16.pt1.solve();
+    // try day16.pt2.solve();
+    //
+    // try day17.pt1.solve();
+    // try day17.pt2.solve();
+    //
+    // try day18.pt1.solve();
+    // try day18.pt2.solve();
+    //
+    // try day19.pt1.solve();
+    // try day19.pt2.solve();
+    //
+    // try day20.pt1.solve();
+    // try day20.pt2.solve();
+    //
+    // try day21.pt1.solve();
+    // try day21.pt2.solve();
 
-    // try day8.pt1.day8Pt1();
-    // try day8.pt2.day8Pt2();
-
-    // try day9.pt1.day9Pt1();
-    // try day9.pt2.day9Pt2();
-
-    // try day10.day10Pt1();
-    // try day10.day10Pt2();
-
-    // try day11.day11Pt1();
-    // try day11.day11Pt2();
-
-    // try day12.pt1.day12Pt1();
-    // try day12.pt2.day12Pt2();
-
-    // try day13.pt1.day13Pt1();
-    // try day13.pt2.day13Pt2();
-
-    // try day14.pt1.day14Pt1();
-    // try day14.pt2.day14Pt2();
-
-    // try day15.pt1.day15Pt1();
-    // try day15.pt1.day15Pt2();
-
-    // try day16.pt1.day16Pt1();
-    // try day16.pt2.day16Pt2();
-
-    // try day17.pt1.day17Pt1();
-    // try day17.pt2.day17Pt2();
-
-    // try day18.pt1.day18Pt1();
-    // try day18.pt2.day18Pt2();
-
-    // try day19.pt1.day19Pt1();
-    // try day19.pt2.day19Pt2();
-
-    // try day20.pt1.day20Pt1();
-    // try day20.pt2.day20Pt2();
-
-    // try day21.pt1.day21Pt1();
-    try day21.pt2.day21Pt2();
+    try day22.pt1.solve();
 }
+
+const day22 = struct {
+    const pt1 = struct {
+        fn solve() !void {
+        }
+    };
+};
 
 const day21 = struct {
     const Direction = enum(u8) {
@@ -106,7 +115,7 @@ const day21 = struct {
 
 
     const pt1 = struct {
-        fn day21Pt1() !void {
+        fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -196,7 +205,7 @@ const day21 = struct {
     };
 
     const pt2 = struct {
-        fn day21Pt2() !void {
+        fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -375,7 +384,7 @@ const day20 = struct {
     };
 
     const pt1 = struct {
-        fn day20Pt1() !void {
+        fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -515,7 +524,7 @@ const day20 = struct {
     };
 
     const pt2 = struct {
-        fn day20Pt2() !void {
+        fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -724,7 +733,7 @@ const day20 = struct {
 
 const day19 = struct {
     const pt1 = struct {
-        fn day19Pt1() !void {
+        fn solve() !void {
             var file = try std.fs.cwd().openFile("input_files/day19.txt", .{ .mode = std.fs.File.OpenMode.read_only });
             var reader = file.reader();
             var buf: [1024]u8 = undefined;
@@ -946,7 +955,7 @@ const day19 = struct {
         };
 
         // OK FINE.  No more fun I guess.
-        fn day19Pt2() !void {
+        fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -1164,7 +1173,7 @@ const day18 = struct {
             colour: u32,
         };
 
-        pub fn day18Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -1385,7 +1394,7 @@ const day18 = struct {
         }
 
 
-        pub fn day18Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -1732,7 +1741,7 @@ const day17 = struct {
         };
 
 
-        pub fn day17Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -1912,7 +1921,7 @@ const day17 = struct {
 
         };
 
-        pub fn day17Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2053,7 +2062,7 @@ const day16 = struct {
             direction: Point,
         };
 
-        pub fn solve(allocator: std.mem.Allocator, grid: [][]u8, init_position: Point, init_direction: Point) !usize {
+        pub fn aux(allocator: std.mem.Allocator, grid: [][]u8, init_position: Point, init_direction: Point) !usize {
             var width = grid[0].len;
             var height = grid.len;
 
@@ -2178,8 +2187,7 @@ const day16 = struct {
             return charged_tiles.count();
         }
 
-
-        pub fn day16Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2196,7 +2204,7 @@ const day16 = struct {
                 }
             }
 
-            var charged = try solve(allocator, grid.items, Point { .row = 0, .col = 0 }, Point { .row = 0, .col = 1});
+            var charged = try aux(allocator, grid.items, Point { .row = 0, .col = 0 }, Point { .row = 0, .col = 1});
 
             std.debug.print("Part 1 charged tiles: {d}\n", .{charged});
         }
@@ -2205,7 +2213,7 @@ const day16 = struct {
     const pt2 = struct {
         const Point = day16.pt1.Point;
 
-        pub fn day16Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2234,35 +2242,35 @@ const day16 = struct {
                     if (row == 0) {
                         if (col == 0) {
                             // top-left
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                         } else if (col == (width - 1)) {
                             // top-right
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                         } else {
                             // top
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 1, .col = 0 }));
                         }
                     } else if (row == (height - 1)) {
                         if (col == 0) {
                             // bottom-left
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                         } else if (col == (width - 1)) {
                             // bottom-right
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                         } else {
                             // bottom
-                            best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
+                            best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = -1, .col = 0 }));
                         }
                     } else if (col == 0) {
                         // left
-                        best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
+                        best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = 1 }));
                     } else if (col == (width - 1)) {
                         // right
-                        best_charge = @max(best_charge, try day16.pt1.solve(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
+                        best_charge = @max(best_charge, try day16.pt1.aux(allocator, grid.items, Point { .row = @intCast(row), .col = @intCast(col) }, Point { .row = 0, .col = -1 }));
                     }
                 }
             }
@@ -2273,20 +2281,21 @@ const day16 = struct {
 };
 
 const day15 = struct {
-    const pt1 = struct {
-        fn hash(s: []const u8) usize {
-            var total: usize = 0;
+    fn hash(s: []const u8) usize {
+        var total: usize = 0;
 
-            for (s) |ch| {
-                total += ch;
-                total *= 17;
-                total %= 256;
-            }
-
-            return total;
+        for (s) |ch| {
+            total += ch;
+            total *= 17;
+            total %= 256;
         }
 
-        pub fn day15Pt1() !void {
+        return total;
+    }
+
+
+    const pt1 = struct {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2308,12 +2317,15 @@ const day15 = struct {
             });
         }
 
+    };
+
+    const pt2 = struct {
         const Lens = struct {
             label: []const u8,
             value: usize,
         };
 
-        pub fn day15Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2387,7 +2399,7 @@ const day15 = struct {
 
 const day14 = struct {
     const pt1 = struct {
-        pub fn day14Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2471,7 +2483,7 @@ const day14 = struct {
             return result.items;
         }
 
-        pub fn day14Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2617,7 +2629,7 @@ const day14 = struct {
 
 const day13 = struct {
     const pt1 = struct {
-        pub fn day13Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2715,7 +2727,7 @@ const day13 = struct {
     };
 
     const pt2 = struct {
-        pub fn day13Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2830,7 +2842,7 @@ const day13 = struct {
 
 const day12 = struct {
     const pt1 = struct {
-        pub fn day12Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -2946,7 +2958,7 @@ const day12 = struct {
     };
 
     const pt2 = struct {
-        pub fn day12Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -3105,189 +3117,193 @@ const day11 = struct {
         col: usize,
     };
 
-    pub fn day11Pt1() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const pt1 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var file = try std.fs.cwd().openFile("input_files/day11.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
+            var file = try std.fs.cwd().openFile("input_files/day11.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
 
-        var populated_rows = try std.DynamicBitSet.initEmpty(allocator, 0);
-        var populated_cols = try std.DynamicBitSet.initEmpty(allocator, 0);
+            var populated_rows = try std.DynamicBitSet.initEmpty(allocator, 0);
+            var populated_cols = try std.DynamicBitSet.initEmpty(allocator, 0);
 
-        var galaxies = std.ArrayList(Galaxy).init(allocator);
+            var galaxies = std.ArrayList(Galaxy).init(allocator);
 
-        var next_id: usize = 1;
+            var next_id: usize = 1;
 
-        var row: usize = 0;
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line|: (row += 1) {
-            try populated_rows.resize(row + 1, false);
-            try populated_cols.resize(line.len + 1, false);
+            var row: usize = 0;
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line|: (row += 1) {
+                try populated_rows.resize(row + 1, false);
+                try populated_cols.resize(line.len + 1, false);
 
-            var col: usize = 0;
-            while (col < line.len): (col += 1) {
+                var col: usize = 0;
+                while (col < line.len): (col += 1) {
 
 
-                if (line[col] == '#') {
-                    populated_rows.set(row);
-                    populated_cols.set(col);
+                    if (line[col] == '#') {
+                        populated_rows.set(row);
+                        populated_cols.set(col);
 
-                    try galaxies.append(Galaxy {
-                        .id = next_id,
-                        .row = row,
-                        .col = col,
-                    });
+                        try galaxies.append(Galaxy {
+                            .id = next_id,
+                            .row = row,
+                            .col = col,
+                        });
 
-                    next_id += 1;
-                }
-            }
-        }
-
-        // Expand our galaxy
-        var galaxy_idx: usize = 0;
-        while (galaxy_idx < galaxies.items.len): (galaxy_idx += 1) {
-            var galaxy = &galaxies.items[galaxy_idx];
-
-            var row_adjustment: usize = 0;
-            {
-                var i: usize = 0;
-                while (i < galaxy.row): (i += 1) {
-                    if (!populated_rows.isSet(i)) {
-                        row_adjustment += 1;
+                        next_id += 1;
                     }
                 }
             }
 
-            var col_adjustment: usize = 0;
-            {
-                var i: usize = 0;
-                while (i < galaxy.col): (i += 1) {
-                    if (!populated_cols.isSet(i)) {
-                        col_adjustment += 1;
+            // Expand our galaxy
+            var galaxy_idx: usize = 0;
+            while (galaxy_idx < galaxies.items.len): (galaxy_idx += 1) {
+                var galaxy = &galaxies.items[galaxy_idx];
+
+                var row_adjustment: usize = 0;
+                {
+                    var i: usize = 0;
+                    while (i < galaxy.row): (i += 1) {
+                        if (!populated_rows.isSet(i)) {
+                            row_adjustment += 1;
+                        }
+                    }
+                }
+
+                var col_adjustment: usize = 0;
+                {
+                    var i: usize = 0;
+                    while (i < galaxy.col): (i += 1) {
+                        if (!populated_cols.isSet(i)) {
+                            col_adjustment += 1;
+                        }
+                    }
+                }
+
+                galaxy.row += row_adjustment;
+                galaxy.col += col_adjustment;
+            }
+
+            // Calculate shortest paths
+            var total: usize = 0;
+
+            var a: usize = 0;
+            while (a < galaxies.items.len): (a += 1) {
+                var b: usize = a + 1;
+
+                while (b < galaxies.items.len): (b += 1) {
+                    // std.debug.print("{d} to {d}: {d}\n",
+                    //                 .{
+                    //                     galaxies.items[a].id,
+                    //                     galaxies.items[b].id,
+                    //                     @abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                    //                         @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col)))
+                    // });
+
+                    total += (@abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                                  @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col))));
+                }
+            }
+
+            std.debug.print("Part 1 Total distances: {d}\n", .{total});
+        }
+    };
+
+    const pt2 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var file = try std.fs.cwd().openFile("input_files/day11.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var populated_rows = try std.DynamicBitSet.initEmpty(allocator, 0);
+            var populated_cols = try std.DynamicBitSet.initEmpty(allocator, 0);
+
+            var galaxies = std.ArrayList(Galaxy).init(allocator);
+
+            var next_id: usize = 1;
+
+            var row: usize = 0;
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line|: (row += 1) {
+                try populated_rows.resize(row + 1, false);
+                try populated_cols.resize(line.len + 1, false);
+
+                var col: usize = 0;
+                while (col < line.len): (col += 1) {
+
+
+                    if (line[col] == '#') {
+                        populated_rows.set(row);
+                        populated_cols.set(col);
+
+                        try galaxies.append(Galaxy {
+                            .id = next_id,
+                            .row = row,
+                            .col = col,
+                        });
+
+                        next_id += 1;
                     }
                 }
             }
 
-            galaxy.row += row_adjustment;
-            galaxy.col += col_adjustment;
-        }
+            // Expand our galaxy
+            var galaxy_idx: usize = 0;
+            while (galaxy_idx < galaxies.items.len): (galaxy_idx += 1) {
+                var galaxy = &galaxies.items[galaxy_idx];
 
-        // Calculate shortest paths
-        var total: usize = 0;
-
-        var a: usize = 0;
-        while (a < galaxies.items.len): (a += 1) {
-            var b: usize = a + 1;
-
-            while (b < galaxies.items.len): (b += 1) {
-                // std.debug.print("{d} to {d}: {d}\n",
-                //                 .{
-                //                     galaxies.items[a].id,
-                //                     galaxies.items[b].id,
-                //                     @abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
-                //                         @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col)))
-                // });
-
-                total += (@abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
-                              @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col))));
-            }
-        }
-
-        std.debug.print("Part 1 Total distances: {d}\n", .{total});
-    }
-
-    pub fn day11Pt2() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
-
-        var file = try std.fs.cwd().openFile("input_files/day11.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
-
-        var populated_rows = try std.DynamicBitSet.initEmpty(allocator, 0);
-        var populated_cols = try std.DynamicBitSet.initEmpty(allocator, 0);
-
-        var galaxies = std.ArrayList(Galaxy).init(allocator);
-
-        var next_id: usize = 1;
-
-        var row: usize = 0;
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line|: (row += 1) {
-            try populated_rows.resize(row + 1, false);
-            try populated_cols.resize(line.len + 1, false);
-
-            var col: usize = 0;
-            while (col < line.len): (col += 1) {
-
-
-                if (line[col] == '#') {
-                    populated_rows.set(row);
-                    populated_cols.set(col);
-
-                    try galaxies.append(Galaxy {
-                        .id = next_id,
-                        .row = row,
-                        .col = col,
-                    });
-
-                    next_id += 1;
-                }
-            }
-        }
-
-        // Expand our galaxy
-        var galaxy_idx: usize = 0;
-        while (galaxy_idx < galaxies.items.len): (galaxy_idx += 1) {
-            var galaxy = &galaxies.items[galaxy_idx];
-
-            var row_adjustment: usize = 0;
-            {
-                var i: usize = 0;
-                while (i < galaxy.row): (i += 1) {
-                    if (!populated_rows.isSet(i)) {
-                        row_adjustment += 999999;
+                var row_adjustment: usize = 0;
+                {
+                    var i: usize = 0;
+                    while (i < galaxy.row): (i += 1) {
+                        if (!populated_rows.isSet(i)) {
+                            row_adjustment += 999999;
+                        }
                     }
                 }
+
+                var col_adjustment: usize = 0;
+                {
+                    var i: usize = 0;
+                    while (i < galaxy.col): (i += 1) {
+                        if (!populated_cols.isSet(i)) {
+                            col_adjustment += 999999;
+                        }
+                    }
+                }
+
+                galaxy.row += row_adjustment;
+                galaxy.col += col_adjustment;
             }
 
-            var col_adjustment: usize = 0;
-            {
-                var i: usize = 0;
-                while (i < galaxy.col): (i += 1) {
-                    if (!populated_cols.isSet(i)) {
-                        col_adjustment += 999999;
-                    }
+            // Calculate shortest paths
+            var total: usize = 0;
+
+            var a: usize = 0;
+            while (a < galaxies.items.len): (a += 1) {
+                var b: usize = a + 1;
+
+                while (b < galaxies.items.len): (b += 1) {
+                    // std.debug.print("{d} to {d}: {d}\n",
+                    //                 .{
+                    //                     galaxies.items[a].id,
+                    //                     galaxies.items[b].id,
+                    //                     @abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                    //                         @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col)))
+                    // });
+
+                    total += (@abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
+                                  @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col))));
                 }
             }
 
-            galaxy.row += row_adjustment;
-            galaxy.col += col_adjustment;
+            std.debug.print("Part 2 Total distances: {d}\n", .{total});
         }
-
-        // Calculate shortest paths
-        var total: usize = 0;
-
-        var a: usize = 0;
-        while (a < galaxies.items.len): (a += 1) {
-            var b: usize = a + 1;
-
-            while (b < galaxies.items.len): (b += 1) {
-                // std.debug.print("{d} to {d}: {d}\n",
-                //                 .{
-                //                     galaxies.items[a].id,
-                //                     galaxies.items[b].id,
-                //                     @abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
-                //                         @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col)))
-                // });
-
-                total += (@abs(@as(isize, @intCast(galaxies.items[a].row)) - @as(isize, @intCast(galaxies.items[b].row))) +
-                              @abs(@as(isize, @intCast(galaxies.items[a].col)) - @as(isize, @intCast(galaxies.items[b].col))));
-            }
-        }
-
-        std.debug.print("Part 2 Total distances: {d}\n", .{total});
-    }
+    };
 };
 
 
@@ -3474,41 +3490,43 @@ const day10 = struct {
         }
     };
 
-    pub fn day10Pt1() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const pt1 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var grid = try readGrid(allocator, "input_files/day10.txt");
+            var grid = try readGrid(allocator, "input_files/day10.txt");
 
-        // Measure the loop length
-        var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
+            // Measure the loop length
+            var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
 
-        var location = Point { .row = grid.start_row, .col = grid.start_col };
+            var location = Point { .row = grid.start_row, .col = grid.start_col };
 
-        var steps: usize = 0;
-        while (true) {
-            try visited_locations.put(location, true);
-            var next_locations = try grid.nextPossibleLocations(location);
+            var steps: usize = 0;
+            while (true) {
+                try visited_locations.put(location, true);
+                var next_locations = try grid.nextPossibleLocations(location);
 
-            var moved: bool = false;
-            for (next_locations) |loc| {
-                if (!visited_locations.contains(loc)) {
-                    location = loc;
-                    moved = true;
+                var moved: bool = false;
+                for (next_locations) |loc| {
+                    if (!visited_locations.contains(loc)) {
+                        location = loc;
+                        moved = true;
+                        break;
+                    }
+                }
+
+                steps += 1;
+
+                if (!moved) {
                     break;
                 }
             }
 
-            steps += 1;
-
-            if (!moved) {
-                break;
-            }
+            std.debug.print("Completed loop in {d} steps\n", .{steps});
+            std.debug.print("Furthest distance from origin is {d} steps\n", .{steps / 2});
         }
-
-        std.debug.print("Completed loop in {d} steps\n", .{steps});
-        std.debug.print("Furthest distance from origin is {d} steps\n", .{steps / 2});
-    }
+    };
 
     fn sprite(row1: []const u8, row2: []const u8, row3: []const u8, row4: []const u8) [16]u8 {
         var result: [16]u8 = undefined;
@@ -3557,120 +3575,122 @@ const day10 = struct {
         return &result;
     }
 
-    pub fn day10Pt2() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const pt2 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var grid = try readGrid(allocator, "input_files/day10.txt");
+            var grid = try readGrid(allocator, "input_files/day10.txt");
 
-        // Measure the loop length
-        var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
+            // Measure the loop length
+            var visited_locations = std.AutoHashMap(Point, bool).init(allocator);
 
-        var location = Point { .row = grid.start_row, .col = grid.start_col };
+            var location = Point { .row = grid.start_row, .col = grid.start_col };
 
-        var steps: usize = 0;
-        while (true) {
-            try visited_locations.put(location, true);
-            var next_locations = try grid.nextPossibleLocations(location);
+            var steps: usize = 0;
+            while (true) {
+                try visited_locations.put(location, true);
+                var next_locations = try grid.nextPossibleLocations(location);
 
-            var moved: bool = false;
-            for (next_locations) |loc| {
-                if (!visited_locations.contains(loc)) {
-                    location = loc;
-                    moved = true;
+                var moved: bool = false;
+                for (next_locations) |loc| {
+                    if (!visited_locations.contains(loc)) {
+                        location = loc;
+                        moved = true;
+                        break;
+                    }
+                }
+
+                steps += 1;
+
+                if (!moved) {
                     break;
                 }
             }
 
-            steps += 1;
+            var shapes = loadShapes();
 
-            if (!moved) {
-                break;
+            var blank_tile = sprite("xxxx",
+                                    "xxxx",
+                                    "xxxx",
+                                    "xxxx");
+
+            // width x height x pixels per tile x RGBA
+            var bitmap = std.ArrayList(u8).init(allocator);
+            var px_size = grid.width * 4 * grid.height * 4 * 4;
+            while (px_size > 0): (px_size -= 1) {
+                try bitmap.append(0);
             }
-        }
 
-        var shapes = loadShapes();
+            var r_idx: usize = 0;
+            while (r_idx < grid.height): (r_idx += 1) {
+                var c_idx: usize = 0;
+                while (c_idx < grid.width): (c_idx += 1) {
+                    var shape = blank_tile;
 
-        var blank_tile = sprite("xxxx",
-                                "xxxx",
-                                "xxxx",
-                                "xxxx");
+                    if (visited_locations.contains(Point { .row = r_idx, .col = c_idx})) {
+                        var tile = grid.rows[r_idx][c_idx];
 
-        // width x height x pixels per tile x RGBA
-        var bitmap = std.ArrayList(u8).init(allocator);
-        var px_size = grid.width * 4 * grid.height * 4 * 4;
-        while (px_size > 0): (px_size -= 1) {
-            try bitmap.append(0);
-        }
-
-        var r_idx: usize = 0;
-        while (r_idx < grid.height): (r_idx += 1) {
-            var c_idx: usize = 0;
-            while (c_idx < grid.width): (c_idx += 1) {
-                var shape = blank_tile;
-
-                if (visited_locations.contains(Point { .row = r_idx, .col = c_idx})) {
-                    var tile = grid.rows[r_idx][c_idx];
-
-                    if (tile == Tile.Start) {
-                        tile = grid.deriveStartType();
-                    }
-
-                    shape = shapes[@intFromEnum(tile)];
-                }
-
-
-                // Draw our shape
-                var char_row_idx: usize = 0;
-                while (char_row_idx < 4): (char_row_idx += 1) {
-                    var char_col_idx: usize = 0;
-                    while (char_col_idx < 4): (char_col_idx += 1) {
-                        var ch = shape[(char_row_idx * 4) + char_col_idx];
-
-                        var colour: u32 = 0xFFFFFFFF;
-
-                        if (ch == 'x') {
-                            colour = 0x666666FF;
-                        } else if (ch == '#') {
-                            colour = 0xFF0000FF;
+                        if (tile == Tile.Start) {
+                            tile = grid.deriveStartType();
                         }
 
-                        var write_pos = (r_idx * 4 * grid.width * 16) + (char_row_idx * grid.width * 16) + (c_idx * 4 * 4) + (char_col_idx * 4);
+                        shape = shapes[@intFromEnum(tile)];
+                    }
 
-                        bitmap.items[write_pos] = @intCast(colour >> 24 & 0xff);
-                        bitmap.items[write_pos + 1] = @intCast(colour >> 16 & 0xff);
-                        bitmap.items[write_pos + 2] = @intCast(colour >> 8 & 0xff);
-                        bitmap.items[write_pos + 3] = @intCast(colour >> 0 & 0xff);
+
+                    // Draw our shape
+                    var char_row_idx: usize = 0;
+                    while (char_row_idx < 4): (char_row_idx += 1) {
+                        var char_col_idx: usize = 0;
+                        while (char_col_idx < 4): (char_col_idx += 1) {
+                            var ch = shape[(char_row_idx * 4) + char_col_idx];
+
+                            var colour: u32 = 0xFFFFFFFF;
+
+                            if (ch == 'x') {
+                                colour = 0x666666FF;
+                            } else if (ch == '#') {
+                                colour = 0xFF0000FF;
+                            }
+
+                            var write_pos = (r_idx * 4 * grid.width * 16) + (char_row_idx * grid.width * 16) + (c_idx * 4 * 4) + (char_col_idx * 4);
+
+                            bitmap.items[write_pos] = @intCast(colour >> 24 & 0xff);
+                            bitmap.items[write_pos + 1] = @intCast(colour >> 16 & 0xff);
+                            bitmap.items[write_pos + 2] = @intCast(colour >> 8 & 0xff);
+                            bitmap.items[write_pos + 3] = @intCast(colour >> 0 & 0xff);
+                        }
                     }
                 }
             }
-        }
 
-        std.debug.print("Writing {d}x{d} bitmap\n", .{ grid.width * 4, grid.height * 4 });
-        var out = try std.fs.createFileAbsolute("/home/mst/tmp/grid.data", .{ });
-        defer out.close();
+            std.debug.print("Writing {d}x{d} bitmap\n", .{ grid.width * 4, grid.height * 4 });
+            var out = try std.fs.createFileAbsolute("/home/mst/tmp/grid.data", .{ });
+            defer out.close();
 
-        _ = try out.write(bitmap.items);
+            _ = try out.write(bitmap.items);
 
-        var file = try std.fs.openFileAbsolute("/home/mst/tmp/grid-bucketed.data", .{ .mode = std.fs.File.OpenMode.read_only });
-        var buf: [4]u8 = undefined;
+            var file = try std.fs.openFileAbsolute("/home/mst/tmp/grid-bucketed.data", .{ .mode = std.fs.File.OpenMode.read_only });
+            var buf: [4]u8 = undefined;
 
-        var contained_pixels: usize = 0;
+            var contained_pixels: usize = 0;
 
-        while (true) {
-            var len = try file.read(&buf);
+            while (true) {
+                var len = try file.read(&buf);
 
-            if (len != 4) {
-                break;
+                if (len != 4) {
+                    break;
+                }
+
+                if (std.mem.eql(u8, &buf, &[_]u8 { 0x66, 0x66, 0x66, 0xFF })) {
+                    contained_pixels += 1;
+                }
             }
 
-            if (std.mem.eql(u8, &buf, &[_]u8 { 0x66, 0x66, 0x66, 0xFF })) {
-                contained_pixels += 1;
-            }
+            std.debug.print("I count {d} contained pixels\n", .{contained_pixels / 16});
         }
-
-        std.debug.print("I count {d} contained pixels\n", .{contained_pixels / 16});
-    }
+    };
 };
 
 
@@ -3717,7 +3737,7 @@ const day9 = struct {
         }
 
 
-        pub fn day9Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -3797,7 +3817,7 @@ const day9 = struct {
         }
 
 
-        pub fn day9Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -3962,7 +3982,7 @@ const day8 = struct {
             right: []u8,
         };
 
-        pub fn day8Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -4119,7 +4139,7 @@ const day8 = struct {
             end_node_count_in_cycle: usize,
         };
 
-        pub fn day8Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -4290,7 +4310,7 @@ const day7 = struct {
         };
 
 
-        pub fn day7Pt1() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -4426,7 +4446,7 @@ const day7 = struct {
         };
 
 
-        pub fn day7Pt2() !void {
+        pub fn solve() !void {
             var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
             var allocator = arena.allocator();
 
@@ -4481,23 +4501,50 @@ const day6 = struct {
         winning_distance_mm: usize,
     };
 
-    pub fn day6Pt1() !void {
-        // var races = [_]RaceResult {
-        //     RaceResult { .race_time_ms = 7, .winning_distance_mm = 9 },
-        //     RaceResult { .race_time_ms = 15, .winning_distance_mm = 40 },
-        //     RaceResult { .race_time_ms = 30, .winning_distance_mm = 200 },
-        // };
+    const pt1 = struct {
+        pub fn solve() !void {
+            // var races = [_]RaceResult {
+            //     RaceResult { .race_time_ms = 7, .winning_distance_mm = 9 },
+            //     RaceResult { .race_time_ms = 15, .winning_distance_mm = 40 },
+            //     RaceResult { .race_time_ms = 30, .winning_distance_mm = 200 },
+            // };
 
-        var races = [_]RaceResult {
-            RaceResult { .race_time_ms = 41, .winning_distance_mm = 214 },
-            RaceResult { .race_time_ms = 96, .winning_distance_mm = 1789 },
-            RaceResult { .race_time_ms = 88, .winning_distance_mm = 1127 },
-            RaceResult { .race_time_ms = 94, .winning_distance_mm = 1055 },
-        };
+            var races = [_]RaceResult {
+                RaceResult { .race_time_ms = 41, .winning_distance_mm = 214 },
+                RaceResult { .race_time_ms = 96, .winning_distance_mm = 1789 },
+                RaceResult { .race_time_ms = 88, .winning_distance_mm = 1127 },
+                RaceResult { .race_time_ms = 94, .winning_distance_mm = 1055 },
+            };
 
-        var result: usize = 1;
+            var result: usize = 1;
 
-        for (races) |race| {
+            for (races) |race| {
+                var win_count: usize = 0;
+
+                var hold_ms: usize = 1;
+                while (hold_ms < race.race_time_ms): (hold_ms += 1) {
+                    var distance_travelled_mm = (race.race_time_ms - hold_ms) * hold_ms;
+
+                    if (distance_travelled_mm > race.winning_distance_mm) {
+                        // std.debug.print("Can win race by holding for {d} ms (travelled {d} mm)\n", .{hold_ms, distance_travelled_mm});
+                        win_count += 1;
+                    }
+                }
+
+                result *= win_count;
+            }
+
+            std.debug.print("Part 1 result: {}\n", .{result});
+        }
+    };
+
+    const pt2 = struct {
+        pub fn solve() !void {
+            // 71503
+            // var race = RaceResult { .race_time_ms = 71530, .winning_distance_mm = 940200 };
+
+            var race = RaceResult { .race_time_ms = 41968894, .winning_distance_mm = 214178911271055 };
+
             var win_count: usize = 0;
 
             var hold_ms: usize = 1;
@@ -4510,32 +4557,9 @@ const day6 = struct {
                 }
             }
 
-            result *= win_count;
+            std.debug.print("Part 2 win count: {}\n", .{win_count});
         }
-
-        std.debug.print("Part 1 result: {}\n", .{result});
-    }
-
-    pub fn day6Pt2() !void {
-        // 71503
-        // var race = RaceResult { .race_time_ms = 71530, .winning_distance_mm = 940200 };
-
-        var race = RaceResult { .race_time_ms = 41968894, .winning_distance_mm = 214178911271055 };
-
-        var win_count: usize = 0;
-
-        var hold_ms: usize = 1;
-        while (hold_ms < race.race_time_ms): (hold_ms += 1) {
-            var distance_travelled_mm = (race.race_time_ms - hold_ms) * hold_ms;
-
-            if (distance_travelled_mm > race.winning_distance_mm) {
-                // std.debug.print("Can win race by holding for {d} ms (travelled {d} mm)\n", .{hold_ms, distance_travelled_mm});
-                win_count += 1;
-            }
-        }
-
-        std.debug.print("Part 2 win count: {}\n", .{win_count});
-    }
+    };
 
 };
 
@@ -4596,311 +4620,318 @@ const day5 = struct {
         }
     };
 
-    pub fn day5Pt1() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const pt1 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var buf: [1024]u8 = undefined;
-        var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+            var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
 
-        var seeds = blk: {
-            var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
-            var tokens = std.mem.splitAny(u8, next_line, ": ");
-            _ = tokens.next();       // label
-            var seeds = std.ArrayList(usize).init(allocator);
+            var seeds = blk: {
+                var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
+                var tokens = std.mem.splitAny(u8, next_line, ": ");
+                _ = tokens.next();       // label
+                var seeds = std.ArrayList(usize).init(allocator);
 
-            while (tokens.next()) |seed| {
-                if (seed.len > 0) {
-                    try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
+                while (tokens.next()) |seed| {
+                    if (seed.len > 0) {
+                        try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
+                    }
                 }
-            }
 
-            break :blk seeds;
-        };
+                break :blk seeds;
+            };
 
-        var mappings = std.StringHashMap(Map).init(allocator);
+            var mappings = std.StringHashMap(Map).init(allocator);
 
-        // Skip empty line
-        try reader.skipUntilDelimiterOrEof('\n');
-
-        while (true) {
-            var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
+            // Skip empty line
             try reader.skipUntilDelimiterOrEof('\n');
 
-            // Read one or more maps
-            var ranges = std.ArrayList(MapRange).init(allocator);
+            while (true) {
+                var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
+                try reader.skipUntilDelimiterOrEof('\n');
 
-            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-                if (line.len == 0) {
-                    break;
+                // Read one or more maps
+                var ranges = std.ArrayList(MapRange).init(allocator);
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    if (line.len == 0) {
+                        break;
+                    }
+
+                    var it = std.mem.splitAny(u8, line, " ");
+
+                    var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+                    var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+                    var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+
+                    try ranges.append(MapRange {
+                        .dst_start = dst_start,
+                        .src_start = src_start,
+                        .src_end = src_start + len,
+                        .len = len,
+                    });
                 }
 
-                var it = std.mem.splitAny(u8, line, " ");
-
-                var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-                var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-                var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-
-                try ranges.append(MapRange {
-                    .dst_start = dst_start,
-                    .src_start = src_start,
-                    .src_end = src_start + len,
-                    .len = len,
-                });
+                try mappings.put(label, try Map.new(allocator, &ranges.items));
             }
 
-            try mappings.put(label, try Map.new(allocator, &ranges.items));
-        }
+            var lowest_location: usize = std.math.maxInt(usize);
 
-        var lowest_location: usize = std.math.maxInt(usize);
-
-        for (seeds.items) |seed| {
-            var mapped: usize = seed;
-
-            mapped = mappings.getPtr("seed-to-soil").?.map(mapped);
-            mapped = mappings.getPtr("soil-to-fertilizer").?.map(mapped);
-            mapped = mappings.getPtr("fertilizer-to-water").?.map(mapped);
-            mapped = mappings.getPtr("water-to-light").?.map(mapped);
-            mapped = mappings.getPtr("light-to-temperature").?.map(mapped);
-            mapped = mappings.getPtr("temperature-to-humidity").?.map(mapped);
-            mapped = mappings.getPtr("humidity-to-location").?.map(mapped);
-
-            if (mapped < lowest_location) {
-                lowest_location = mapped;
-            }
-        }
-
-        std.debug.print("Part 1 lowest location was {d}\n", . {
-            lowest_location
-        });
-    }
-
-
-    pub fn day5Pt2() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
-
-        var buf: [1024]u8 = undefined;
-        var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var reader = file.reader();
-
-        var seed_ranges = blk: {
-            var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
-            var tokens = std.mem.splitAny(u8, next_line, ": ");
-            _ = tokens.next();       // label
-            var seeds = std.ArrayList(usize).init(allocator);
-
-            while (tokens.next()) |seed| {
-                if (seed.len > 0) {
-                    try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
-                }
-            }
-
-            break :blk seeds;
-        };
-
-        var mappings = std.StringHashMap(Map).init(allocator);
-
-        // Skip empty line
-        try reader.skipUntilDelimiterOrEof('\n');
-
-        while (true) {
-            var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
-            try reader.skipUntilDelimiterOrEof('\n');
-
-            // Read one or more maps
-            var ranges = std.ArrayList(MapRange).init(allocator);
-
-            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-                if (line.len == 0) {
-                    break;
-                }
-
-                var it = std.mem.splitAny(u8, line, " ");
-
-                var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-                var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-                var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
-
-                try ranges.append(MapRange {
-                    .dst_start = dst_start,
-                    .src_start = src_start,
-                    .src_end = src_start + len,
-                    .len = len,
-                });
-            }
-
-            try mappings.put(label, try Map.new(allocator, &ranges.items));
-        }
-
-        var lowest_location: usize = std.math.maxInt(usize);
-
-        var map0 = mappings.getPtr("seed-to-soil").?;
-        var map1 = mappings.getPtr("soil-to-fertilizer").?;
-        var map2 = mappings.getPtr("fertilizer-to-water").?;
-        var map3 = mappings.getPtr("water-to-light").?;
-        var map4 = mappings.getPtr("light-to-temperature").?;
-        var map5 = mappings.getPtr("temperature-to-humidity").?;
-        var map6 = mappings.getPtr("humidity-to-location").?;
-
-        var i: usize = 0;
-        while (i < seed_ranges.items.len): (i += 2) {
-            var range_start = seed_ranges.items[i];
-            var range_len = seed_ranges.items[i + 1];
-
-            var r: usize = 0;
-            while (r < range_len): (r += 1) {
-                var seed = range_start + r;
-
+            for (seeds.items) |seed| {
                 var mapped: usize = seed;
 
-                mapped = map0.map(mapped);
-                mapped = map1.map(mapped);
-                mapped = map2.map(mapped);
-                mapped = map3.map(mapped);
-                mapped = map4.map(mapped);
-                mapped = map5.map(mapped);
-                mapped = map6.map(mapped);
+                mapped = mappings.getPtr("seed-to-soil").?.map(mapped);
+                mapped = mappings.getPtr("soil-to-fertilizer").?.map(mapped);
+                mapped = mappings.getPtr("fertilizer-to-water").?.map(mapped);
+                mapped = mappings.getPtr("water-to-light").?.map(mapped);
+                mapped = mappings.getPtr("light-to-temperature").?.map(mapped);
+                mapped = mappings.getPtr("temperature-to-humidity").?.map(mapped);
+                mapped = mappings.getPtr("humidity-to-location").?.map(mapped);
 
                 if (mapped < lowest_location) {
-                    std.debug.print("New best: {d}\n", . {
-                        mapped
-                    });
                     lowest_location = mapped;
                 }
             }
+
+            std.debug.print("Part 1 lowest location was {d}\n", . {
+                lowest_location
+            });
         }
-
-        std.debug.print("Part 2 lowest location was {d}\n", . {
-            lowest_location
-        });
-    }
-};
+    };
 
 
-const day4 = struct {
-    pub fn day4Pt1() !void {
-        var buf: [1024]u8 = undefined;
+    const pt2 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var buf: [1024]u8 = undefined;
+            var file = try std.fs.cwd().openFile("input_files/day5.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
 
-        var reader = file.reader();
+            var seed_ranges = blk: {
+                var next_line = (try reader.readUntilDelimiterOrEof(&buf, '\n')).?;
+                var tokens = std.mem.splitAny(u8, next_line, ": ");
+                _ = tokens.next();       // label
+                var seeds = std.ArrayList(usize).init(allocator);
 
-        var total_score: usize = 0;
+                while (tokens.next()) |seed| {
+                    if (seed.len > 0) {
+                        try seeds.append(try std.fmt.parseUnsigned(usize, seed, 10));
+                    }
+                }
 
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var score: usize = 0;
-
-            var numbers = blk: {
-                var it = std.mem.splitSequence(u8, line, ": ");
-                _ = it.next();
-                break :blk it.next().?;
+                break :blk seeds;
             };
 
-            var sides = std.mem.splitSequence(u8, numbers, " | ");
-            var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
-            {
-                var it = std.mem.window(u8, sides.next().?, 2, 3);
+            var mappings = std.StringHashMap(Map).init(allocator);
 
-                while (it.next()) |s| {
-                    var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
-                    winning_numbers.set(winner);
+            // Skip empty line
+            try reader.skipUntilDelimiterOrEof('\n');
+
+            while (true) {
+                var label = try allocator.dupe(u8, reader.readUntilDelimiter(&buf, ' ') catch break);
+                try reader.skipUntilDelimiterOrEof('\n');
+
+                // Read one or more maps
+                var ranges = std.ArrayList(MapRange).init(allocator);
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    if (line.len == 0) {
+                        break;
+                    }
+
+                    var it = std.mem.splitAny(u8, line, " ");
+
+                    var dst_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+                    var src_start = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+                    var len = try std.fmt.parseUnsigned(usize, it.next().?, 10);
+
+                    try ranges.append(MapRange {
+                        .dst_start = dst_start,
+                        .src_start = src_start,
+                        .src_end = src_start + len,
+                        .len = len,
+                    });
                 }
+
+                try mappings.put(label, try Map.new(allocator, &ranges.items));
             }
 
-            var it = std.mem.window(u8, sides.next().?, 2, 3);
-            while (it.next()) |s| {
-                var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+            var lowest_location: usize = std.math.maxInt(usize);
 
-                if (winning_numbers.isSet(our_number)) {
-                    if (score == 0) {
-                        score = 1;
-                    } else {
-                        score *= 2;
+            var map0 = mappings.getPtr("seed-to-soil").?;
+            var map1 = mappings.getPtr("soil-to-fertilizer").?;
+            var map2 = mappings.getPtr("fertilizer-to-water").?;
+            var map3 = mappings.getPtr("water-to-light").?;
+            var map4 = mappings.getPtr("light-to-temperature").?;
+            var map5 = mappings.getPtr("temperature-to-humidity").?;
+            var map6 = mappings.getPtr("humidity-to-location").?;
+
+            var i: usize = 0;
+            while (i < seed_ranges.items.len): (i += 2) {
+                var range_start = seed_ranges.items[i];
+                var range_len = seed_ranges.items[i + 1];
+
+                var r: usize = 0;
+                while (r < range_len): (r += 1) {
+                    var seed = range_start + r;
+
+                    var mapped: usize = seed;
+
+                    mapped = map0.map(mapped);
+                    mapped = map1.map(mapped);
+                    mapped = map2.map(mapped);
+                    mapped = map3.map(mapped);
+                    mapped = map4.map(mapped);
+                    mapped = map5.map(mapped);
+                    mapped = map6.map(mapped);
+
+                    if (mapped < lowest_location) {
+                        std.debug.print("New best: {d}\n", . {
+                            mapped
+                        });
+                        lowest_location = mapped;
                     }
                 }
             }
 
-            total_score += score;
+            std.debug.print("Part 2 lowest location was {d}\n", . {
+                lowest_location
+            });
         }
+    };
+};
 
-        std.debug.print("Part 1 total score was: {d}\n", .{total_score});
 
-    }
+const day4 = struct {
+    const pt1 = struct {
+        pub fn solve() !void {
+            var buf: [1024]u8 = undefined;
 
-    pub fn day4Pt2() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+            var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
-        var buf: [1024]u8 = undefined;
+            var reader = file.reader();
 
-        var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var total_score: usize = 0;
 
-        var reader = file.reader();
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var score: usize = 0;
 
-        var card_scores = std.ArrayList(usize).init(allocator);
+                var numbers = blk: {
+                    var it = std.mem.splitSequence(u8, line, ": ");
+                    _ = it.next();
+                    break :blk it.next().?;
+                };
 
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var score: usize = 0;
+                var sides = std.mem.splitSequence(u8, numbers, " | ");
+                var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
+                {
+                    var it = std.mem.window(u8, sides.next().?, 2, 3);
 
-            var numbers = blk: {
-                var it = std.mem.splitSequence(u8, line, ": ");
-                _ = it.next();
-                break :blk it.next().?;
-            };
+                    while (it.next()) |s| {
+                        var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+                        winning_numbers.set(winner);
+                    }
+                }
 
-            var sides = std.mem.splitSequence(u8, numbers, " | ");
-            var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
-            {
                 var it = std.mem.window(u8, sides.next().?, 2, 3);
-
                 while (it.next()) |s| {
-                    var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
-                    winning_numbers.set(winner);
+                    var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+
+                    if (winning_numbers.isSet(our_number)) {
+                        if (score == 0) {
+                            score = 1;
+                        } else {
+                            score *= 2;
+                        }
+                    }
+                }
+
+                total_score += score;
+            }
+
+            std.debug.print("Part 1 total score was: {d}\n", .{total_score});
+        }
+    };
+
+    const pt2 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var buf: [1024]u8 = undefined;
+
+            var file = try std.fs.cwd().openFile("input_files/day4.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+            var reader = file.reader();
+
+            var card_scores = std.ArrayList(usize).init(allocator);
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var score: usize = 0;
+
+                var numbers = blk: {
+                    var it = std.mem.splitSequence(u8, line, ": ");
+                    _ = it.next();
+                    break :blk it.next().?;
+                };
+
+                var sides = std.mem.splitSequence(u8, numbers, " | ");
+                var winning_numbers: std.StaticBitSet(256) = std.StaticBitSet(256).initEmpty();
+                {
+                    var it = std.mem.window(u8, sides.next().?, 2, 3);
+
+                    while (it.next()) |s| {
+                        var winner = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+                        winning_numbers.set(winner);
+                    }
+                }
+
+                var it = std.mem.window(u8, sides.next().?, 2, 3);
+                while (it.next()) |s| {
+                    var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+
+                    if (winning_numbers.isSet(our_number)) {
+                        score += 1;
+                    }
+                }
+
+                try card_scores.append(score);
+            }
+
+            var queue = std.ArrayList(usize).init(allocator);
+            var cards_handled: usize = 0;
+
+            {
+                var i: usize = 0;
+                while (i < card_scores.items.len): (i += 1) {
+                    try queue.append(i);
                 }
             }
 
-            var it = std.mem.window(u8, sides.next().?, 2, 3);
-            while (it.next()) |s| {
-                var our_number = try std.fmt.parseUnsigned(usize, std.mem.trim(u8, s, " "), 10);
+            while (queue.items.len > 0) {
+                var next_item = queue.pop();
+                cards_handled += 1;
 
-                if (winning_numbers.isSet(our_number)) {
-                    score += 1;
+                var card_score = card_scores.items[next_item];
+
+                var i: usize = 0;
+                while (i < card_score): (i += 1) {
+                    var next_idx = next_item + 1 + i;
+
+                    if (next_idx < card_scores.items.len) {
+                        try queue.append(next_idx);
+                    }
                 }
             }
 
-            try card_scores.append(score);
+            std.debug.print("Part 2 we won a total of {d} cards\n", .{ cards_handled } );
         }
-
-        var queue = std.ArrayList(usize).init(allocator);
-        var cards_handled: usize = 0;
-
-        {
-            var i: usize = 0;
-            while (i < card_scores.items.len): (i += 1) {
-                try queue.append(i);
-            }
-        }
-
-        while (queue.items.len > 0) {
-            var next_item = queue.pop();
-            cards_handled += 1;
-
-            var card_score = card_scores.items[next_item];
-
-            var i: usize = 0;
-            while (i < card_score): (i += 1) {
-                var next_idx = next_item + 1 + i;
-
-                if (next_idx < card_scores.items.len) {
-                    try queue.append(next_idx);
-                }
-            }
-        }
-
-        std.debug.print("Part 2 we won a total of {d} cards\n", .{ cards_handled } );
-    }
+    };
 };
 
 
@@ -4910,191 +4941,195 @@ const day3 = struct {
         col: usize,
     };
 
-    pub fn day3Pt1() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
+    const pt1 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-        var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+            var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
 
-        var width: usize = 0;
-        var height: usize = 0;
-        var grid = std.ArrayList([]const u8).init(allocator);
+            var width: usize = 0;
+            var height: usize = 0;
+            var grid = std.ArrayList([]const u8).init(allocator);
 
-        var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
-        while (line_it.next()) |line| {
-            width = line.len;
-            height += 1;
-            try grid.append(line);
-        }
+            var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
+            while (line_it.next()) |line| {
+                width = line.len;
+                height += 1;
+                try grid.append(line);
+            }
 
-        var grid_dims = Coord2d { .row = height, .col = width };
+            var grid_dims = Coord2d { .row = height, .col = width };
 
-        std.debug.print("{d} x {d}\n", .{width, height});
+            std.debug.print("{d} x {d}\n", .{width, height});
 
-        var positions_of_interest = std.AutoHashMap(Coord2d, void).init(allocator);
+            var positions_of_interest = std.AutoHashMap(Coord2d, void).init(allocator);
 
-        {
-            var row: usize = 0;
-            while (row < grid_dims.row): (row += 1) {
-                var col: usize = 0;
-                while (col < grid_dims.col): (col += 1) {
-                    var ch = grid.items[row][col];
-                    if (!std.ascii.isDigit(ch) and ch != '.') {
-                        // Punctuation of interest
-                        for ([_]i8 { -1, 0, 1}) |row_off| {
-                            for ([_]i8 { -1, 0, 1}) |col_off| {
-                                try positions_of_interest.put(Coord2d {
-                                    .row = @intCast(@as(isize, @intCast(row)) + row_off),
-                                    .col = @intCast(@as(isize, @intCast(col)) + col_off)
-                                    }, {});
+            {
+                var row: usize = 0;
+                while (row < grid_dims.row): (row += 1) {
+                    var col: usize = 0;
+                    while (col < grid_dims.col): (col += 1) {
+                        var ch = grid.items[row][col];
+                        if (!std.ascii.isDigit(ch) and ch != '.') {
+                            // Punctuation of interest
+                            for ([_]i8 { -1, 0, 1}) |row_off| {
+                                for ([_]i8 { -1, 0, 1}) |col_off| {
+                                    try positions_of_interest.put(Coord2d {
+                                        .row = @intCast(@as(isize, @intCast(row)) + row_off),
+                                        .col = @intCast(@as(isize, @intCast(col)) + col_off)
+                                        }, {});
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Walk the grid, find the numbers we care about, add 'em up
-        var total: usize = 0;
-        {
-            var row: usize = 0;
-            while (row < grid_dims.row): (row += 1) {
-                var col: usize = 0;
-                while (col < grid_dims.col): (col += 1) {
-                    if (std.ascii.isDigit(grid.items[row][col])) {
-                        var is_counted = false;
-                        var value: usize = 0;
+            // Walk the grid, find the numbers we care about, add 'em up
+            var total: usize = 0;
+            {
+                var row: usize = 0;
+                while (row < grid_dims.row): (row += 1) {
+                    var col: usize = 0;
+                    while (col < grid_dims.col): (col += 1) {
+                        if (std.ascii.isDigit(grid.items[row][col])) {
+                            var is_counted = false;
+                            var value: usize = 0;
 
-                        while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
-                            if (positions_of_interest.contains(Coord2d { .row = row, .col = col })) {
-                                is_counted = true;
-                            }
-
-                            value *= 10;
-                            value += grid.items[row][col] - '0';
-                        }
-
-                        if (is_counted) {
-                            total += value;
-                        }
-                    }
-                }
-            }
-        }
-
-        std.debug.print("Part 1 total was: {d}\n", . {
-            total
-        });
-    }
-
-    pub fn day3Pt2() !void {
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        var allocator = arena.allocator();
-
-        var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-        var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
-
-        var width: usize = 0;
-        var height: usize = 0;
-        var grid = std.ArrayList([]const u8).init(allocator);
-
-        var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
-        while (line_it.next()) |line| {
-            width = line.len;
-            height += 1;
-            try grid.append(line);
-        }
-
-        var grid_dims = Coord2d { .row = height, .col = width };
-
-        std.debug.print("{d} x {d}\n", .{width, height});
-
-        var positions_of_interest = std.AutoHashMap(Coord2d, std.ArrayList(usize)).init(allocator);
-
-        var gear_ratios = std.ArrayList(usize).init(allocator);
-        var gear_factor_count = std.ArrayList(usize).init(allocator);
-
-        {
-            var row: usize = 0;
-            while (row < grid_dims.row): (row += 1) {
-                var col: usize = 0;
-                while (col < grid_dims.col): (col += 1) {
-                    var ch = grid.items[row][col];
-                    if (ch == '*') {
-                        try gear_ratios.append(1);
-                        try gear_factor_count.append(0);
-                        var gear_id = gear_ratios.items.len - 1;
-
-                        // Record our gear ID against the positions of interest
-                        //
-                        // Sometimes one number correspond to two gears, so watching for that too...
-                        for ([_]i8 { -1, 0, 1}) |row_off| {
-                            for ([_]i8 { -1, 0, 1}) |col_off| {
-                                var coord = Coord2d {
-                                    .row = @intCast(@as(isize, @intCast(row)) + row_off),
-                                    .col = @intCast(@as(isize, @intCast(col)) + col_off)
-                                };
-
-                                if (!positions_of_interest.contains(coord)) {
-                                    try positions_of_interest.put(coord, std.ArrayList(usize).init(allocator));
+                            while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
+                                if (positions_of_interest.contains(Coord2d { .row = row, .col = col })) {
+                                    is_counted = true;
                                 }
 
-                                var coord_positions = positions_of_interest.getPtr(coord).?;
-                                try coord_positions.*.append(gear_id);
+                                value *= 10;
+                                value += grid.items[row][col] - '0';
+                            }
+
+                            if (is_counted) {
+                                total += value;
                             }
                         }
                     }
                 }
             }
+
+            std.debug.print("Part 1 total was: {d}\n", . {
+                total
+            });
         }
+    };
 
-        // Walk the grid, find the numbers we care about, add them to our gear ratios
-        {
-            var row: usize = 0;
-            while (row < grid_dims.row): (row += 1) {
-                var col: usize = 0;
-                while (col < grid_dims.col): (col += 1) {
-                    if (std.ascii.isDigit(grid.items[row][col])) {
-                        var gear_ids = try std.DynamicBitSet.initEmpty(allocator, 0);
-                        var value: usize = 0;
+    const pt2 = struct {
+        pub fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
 
-                        while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
-                            var coord = Coord2d { .row = row, .col = col };
+            var file = try std.fs.cwd().openFile("input_files/day3.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var bytes = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
 
-                            if (positions_of_interest.contains(coord)) {
-                                for (positions_of_interest.get(coord).?.items) |gear_id| {
-                                    if (gear_ids.capacity() < (gear_id + 1)) {
-                                        try gear_ids.resize(gear_id + 1, false);
+            var width: usize = 0;
+            var height: usize = 0;
+            var grid = std.ArrayList([]const u8).init(allocator);
+
+            var line_it = std.mem.splitSequence(u8, std.mem.trim(u8, bytes, "\n"), "\n");
+            while (line_it.next()) |line| {
+                width = line.len;
+                height += 1;
+                try grid.append(line);
+            }
+
+            var grid_dims = Coord2d { .row = height, .col = width };
+
+            std.debug.print("{d} x {d}\n", .{width, height});
+
+            var positions_of_interest = std.AutoHashMap(Coord2d, std.ArrayList(usize)).init(allocator);
+
+            var gear_ratios = std.ArrayList(usize).init(allocator);
+            var gear_factor_count = std.ArrayList(usize).init(allocator);
+
+            {
+                var row: usize = 0;
+                while (row < grid_dims.row): (row += 1) {
+                    var col: usize = 0;
+                    while (col < grid_dims.col): (col += 1) {
+                        var ch = grid.items[row][col];
+                        if (ch == '*') {
+                            try gear_ratios.append(1);
+                            try gear_factor_count.append(0);
+                            var gear_id = gear_ratios.items.len - 1;
+
+                            // Record our gear ID against the positions of interest
+                            //
+                            // Sometimes one number correspond to two gears, so watching for that too...
+                            for ([_]i8 { -1, 0, 1}) |row_off| {
+                                for ([_]i8 { -1, 0, 1}) |col_off| {
+                                    var coord = Coord2d {
+                                        .row = @intCast(@as(isize, @intCast(row)) + row_off),
+                                        .col = @intCast(@as(isize, @intCast(col)) + col_off)
+                                    };
+
+                                    if (!positions_of_interest.contains(coord)) {
+                                        try positions_of_interest.put(coord, std.ArrayList(usize).init(allocator));
                                     }
-                                    gear_ids.set(gear_id);
+
+                                    var coord_positions = positions_of_interest.getPtr(coord).?;
+                                    try coord_positions.*.append(gear_id);
                                 }
                             }
-
-                            value *= 10;
-                            value += grid.items[row][col] - '0';
-                        }
-
-                        var bits = gear_ids.iterator(.{});
-                        while (bits.next()) |gear_id| {
-                            gear_ratios.items[gear_id] *= value;
-                            gear_factor_count.items[gear_id] += 1;
                         }
                     }
                 }
             }
-        }
 
-        var total: usize = 0;
-        var idx: usize = 0;
-        while (idx < gear_factor_count.items.len): (idx += 1) {
-            if (gear_factor_count.items[idx] == 2) {
-                total += gear_ratios.items[idx];
+            // Walk the grid, find the numbers we care about, add them to our gear ratios
+            {
+                var row: usize = 0;
+                while (row < grid_dims.row): (row += 1) {
+                    var col: usize = 0;
+                    while (col < grid_dims.col): (col += 1) {
+                        if (std.ascii.isDigit(grid.items[row][col])) {
+                            var gear_ids = try std.DynamicBitSet.initEmpty(allocator, 0);
+                            var value: usize = 0;
+
+                            while (col < grid_dims.col and std.ascii.isDigit(grid.items[row][col])): (col += 1) {
+                                var coord = Coord2d { .row = row, .col = col };
+
+                                if (positions_of_interest.contains(coord)) {
+                                    for (positions_of_interest.get(coord).?.items) |gear_id| {
+                                        if (gear_ids.capacity() < (gear_id + 1)) {
+                                            try gear_ids.resize(gear_id + 1, false);
+                                        }
+                                        gear_ids.set(gear_id);
+                                    }
+                                }
+
+                                value *= 10;
+                                value += grid.items[row][col] - '0';
+                            }
+
+                            var bits = gear_ids.iterator(.{});
+                            while (bits.next()) |gear_id| {
+                                gear_ratios.items[gear_id] *= value;
+                                gear_factor_count.items[gear_id] += 1;
+                            }
+                        }
+                    }
+                }
             }
-        }
 
-        std.debug.print("Part 2 total gear ratio: {}\n", .{total});
-    }
+            var total: usize = 0;
+            var idx: usize = 0;
+            while (idx < gear_factor_count.items.len): (idx += 1) {
+                if (gear_factor_count.items[idx] == 2) {
+                    total += gear_ratios.items[idx];
+                }
+            }
+
+            std.debug.print("Part 2 total gear ratio: {}\n", .{total});
+        }
+    };
 };
 
 const day2 = struct {
@@ -5104,188 +5139,196 @@ const day2 = struct {
         blue: u64,
     };
 
-    pub fn day2Pt1() !void {
-        var file = try std.fs.cwd().openFile("input_files/day2.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    const pt1 = struct {
+        pub fn solve() !void {
+            var file = try std.fs.cwd().openFile("input_files/day2.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
 
-        var result: usize = 0;
+            var result: usize = 0;
 
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var game_it = std.mem.splitSequence(u8, line, ":");
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var game_it = std.mem.splitSequence(u8, line, ":");
 
-            var game = try std.fmt.parseUnsigned(usize, game_it.next().?[5..], 10);
-            var samples = std.mem.trim(u8, game_it.next().?, " ");
+                var game = try std.fmt.parseUnsigned(usize, game_it.next().?[5..], 10);
+                var samples = std.mem.trim(u8, game_it.next().?, " ");
 
-            var sample_it = std.mem.splitSequence(u8, samples, "; ");
+                var sample_it = std.mem.splitSequence(u8, samples, "; ");
 
-            var game_possible = true;
+                var game_possible = true;
 
-            while (sample_it.next()) |sample_str| {
-                var cube_it = std.mem.splitSequence(u8, sample_str, ", ");
+                while (sample_it.next()) |sample_str| {
+                    var cube_it = std.mem.splitSequence(u8, sample_str, ", ");
 
-                var sample = Sample { .red = 0, .green = 0, .blue = 0 };
+                    var sample = Sample { .red = 0, .green = 0, .blue = 0 };
 
-                while (cube_it.next()) |cube| {
-                    var cube_bits = std.mem.splitSequence(u8, cube, " ");
-                    var count = try std.fmt.parseUnsigned(usize, cube_bits.next().?, 10);
-                    var colour = cube_bits.next().?;
+                    while (cube_it.next()) |cube| {
+                        var cube_bits = std.mem.splitSequence(u8, cube, " ");
+                        var count = try std.fmt.parseUnsigned(usize, cube_bits.next().?, 10);
+                        var colour = cube_bits.next().?;
 
-                    switch (colour[0]) {
-                        'r' => { sample.red = count; },
-                        'g' => { sample.green = count; },
-                        'b' => { sample.blue = count; },
-                        else => { unreachable; }
+                        switch (colour[0]) {
+                            'r' => { sample.red = count; },
+                            'g' => { sample.green = count; },
+                            'b' => { sample.blue = count; },
+                            else => { unreachable; }
+                        }
+                    }
+
+                    if (sample.red > 12 or sample.green > 13 or sample.blue > 14) {
+                        game_possible = false;
                     }
                 }
 
-                if (sample.red > 12 or sample.green > 13 or sample.blue > 14) {
-                    game_possible = false;
+                if (game_possible) {
+                    result += game;
                 }
             }
 
-            if (game_possible) {
-                result += game;
-            }
+            std.debug.print("Sum of possible games: {}\n", .{result});
         }
-
-        std.debug.print("Sum of possible games: {}\n", .{result});
-    }
+    };
 
 
-    pub fn day2Pt2() !void {
-        var file = try std.fs.cwd().openFile("input_files/day2.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    const pt2 = struct {
+        pub fn solve() !void {
+            var file = try std.fs.cwd().openFile("input_files/day2.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
 
-        var result: usize = 0;
+            var result: usize = 0;
 
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var game_it = std.mem.splitSequence(u8, line, ":");
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var game_it = std.mem.splitSequence(u8, line, ":");
 
-            _ = game_it.next();
-            var samples = std.mem.trim(u8, game_it.next().?, " ");
+                _ = game_it.next();
+                var samples = std.mem.trim(u8, game_it.next().?, " ");
 
-            var min_sample = Sample { .red = 0, .green = 0, .blue = 0 };
+                var min_sample = Sample { .red = 0, .green = 0, .blue = 0 };
 
-            var sample_it = std.mem.splitSequence(u8, samples, "; ");
-            while (sample_it.next()) |sample_str| {
-                var cube_it = std.mem.splitSequence(u8, sample_str, ", ");
+                var sample_it = std.mem.splitSequence(u8, samples, "; ");
+                while (sample_it.next()) |sample_str| {
+                    var cube_it = std.mem.splitSequence(u8, sample_str, ", ");
 
-                var sample = Sample { .red = 0, .green = 0, .blue = 0 };
+                    var sample = Sample { .red = 0, .green = 0, .blue = 0 };
 
-                while (cube_it.next()) |cube| {
-                    var cube_bits = std.mem.splitSequence(u8, cube, " ");
-                    var count = try std.fmt.parseUnsigned(usize, cube_bits.next().?, 10);
-                    var colour = cube_bits.next().?;
+                    while (cube_it.next()) |cube| {
+                        var cube_bits = std.mem.splitSequence(u8, cube, " ");
+                        var count = try std.fmt.parseUnsigned(usize, cube_bits.next().?, 10);
+                        var colour = cube_bits.next().?;
 
-                    switch (colour[0]) {
-                        'r' => { sample.red = count; },
-                        'g' => { sample.green = count; },
-                        'b' => { sample.blue = count; },
-                        else => { unreachable; }
+                        switch (colour[0]) {
+                            'r' => { sample.red = count; },
+                            'g' => { sample.green = count; },
+                            'b' => { sample.blue = count; },
+                            else => { unreachable; }
+                        }
                     }
+
+                    min_sample.red = @max(min_sample.red, sample.red);
+                    min_sample.green = @max(min_sample.green, sample.green);
+                    min_sample.blue = @max(min_sample.blue, sample.blue);
                 }
 
-                min_sample.red = @max(min_sample.red, sample.red);
-                min_sample.green = @max(min_sample.green, sample.green);
-                min_sample.blue = @max(min_sample.blue, sample.blue);
+                result += (min_sample.red * min_sample.green * min_sample.blue);
             }
 
-            result += (min_sample.red * min_sample.green * min_sample.blue);
+            std.debug.print("Sum of power sets: {d}\n", .{result});
         }
-
-        std.debug.print("Sum of power sets: {d}\n", .{result});
-    }
+    };
 };
 
 const day1 = struct {
-    pub fn day1Pt1() !void {
-        var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+    const pt1 = struct {
+        pub fn solve() !void {
+            var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
 
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
 
-        var sum: usize = 0;
+            var sum: usize = 0;
 
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var digits: [2]u8 = .{0, 0};
-            var offset: usize = 0;
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var digits: [2]u8 = .{0, 0};
+                var offset: usize = 0;
 
-            for (line) |ch| {
-                if (std.ascii.isDigit(ch)) {
-                    digits[offset] = ch - '0';
+                for (line) |ch| {
+                    if (std.ascii.isDigit(ch)) {
+                        digits[offset] = ch - '0';
 
-                    if (offset == 0) {
-                        offset += 1;
-                        digits[offset] = digits[offset - 1];
-                    }
-                }
-            }
-
-            // std.debug.print("Line: {s}\n", .{line});
-            // std.debug.print("Digits: {d}\n", .{digits});
-
-            sum += (digits[0] * 10) + digits[1];
-        }
-
-        std.debug.print("Sum (pt1): {}\n", .{sum});
-    }
-
-    pub fn day1Pt2() !void {
-        var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
-
-        var reader = file.reader();
-        var buf: [1024]u8 = undefined;
-
-        var sum: usize = 0;
-
-        var words = [_][]const u8 {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
-
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var digits: [2]u8 = .{0, 0};
-            var offset: usize = 0;
-
-            var i: usize = 0;
-            while (i < line.len) {
-                var value: ?u8 = null;
-
-                if (std.ascii.isDigit(line[i])) {
-                    value = line[i] - '0';
-                }
-
-                if (value == null) {
-                    for (0.., words) |word_idx, word| {
-                        if (std.mem.startsWith(u8, line[i..], word)) {
-                            value = @intCast(word_idx + 1);
-                            break;
+                        if (offset == 0) {
+                            offset += 1;
+                            digits[offset] = digits[offset - 1];
                         }
                     }
                 }
 
-                if (value != null) {
-                    digits[offset] = value.?;
+                // std.debug.print("Line: {s}\n", .{line});
+                // std.debug.print("Digits: {d}\n", .{digits});
 
-                    if (offset == 0) {
-                        offset += 1;
-                        digits[offset] = value.?;
-                    }
-                }
-
-                i += 1;
+                sum += (digits[0] * 10) + digits[1];
             }
 
-            // std.debug.print("Line: {s} -> {d}\n", .{line, digits});
-
-            sum += (digits[0] * 10) + digits[1];
-
-            // std.debug.print("+= {d} = {d}\n", .{(digits[0] * 10) + digits[1], sum});
+            std.debug.print("Sum (pt1): {}\n", .{sum});
         }
+    };
 
-        std.debug.print("Sum (pt2): {}", .{sum});
-    }
+    const pt2 = struct {
+        pub fn solve() !void {
+            var file = try std.fs.cwd().openFile("input_files/day1.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            var sum: usize = 0;
+
+            var words = [_][]const u8 {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var digits: [2]u8 = .{0, 0};
+                var offset: usize = 0;
+
+                var i: usize = 0;
+                while (i < line.len) {
+                    var value: ?u8 = null;
+
+                    if (std.ascii.isDigit(line[i])) {
+                        value = line[i] - '0';
+                    }
+
+                    if (value == null) {
+                        for (0.., words) |word_idx, word| {
+                            if (std.mem.startsWith(u8, line[i..], word)) {
+                                value = @intCast(word_idx + 1);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (value != null) {
+                        digits[offset] = value.?;
+
+                        if (offset == 0) {
+                            offset += 1;
+                            digits[offset] = value.?;
+                        }
+                    }
+
+                    i += 1;
+                }
+
+                // std.debug.print("Line: {s} -> {d}\n", .{line, digits});
+
+                sum += (digits[0] * 10) + digits[1];
+
+                // std.debug.print("+= {d} = {d}\n", .{(digits[0] * 10) + digits[1], sum});
+            }
+
+            std.debug.print("Sum (pt2): {}", .{sum});
+        }
+    };
 };
 
 pub fn example_code() !void {
