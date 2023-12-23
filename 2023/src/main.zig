@@ -60,9 +60,140 @@ pub fn main() !void {
     // try day19.pt1.day19Pt1();
     // try day19.pt2.day19Pt2();
 
-    try day20.pt1.day20Pt1();
-    try day20.pt2.day20Pt2();
+    // try day20.pt1.day20Pt1();
+    // try day20.pt2.day20Pt2();
+
+    try day21.pt1.day21Pt1();
 }
+
+const day21 = struct {
+    const pt1 = struct {
+        const Direction = enum(u8) {
+            North,
+            South,
+            East,
+            West,
+        };
+
+        const Point = struct {
+            row: isize,
+            col: isize,
+
+            fn move(self: *const Point, direction: Direction) Point {
+                return switch (direction) {
+                    .North => Point { .row = self.row - 1, .col = self.col },
+                    .South => Point { .row = self.row + 1, .col = self.col },
+                    .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                    .West =>  Point { .row = self.row,     .col = self.col - 1 },
+                };
+            }
+
+            fn rowU(self: *const Point) usize {
+                return @intCast(self.row);
+            }
+
+            fn colU(self: *const Point) usize {
+                return @intCast(self.col);
+            }
+
+            fn of(row: isize, col: isize) Point {
+                return Point {
+                    .row = row,
+                    .col = col,
+                };
+            }
+        };
+
+
+        fn day21Pt1() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var grid = std.ArrayList([]u8).init(allocator);
+            var start = Point.of(0, 0);
+
+            // Parse our grid and find the start
+            {
+                var file = try std.fs.cwd().openFile("input_files/day21.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                var start_found: bool = false;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var start_pos = std.mem.indexOfScalar(u8, line, 'S');
+
+                    var row = try allocator.dupe(u8, line);
+
+                    if (start_pos != null) {
+                        start = Point.of(@intCast(grid.items.len), @intCast(start_pos.?));
+                        row[start_pos.?] = '.'; // Start is a garden plot
+                        start_found = true;
+                    }
+
+                    try grid.append(row);
+                }
+
+                std.debug.assert(start_found);
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            // The set of positions we need to investigate from
+            var front = std.AutoHashMap(Point, void).init(allocator);
+            var next_front = std.AutoHashMap(Point, void).init(allocator);
+            var shortest_paths = std.AutoHashMap(Point, usize).init(allocator);
+
+            try front.put(start, {});
+            try shortest_paths.put(start, 0);
+
+            var steps: usize = 0;
+
+            while (steps <= 64): (steps += 1) {
+                next_front.clearRetainingCapacity();
+
+                var it = front.keyIterator();
+
+                while (it.next()) |pos| {
+                    if (!shortest_paths.contains(pos.*)) {
+                        try shortest_paths.put(pos.*, steps);
+                    }
+
+                    inline for (std.meta.fields(Direction)) |direction_enum| {
+                        var direction: Direction = @enumFromInt(direction_enum.value);
+
+                        var next_pos = pos.move(direction);
+
+                        if (next_pos.row >= 0 and next_pos.col >= 0 and next_pos.row < height and next_pos.col < width) {
+                            if (grid.items[next_pos.rowU()][next_pos.colU()] == '.') {
+                                try next_front.put(next_pos, {});
+                            }
+                        }
+                    }
+                }
+
+                var tmp = front;
+                front = next_front;
+                next_front = tmp;
+            }
+
+            var count: usize = 0;
+
+            var it = shortest_paths.keyIterator();
+            while (it.next()) |point| {
+                var distance = shortest_paths.get(point.*).?;
+
+                if ((distance % 2) == 0) {
+                    count += 1;
+                }
+            }
+
+            std.debug.print("Part 1: reachable gardens {d}\n", .{count});
+
+        }
+    };
+};
 
 const day20 = struct {
     const Pulse = enum {
