@@ -67,8 +67,153 @@ pub fn main() !void {
     // try day21.pt2.solve();
 
     // try day22.pt1.solve();
-    try day22.pt2.solve();
+    // try day22.pt2.solve();
+
+    try day23.pt1.solve();
 }
+
+const day23 = struct {
+    const Direction = enum(u8) {
+        North,
+        South,
+        East,
+        West,
+    };
+
+    const Point = struct {
+        row: isize,
+        col: isize,
+
+        fn move(self: *const Point, direction: Direction) Point {
+            return switch (direction) {
+                .North => Point { .row = self.row - 1, .col = self.col },
+                .South => Point { .row = self.row + 1, .col = self.col },
+                .East =>  Point { .row = self.row,     .col = self.col + 1 },
+                .West =>  Point { .row = self.row,     .col = self.col - 1 },
+            };
+        }
+
+        fn rowU(self: *const Point) usize {
+            return @intCast(self.row);
+        }
+
+        fn colU(self: *const Point) usize {
+            return @intCast(self.col);
+        }
+
+        fn of(row: isize, col: isize) Point {
+            return Point {
+                .row = row,
+                .col = col,
+            };
+        }
+    };
+
+    const pt1 = struct {
+        const Path = struct {
+            position: Point,
+            seen_nodes: std.AutoHashMap(Point, void),
+            length: usize,
+        };
+
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day23.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    try grid.append(try allocator.dupe(u8, line));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+
+            var start_position = Point.of(0, @intCast(std.mem.indexOfScalar(u8, grid.items[0], '.').?));
+            var end_position = Point.of(@intCast(grid.items.len - 1), @intCast(std.mem.indexOfScalar(u8, grid.items[grid.items.len - 1], '.').?));
+
+            var paths = std.ArrayList(Path).init(allocator);
+
+            try paths.append(Path { .position = start_position, .seen_nodes = std.AutoHashMap(Point, void).init(allocator), .length = 0 });
+
+            var best_length: usize = 0;
+
+            while (paths.items.len > 0) {
+                var current_path = &paths.items[paths.items.len - 1];
+
+                if (current_path.position.row == end_position.row and current_path.position.col == end_position.col) {
+                    if (current_path.length > best_length) {
+                        best_length = current_path.length;
+                        _ = paths.pop();
+                        continue;
+                    }
+                }
+
+                var available_movements: [4]?Direction = undefined;
+                var available_movement_count: usize = 1;
+
+                var current_tile = grid.items[current_path.position.rowU()][current_path.position.colU()];
+
+                available_movement_count = 0;
+                inline for (std.meta.fields(Direction)) |direction_enum| {
+                    var direction: Direction = @enumFromInt(direction_enum.value);
+
+                    if ((current_tile == '>' and direction == .East) or
+                            (current_tile == '<' and direction == .West) or
+                            (current_tile == '^' and direction == .North) or
+                            (current_tile == 'v' and direction == .South) or
+                            (current_tile == '.')) {
+                        var next_position = current_path.position.move(direction);
+
+                        if (next_position.row >= 0 and next_position.col >= 0 and
+                                next_position.row < height and next_position.col < width and
+                                grid.items[next_position.rowU()][next_position.colU()] != '#' and
+                                !current_path.seen_nodes.contains(next_position)) {
+                            // Sure why not
+                            available_movements[available_movement_count] = direction;
+                            available_movement_count += 1;
+                        }
+                    }
+                }
+
+                if (available_movement_count == 0) {
+                    // No good
+                    _ = paths.pop();
+                    continue;
+                }
+
+                try current_path.seen_nodes.put(current_path.position, {});
+                current_path.length += 1;
+
+                // Any extras get added for exploration
+                {
+                    var i: usize = 1;
+                    while (i < available_movement_count): (i += 1) {
+                        var divergent_path = Path {
+                            .position = current_path.position.move(available_movements[i].?),
+                            .seen_nodes = try current_path.seen_nodes.cloneWithAllocator(allocator),
+                            .length = current_path.length,
+                        };
+
+                        try paths.append(divergent_path);
+                    }
+                }
+
+                current_path.position = current_path.position.move(available_movements[0].?);
+            }
+
+            std.debug.print("Part 1: Longest walk was {d}\n", .{best_length});
+        }
+    };
+};
+
+
 
 const day22 = struct {
     const Point = struct {
