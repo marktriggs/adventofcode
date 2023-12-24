@@ -70,8 +70,178 @@ pub fn main() !void {
 }
 
 const day22 = struct {
+    const Point = struct {
+        x: isize,
+        y: isize,
+        z: isize,
+
+        fn moveDown(self: *const Point) Point {
+            return Point {
+                .x = self.x,
+                .y = self.y,
+                .z = self.z - 1,
+            };
+        }
+    };
+
+    const Shape = struct {
+        id: usize,
+        start: Point,
+        end: Point,
+
+        fn points(self: *const Shape, allocator: std.mem.Allocator) !std.ArrayList(Point) {
+            var result = std.ArrayList(Point).init(allocator);
+
+            var x = @min(self.start.x, self.end.x);
+            while (x <= @max(self.start.x, self.end.x)): (x += 1) {
+                var y = @min(self.start.y, self.end.y);
+                while (y <= @max(self.start.y, self.end.y)): (y += 1) {
+                    var z = @min(self.start.z, self.end.z);
+                    while (z <= @max(self.start.z, self.end.z)): (z += 1) {
+                        try result.append(Point { .x = x, .y = y, .z = z});
+                    }
+                }
+            }
+
+            return result;
+        }
+    };
+
+    fn shapeZLessThan(context: void, a: Shape, b: Shape) bool {
+        _ = context;
+        return @min(a.start.z, a.end.z) < @min(b.start.z, b.end.z);
+    }
+
     const pt1 = struct {
         fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var shapes = std.ArrayList(Shape).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day22.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                var next_shape_id: usize = 0;
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, ",~");
+
+                    try shapes.append(
+                        Shape {
+                            .id = next_shape_id,
+                            .start = Point {
+                                .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .z = try std.fmt.parseInt(isize, it.next().?, 10),
+                            },
+                            .end = Point {
+                                .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .z = try std.fmt.parseInt(isize, it.next().?, 10),
+                            },
+                    });
+
+                    next_shape_id += 1;
+                }
+            }
+
+            var world = std.AutoHashMap(Point, usize).init(allocator);
+
+            for (shapes.items) |shape| {
+                for ((try shape.points(allocator)).items) |point| {
+                    std.debug.assert(!world.contains(point));
+                    try world.put(point, shape.id);
+                }
+            }
+
+            std.sort.heap(Shape, shapes.items, {}, shapeZLessThan);
+
+            var moved = true;
+
+            while (moved) {
+                moved = false;
+                for (shapes.items) |*shape| {
+                    var min_z = @min(shape.start.z, shape.end.z);
+
+                    while (min_z > 1) {
+                        var can_move_down = true;
+                        var points = try shape.points(allocator);
+
+                        for (points.items) |point| {
+                            var p: Point = point.moveDown();
+                            if (world.contains(p) and world.get(p) != shape.id) {
+                                can_move_down = false;
+                                break;
+                            }
+                        }
+
+                        if (can_move_down) {
+                            moved = true;
+                            min_z -= 1;
+
+                            for (points.items) |point| {
+                                _ = world.remove(point);
+                                try world.put(point.moveDown(), shape.id);
+                            }
+
+                            shape.start.z -= 1;
+                            shape.end.z -= 1;
+                            min_z -= 1;
+                        } else {
+                            break;
+                        }
+
+                    }
+                }
+            }
+
+            // for (shapes.items) |shape| {
+            //     var points = try shape.points(allocator);
+            //
+            //     for (points.items) |point| {
+            //         std.debug.print("cubes.push(makeCube({d}, {d}, {d}, {d}));\n",
+            //                         .{
+            //                             point.x,
+            //                             point.y,
+            //                             point.z,
+            //                             shape.id
+            //         });
+            //     }
+            // }
+
+            var shapes_resting_on = std.AutoHashMap(usize, []usize).init(allocator);
+
+            for (shapes.items) |shape| {
+                var rests_on = std.ArrayList(usize).init(allocator);
+
+                var points = try shape.points(allocator);
+
+                for (points.items) |point| {
+                    var is_on = world.get(point.moveDown());
+
+                    if (is_on != null and is_on.? != shape.id) {
+                        if (std.mem.indexOfScalar(usize, rests_on.items, is_on.?) == null) {
+                            try rests_on.append(is_on.?);
+                        }
+                    }
+                }
+
+                try shapes_resting_on.put(shape.id, rests_on.items);
+            }
+
+            var no_disintegrate = std.StaticBitSet(10000).initEmpty();
+
+            var it = shapes_resting_on.keyIterator();
+            while (it.next()) |id| {
+                if (shapes_resting_on.get(id.*).?.len == 1) {
+                    no_disintegrate.set(shapes_resting_on.get(id.*).?[0]);
+                }
+
+                // std.debug.print("{d} -> {any}\n", .{id.*, shapes_resting_on.get(id.*)});
+            }
+
+            std.debug.print("Part 1: {d} bricks can be safely disintegrated.\n", .{shapes.items.len - no_disintegrate.count()});
         }
     };
 };
