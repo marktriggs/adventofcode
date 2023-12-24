@@ -66,7 +66,8 @@ pub fn main() !void {
     // try day21.pt1.solve();
     // try day21.pt2.solve();
 
-    try day22.pt1.solve();
+    // try day22.pt1.solve();
+    try day22.pt2.solve();
 }
 
 const day22 = struct {
@@ -80,6 +81,14 @@ const day22 = struct {
                 .x = self.x,
                 .y = self.y,
                 .z = self.z - 1,
+            };
+        }
+
+        fn moveUp(self: *const Point) Point {
+            return Point {
+                .x = self.x,
+                .y = self.y,
+                .z = self.z + 1,
             };
         }
     };
@@ -196,19 +205,19 @@ const day22 = struct {
                 }
             }
 
-            // for (shapes.items) |shape| {
-            //     var points = try shape.points(allocator);
-            //
-            //     for (points.items) |point| {
-            //         std.debug.print("cubes.push(makeCube({d}, {d}, {d}, {d}));\n",
-            //                         .{
-            //                             point.x,
-            //                             point.y,
-            //                             point.z,
-            //                             shape.id
-            //         });
-            //     }
-            // }
+            for (shapes.items) |shape| {
+                var points = try shape.points(allocator);
+
+                for (points.items) |point| {
+                    std.debug.print("cubes.push(makeCube({d}, {d}, {d}, {d}));\n",
+                                    .{
+                                        point.x,
+                                        point.y,
+                                        point.z,
+                                        shape.id
+                    });
+                }
+            }
 
             var shapes_resting_on = std.AutoHashMap(usize, []usize).init(allocator);
 
@@ -242,6 +251,167 @@ const day22 = struct {
             }
 
             std.debug.print("Part 1: {d} bricks can be safely disintegrated.\n", .{shapes.items.len - no_disintegrate.count()});
+        }
+    };
+
+    const pt2 = struct {
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var shapes = std.ArrayList(Shape).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day22.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                var next_shape_id: usize = 0;
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, ",~");
+
+                    try shapes.append(
+                        Shape {
+                            .id = next_shape_id,
+                            .start = Point {
+                                .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .z = try std.fmt.parseInt(isize, it.next().?, 10),
+                            },
+                            .end = Point {
+                                .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                                .z = try std.fmt.parseInt(isize, it.next().?, 10),
+                            },
+                    });
+
+                    next_shape_id += 1;
+                }
+            }
+
+            var world = std.AutoHashMap(Point, usize).init(allocator);
+
+            for (shapes.items) |shape| {
+                for ((try shape.points(allocator)).items) |point| {
+                    std.debug.assert(!world.contains(point));
+                    try world.put(point, shape.id);
+                }
+            }
+
+            std.sort.heap(Shape, shapes.items, {}, shapeZLessThan);
+
+            var moved = true;
+
+            while (moved) {
+                moved = false;
+                for (shapes.items) |*shape| {
+                    var min_z = @min(shape.start.z, shape.end.z);
+
+                    while (min_z > 1) {
+                        var can_move_down = true;
+                        var points = try shape.points(allocator);
+
+                        for (points.items) |point| {
+                            var p: Point = point.moveDown();
+                            if (world.contains(p) and world.get(p) != shape.id) {
+                                can_move_down = false;
+                                break;
+                            }
+                        }
+
+                        if (can_move_down) {
+                            moved = true;
+                            min_z -= 1;
+
+                            for (points.items) |point| {
+                                _ = world.remove(point);
+                                try world.put(point.moveDown(), shape.id);
+                            }
+
+                            shape.start.z -= 1;
+                            shape.end.z -= 1;
+                            min_z -= 1;
+                        } else {
+                            break;
+                        }
+
+                    }
+                }
+            }
+
+            var shapes_below = std.AutoHashMap(usize, []usize).init(allocator);
+
+            for (shapes.items) |shape| {
+                var below = std.ArrayList(usize).init(allocator);
+
+                var points = try shape.points(allocator);
+
+                for (points.items) |point| {
+                    var is_on = world.get(point.moveDown());
+
+                    if (is_on != null and is_on.? != shape.id) {
+                        if (std.mem.indexOfScalar(usize, below.items, is_on.?) == null) {
+                            try below.append(is_on.?);
+                        }
+                    }
+                }
+
+                try shapes_below.put(shape.id, below.items);
+            }
+
+            var shapes_above = std.AutoHashMap(usize, []usize).init(allocator);
+
+            for (shapes.items) |shape| {
+                var above = std.ArrayList(usize).init(allocator);
+
+                var points = try shape.points(allocator);
+
+                for (points.items) |point| {
+                    var is_on = world.get(point.moveUp());
+
+                    if (is_on != null and is_on.? != shape.id) {
+                        if (std.mem.indexOfScalar(usize, above.items, is_on.?) == null) {
+                            try above.append(is_on.?);
+                        }
+                    }
+                }
+
+                try shapes_above.put(shape.id, above.items);
+            }
+
+
+            var total_fallen: usize = 0;
+
+            for (shapes.items) |shape| {
+                var fallen = std.StaticBitSet(2048).initEmpty();
+                var front = std.fifo.LinearFifo(usize, std.fifo.LinearFifoBufferType.Dynamic).init(allocator);
+
+                fallen.set(shape.id);
+                try front.writeItem(shape.id);
+
+                while (front.count > 0) {
+                    var next = front.readItem().?;
+
+                    var candidates = shapes_above.get(next).?;
+
+                    for (candidates) |candidate_id| {
+                        var all_fallen = true;
+                        for (shapes_below.get(candidate_id).?) |other_id| {
+                            if (!fallen.isSet(other_id)) {
+                                all_fallen = false;
+                            }
+                        }
+
+                        if (all_fallen) {
+                            fallen.set(candidate_id);
+                            try front.writeItem(candidate_id);
+                        }
+                    }
+                }
+
+                total_fallen += fallen.count() - 1;
+            }
+
+            std.debug.print("Part 2: Total bricks that would fall: {d}\n", .{total_fallen});
         }
     };
 };
