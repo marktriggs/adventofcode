@@ -69,7 +69,8 @@ pub fn main() !void {
     // try day22.pt1.solve();
     // try day22.pt2.solve();
 
-    try day23.pt1.solve();
+    // try day23.pt1.solve();
+    // try day23.pt2.solve();
 }
 
 const day23 = struct {
@@ -206,6 +207,126 @@ const day23 = struct {
                 }
 
                 current_path.position = current_path.position.move(available_movements[0].?);
+            }
+
+            std.debug.print("Part 1: Longest walk was {d}\n", .{best_length});
+        }
+    };
+
+    const pt2 = struct {
+        const Path = struct {
+            position: Point,
+            last_position: ?Point,
+            seen_nodes: std.AutoHashMap(Point, void),
+            length: usize,
+        };
+
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var grid = std.ArrayList([]u8).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day23.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    try grid.append(try allocator.dupe(u8, line));
+                }
+            }
+
+            var width = grid.items[0].len;
+            var height = grid.items.len;
+
+            var start_position = Point.of(0, @intCast(std.mem.indexOfScalar(u8, grid.items[0], '.').?));
+            var end_position = Point.of(@intCast(grid.items.len - 1), @intCast(std.mem.indexOfScalar(u8, grid.items[grid.items.len - 1], '.').?));
+
+            var paths = std.ArrayList(Path).init(allocator);
+
+            try paths.append(Path { .position = start_position, .last_position = null, .seen_nodes = std.AutoHashMap(Point, void).init(allocator), .length = 0 });
+
+            var best_length: usize = 0;
+
+            while (paths.items.len > 0) {
+                var best_path_idx: usize = 0;
+                var best_path_length: usize = 0;
+
+                {
+                    var i: usize = 0;
+                    for (paths.items) |path| {
+                        if (path.length > best_path_length) {
+                            best_path_idx = i;
+                        }
+
+                        i += 1;
+                    }
+                }
+
+                var current_path = paths.swapRemove(best_path_idx);
+
+                if (current_path.position.row == end_position.row and current_path.position.col == end_position.col) {
+                    if (current_path.length > best_length) {
+                        best_length = current_path.length;
+
+                        std.debug.print("New best: {d}\n", .{best_length});
+
+                        continue;
+                    }
+                }
+
+                var available_movements: [4]?Direction = undefined;
+                var available_movement_count: usize = 1;
+
+                // var current_tile = grid.items[current_path.position.rowU()][current_path.position.colU()];
+
+                available_movement_count = 0;
+                inline for (std.meta.fields(Direction)) |direction_enum| {
+                    var direction: Direction = @enumFromInt(direction_enum.value);
+
+                    var next_position = current_path.position.move(direction);
+
+                    if ((current_path.last_position == null or !std.meta.eql(next_position, current_path.last_position.?)) and
+                            next_position.row >= 0 and next_position.col >= 0 and
+                            next_position.row < height and next_position.col < width and
+                            grid.items[next_position.rowU()][next_position.colU()] != '#' and
+                            grid.items[next_position.rowU()][next_position.colU()] != '@' and
+                            !current_path.seen_nodes.contains(next_position)) {
+                        // Sure why not
+                        available_movements[available_movement_count] = direction;
+                        available_movement_count += 1;
+                    }
+                }
+
+                if (available_movement_count == 0) {
+                    // No good
+                    continue;
+                }
+
+                if (available_movement_count > 1) {
+                    try current_path.seen_nodes.put(current_path.position, {});
+                }
+
+                current_path.length += 1;
+                current_path.last_position = current_path.position;
+
+                // Any extras get added for exploration
+                {
+                    var i: usize = 1;
+                    while (i < available_movement_count): (i += 1) {
+                        var divergent_path = Path {
+                            .position = current_path.position.move(available_movements[i].?),
+                            .last_position = current_path.last_position,
+                            .seen_nodes = try current_path.seen_nodes.cloneWithAllocator(allocator),
+                            .length = current_path.length,
+                        };
+
+                        try paths.append(divergent_path);
+                    }
+                }
+
+                current_path.position = current_path.position.move(available_movements[0].?);
+                try paths.append(current_path);
             }
 
             std.debug.print("Part 1: Longest walk was {d}\n", .{best_length});
