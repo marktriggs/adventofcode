@@ -71,7 +71,176 @@ pub fn main() !void {
 
     // try day23.pt1.solve();
     // try day23.pt2.solve();
+
+    try day24.pt1.solve();
 }
+
+const day24 = struct {
+
+    const pt1 = struct {
+
+        const Hailstone = struct {
+            x: isize,
+            y: isize,
+            z: isize,
+
+            vx: isize,
+            vy: isize,
+            vz: isize,
+
+            fn x_f64(self: *const Hailstone) f64 { return @floatFromInt(self.x); }
+            fn y_f64(self: *const Hailstone) f64 { return @floatFromInt(self.y); }
+            fn z_f64(self: *const Hailstone) f64 { return @floatFromInt(self.z); }
+
+            fn vx_f64(self: *const Hailstone) f64 { return @floatFromInt(self.vx); }
+            fn vy_f64(self: *const Hailstone) f64 { return @floatFromInt(self.vy); }
+            fn vz_f64(self: *const Hailstone) f64 { return @floatFromInt(self.vz); }
+
+
+            fn gradient(self: *const Hailstone) f64 {
+                return self.vy_f64() / self.vx_f64();
+            }
+
+            fn intercept(self: *const Hailstone) f64 {
+                return (self.y_f64() - (self.gradient() * self.x_f64()));
+            }
+
+            fn yval(self: *const Hailstone, x: f64) f64 {
+                var m = self.gradient();
+                var b = self.intercept();
+
+                return (m * x) + b;
+            }
+
+            fn xval(self: *const Hailstone, y: f64) f64 {
+                var m = self.gradient();
+                var b = self.intercept();
+
+                return (y - b) / m;
+            }
+
+            fn min_y(self: *const Hailstone, min: f64) f64 {
+                if (self.vy_f64() > 0) {
+                    return @max(min, self.y_f64());
+                } else {
+                    return min;
+                }
+            }
+
+            fn min_x(self: *const Hailstone, min: f64) f64 {
+                if (self.vx_f64() > 0) {
+                    return @max(min, self.x_f64());
+                } else {
+                    return min;
+                }
+            }
+
+            fn max_y(self: *const Hailstone, min: f64) f64 {
+                if (self.vy_f64() < 0) {
+                    return @min(min, self.y_f64());
+                } else {
+                    return min;
+                }
+            }
+
+            fn max_x(self: *const Hailstone, min: f64) f64 {
+                if (self.vx_f64() < 0) {
+                    return @min(min, self.x_f64());
+                } else {
+                    return min;
+                }
+            }
+        };
+
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var hailstones = std.ArrayList(Hailstone).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day24.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, ", @");
+
+                    try hailstones.append(Hailstone {
+                        .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .z = try std.fmt.parseInt(isize, it.next().?, 10),
+
+                        .vx = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .vy = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .vz = try std.fmt.parseInt(isize, it.next().?, 10),
+                    });
+                }
+            }
+
+            var crosses: usize = 0;
+
+            // Cap these values based on the starting direction/position of our hailstones?
+
+            var min_val: f64 = 200000000000000.0;
+            var max_val: f64 = 400000000000000.0;
+            // var min_val: f64 = 7.0;
+            // var max_val: f64 = 27.0;
+
+            var i: usize = 0;
+            while (i < hailstones.items.len): (i += 1) {
+                var j: usize = i + 1;
+                while (j < hailstones.items.len): (j += 1) {
+                    var a = hailstones.items[i];
+                    var b = hailstones.items[j];
+
+                    if (a.gradient() == b.gradient()) {
+                        // parallel
+                    } else {
+                        var combined_min_y = @max(a.min_y(min_val), b.min_y(min_val));
+                        var combined_max_y = @min(a.max_y(max_val), b.max_y(max_val));
+
+                        var combined_min_x = @max(a.min_x(min_val), b.min_x(min_val));
+                        var combined_max_x = @min(a.max_x(max_val), b.max_x(max_val));
+
+                        var ydiff_min = a.yval(combined_min_x) - b.yval(combined_min_x);
+                        var ydiff_max = a.yval(combined_max_x) - b.yval(combined_max_x);
+
+                        var xdiff_min = a.xval(combined_min_y) - b.xval(combined_min_y);
+                        var xdiff_max = a.xval(combined_max_y) - b.xval(combined_max_y);
+
+                        if (((ydiff_min < 0 and ydiff_max > 0) or (ydiff_min > 0 and ydiff_max < 0)) and
+                                ((xdiff_min < 0 and xdiff_max > 0) or (xdiff_min > 0 and xdiff_max < 0))) {
+
+                            // If their relative x/y values swapped across the range of interest, then they
+                            // crossed.
+                            crosses += 1;
+                        } else {
+                            // std.debug.print("NO Cross between {any} and {any}\n", .{a, b});
+                            // std.debug.print("  y = {d}x + {d}   and   y = {d}x + {d}\n", .{a.gradient(), a.intercept(), b.gradient(), b.intercept()});
+                            // std.debug.print("  => minxy={d}:{d}  maxxy={d}:{d}\n", .{combined_min_x, combined_min_y, combined_max_x, combined_max_y});
+                            // std.debug.print("  => {d}, {d}  {d}, {d}\n", .{ydiff_min, ydiff_max, xdiff_min, xdiff_max});
+                            //
+                            // std.debug.print("  a.yval({d}) = {d}; b.yval({d}) = {d};\n",
+                            //                 .{
+                            //                     combined_min_y, a.yval(combined_min_y),
+                            //                     combined_min_y, b.yval(combined_min_y),
+                            // });
+                            //
+                            // std.debug.print("  a.yval({d}) = {d}; b.yval({d}) = {d};\n",
+                            //                 .{
+                            //                     combined_max_y, a.yval(combined_max_y),
+                            //                     combined_max_y, b.yval(combined_max_y),
+                            // });
+
+                        }
+                    }
+                }
+            }
+
+            std.debug.print("{d} pairs crossed within range\n", .{crosses});
+        }
+    };
+};
 
 const day23 = struct {
     const Direction = enum(u8) {
