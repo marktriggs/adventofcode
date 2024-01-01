@@ -73,8 +73,108 @@ pub fn main() !void {
     // try day23.pt2.solve();
 
     // try day24.pt1.solve();
-    try day24.pt2.solve();
+    // try day24.pt2.solve();
+
+    try day25.pt1.solve();
 }
+
+const day25 = struct {
+
+    const pt1 = struct {
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+
+            var connections = std.StringHashMap(std.ArrayList([]u8)).init(allocator);
+
+            var file = try std.fs.cwd().openFile("input_files/day25.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+            var reader = file.reader();
+            var buf: [1024]u8 = undefined;
+
+            while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                var it = std.mem.tokenizeAny(u8, line, ": ");
+
+                var src = it.next().?;
+
+                while (it.next()) |target| {
+                    // I inspected the graph visually using graphviz to work out which three to remove.
+                    if ((std.mem.eql(u8, src, "rhk") and std.mem.eql(u8, target, "bff")) or
+                            (std.mem.eql(u8, src, "qpp") and std.mem.eql(u8, target, "vnm")) or
+                            (std.mem.eql(u8, src, "kfr") and std.mem.eql(u8, target, "vkp"))) {
+                        // skip
+                    } else {
+                        if (!connections.contains(src)) {
+                            try connections.put(try allocator.dupe(u8, src), std.ArrayList([]u8).init(allocator));
+                        }
+
+                        try connections.getPtr(src).?.append(try allocator.dupe(u8, target));
+                    }
+
+                    // dot format
+                    // std.debug.print("{s} -> {s};\n", .{src, target});
+                }
+            }
+
+            var grouping = std.StringHashMap(usize).init(allocator);
+            var group_num: usize = 0;
+
+            // keys
+            {
+                var it = connections.keyIterator();
+                while (it.next()) |node| {
+                    try grouping.put(try allocator.dupe(u8, node.*), group_num);
+                    group_num += 1;
+                }
+            }
+
+            // targets
+            {
+                var it = connections.valueIterator();
+                while (it.next()) |nodes| {
+                    for (nodes.items) |node| {
+                        if (!grouping.contains(node)) {
+                            try grouping.put(try allocator.dupe(u8, node), group_num);
+                            group_num += 1;
+                        }
+                    }
+                }
+            }
+
+            // Connect everything
+            {
+                var it = connections.keyIterator();
+
+                while (it.next()) |src| {
+                    var targets = connections.getPtr(src.*).?;
+
+                    var src_num = grouping.get(src.*).?;
+
+                    var groups_to_merge = std.AutoHashMap(usize, void).init(allocator);
+
+                    for (targets.items) |target| {
+                        var target_slot = grouping.getPtr(target).?;
+                        try groups_to_merge.put(target_slot.*, {});
+                    }
+
+                    var keys_it = grouping.keyIterator();
+                    while (keys_it.next()) |k| {
+                        if (groups_to_merge.contains(grouping.get(k.*).?)) {
+                            try grouping.put(k.*, src_num);
+                        }
+                    }
+                }
+            }
+
+            // Count group sizes
+            {
+                var it = grouping.valueIterator();
+                while (it.next()) |value| {
+                    std.debug.print("{d}\n", .{value.*});
+                }
+            }
+        }
+    };
+};
 
 const day24 = struct {
 
