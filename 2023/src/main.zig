@@ -72,7 +72,8 @@ pub fn main() !void {
     // try day23.pt1.solve();
     // try day23.pt2.solve();
 
-    try day24.pt1.solve();
+    // try day24.pt1.solve();
+    try day24.pt2.solve();
 }
 
 const day24 = struct {
@@ -238,6 +239,57 @@ const day24 = struct {
             }
 
             std.debug.print("{d} pairs crossed within range\n", .{crosses});
+        }
+    };
+
+
+    const pt2 = struct {
+
+        const Hailstone = struct {
+            x: isize,
+            y: isize,
+            z: isize,
+
+            vx: isize,
+            vy: isize,
+            vz: isize,
+        };
+
+        fn solve() !void {
+            var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+            var allocator = arena.allocator();
+            var hailstones = std.ArrayList(Hailstone).init(allocator);
+
+            {
+                var file = try std.fs.cwd().openFile("input_files/day24.txt", .{ .mode = std.fs.File.OpenMode.read_only });
+                var reader = file.reader();
+                var buf: [1024]u8 = undefined;
+
+                while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+                    var it = std.mem.tokenizeAny(u8, line, ", @");
+
+                    try hailstones.append(Hailstone {
+                        .x = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .y = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .z = try std.fmt.parseInt(isize, it.next().?, 10),
+
+                        .vx = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .vy = try std.fmt.parseInt(isize, it.next().?, 10),
+                        .vz = try std.fmt.parseInt(isize, it.next().?, 10),
+                    });
+                }
+            }
+
+            var timevar: usize = 0;
+            for (hailstones.items) |h| {
+                std.debug.print("({d} + ({d} * t{d})) = x + (vx * t{d})\n", .{h.x, h.vx, timevar, timevar});
+                std.debug.print("({d} + ({d} * t{d})) = y + (vy * t{d})\n", .{h.y, h.vy, timevar, timevar});
+                std.debug.print("({d} + ({d} * t{d})) = z + (vz * t{d})\n", .{h.z, h.vz, timevar, timevar});
+
+                timevar += 1;
+            }
+
+
         }
     };
 };
