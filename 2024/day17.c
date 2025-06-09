@@ -137,7 +137,7 @@ int interpret(Computer *computer) {
 
 void part1() {
     Computer computer = { 0 };
-    uint64_t input[] = { 2, 4, 1, 7, 7, 5, 1, 7, 0, 3, 4, 1, 5, 5, 3, 0 };
+    #include "input_files/day17.txt"
 
     for (int i = 0; i < alen(input); i++) {
         computer.instructions[i] = input[i];
@@ -197,7 +197,7 @@ void solve(uint64_t *input, int input_len, int input_idx, uint64_t solved_a, uin
 }
 
 void part2() {
-    uint64_t input[] = { 2, 4, 1, 7, 7, 5, 1, 7, 0, 3, 4, 1, 5, 5, 3, 0 };
+    #include "input_files/day17.txt"
     solve(input, alen(input), alen(input) - 1, 0, 1);
 }
 
